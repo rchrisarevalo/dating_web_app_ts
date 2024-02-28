@@ -1,0 +1,124 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Python Test Suite For Dating Web App
+
+env:
+  DB_KEY: ${{vars.DB_KEY}}
+  SK_KEY: ${{vars.SK_KEY}}
+
+on:
+  push:
+    branches: [ "master", "DAT-121-Refactor-code-in-file-containing-routes" ]
+  pull_request:
+    branches: [ "master", "DAT-121-Refactor-code-in-file-containing-routes" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 pytest flask scikit-learn flask[async]
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    - name: Lint with flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Test if environment variables are accessed.
+      run: |
+        env
+      
+    - name: Run time is less than 0.20s
+      run: |
+        cd src/backend
+        pytest matching_algorithm_test.py::TestMatchingAlgorithmRunTime::test_run_time -v
+
+    - name: Run time is less than 0.20s after multiple iterations
+      run: |
+        cd src/backend
+        pytest matching_algorithm_test.py::TestMatchingAlgorithmRunTime::test_run_time_multiple -v
+
+    - name: Test to see if matching algorithm returns user profiles and their estimated similarity percentages.
+      run: |
+        cd src/backend
+        pytest matching_algorithm_test.py::TestMatchingAlgorithm::test_match -v
+
+    - name: Retrieve the top 5 users with the highest similarity scores.
+      run: |
+        cd src/backend
+        pytest matching_algorithm_test.py::TestMatchingAlgorithm::test_similarity_scores -v
+
+    - name: Retrieve the top k users with the highest similarity scores.
+      run: |
+        cd src/backend
+        pytest matching_algorithm_test.py::TestMatchingAlgorithm::test_retrieve_top_k_users -v
+      
+    - name: Insert a user into a heap and ensure that the heap follows all the rules and there are no violations.
+      run: |
+        cd src/backend
+        pytest matching_algorithm_test.py::TestHeap::test_insert -v
+
+    - name: Delete users from the heap and check if the top user changes through different operations.
+      run: |
+        cd src/backend
+        pytest matching_algorithm_test.py::TestHeap::test_delete_and_top -v
+
+    - name: Change the rating of the user depending on whether they are rated positively, neutrally, or negatively.
+      run: |
+        cd src/backend
+        pytest matching_algorithm_test.py::TestRating::test_change_rating -v
+
+    - name: Check if root route is working.
+      run: |
+        cd src/backend
+        pytest flask_api_test.py::test_simple_route -v
+
+    - name: User should sign up if they are of or over the age of majority in their jurisdiction.
+      run: |
+        cd src/backend
+        pytest flask_api_test.py::test_signup -v
+
+    - name: User should be unable to sign up for an account if they are under the age of majority in their jurisdiction.
+      run: |
+        cd src/backend
+        pytest flask_api_test.py::test_signup_if_underage -v
+    
+    - name: User should be able to log in if they have an account.
+      run: |
+        cd src/backend
+        pytest flask_api_test.py::test_login -v
+    
+    - name: Prevent a user from logging in if they do not have a valid token.
+      run: |
+        cd src/backend
+        pytest flask_api_test.py::test_login_with_invalid_token -v
+
+    - name: Retrieve a user's profile information if they are currently logged in.
+      run: |
+        cd src/backend
+        pytest flask_api_test.py::test_retrieve_profile_information -v
+
+    - name: Allow users to change their DOB if they registered for an account using a valid DOB. Otherwise, suspend/ban their account if they did not do so.
+      run: |
+        cd src/backend
+        pytest flask_api_test.py::test_update_profile_DOB -v
+    
+    - name: User should search for other users based on a specific keyword they enter into the search bar.
+      run: |
+        cd src/backend
+        pytest flask_api_test.py::test_search -v
