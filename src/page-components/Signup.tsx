@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalculateBirthday } from '../functions/CalculateBirthday';
 import { listStatesTerritories } from '../functions/listStatesTerritories';
@@ -35,10 +35,6 @@ export const SignUp = () => {
         pic: "",
         checkmarked: false
     })
-
-    useEffect(() => {
-        console.log(form)
-    }, [form])
 
     const handleDOB = () => {
         const dob = (document.getElementById("date-of-birth") as HTMLInputElement).value
@@ -346,7 +342,7 @@ export const SignUp = () => {
                                 </i>
                             </label>
                             <br></br>
-                            <select id="so-filter-check" required onChange={(e) => setForm({...form, so_filter_choice: e.target.value})}>
+                            <select id="so-filter-check" required onChange={(e) => setForm({...form, so_filter_choice: (e.target.value === "Yes" ? "True" : "False")})}>
                                 <option value="Select">Select</option>
                                 <option value="Yes">Yes</option>
                                 <option value="No">No</option>

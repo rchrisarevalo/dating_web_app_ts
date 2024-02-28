@@ -74,6 +74,7 @@ def test_signup():
         "sexual_orientation": "Heterosexual",
         "interested_in": "Men",
         "relationship_status": "Single",
+        "so_filter_choice": "true",
         "interests": "Reading, Writing, Coding, Hiking, Biking, Swimming, Running, Walking, Eating, Sleeping, Playing, Gaming, Watching, Listening, Talking, Thinking, Loving, Living, Breathing, Being, Existing, etc.",
         "age": 23,
         "pic": "test_user.jpg"
@@ -109,6 +110,7 @@ def test_signup_if_underage():
         "sexual_orientation": "Heterosexual",
         "interested_in": "Men",
         "relationship_status": "Single",
+        "so_filter_choice": "true",
         "interests": "Reading, Writing, Coding, Hiking, Biking, Swimming, Running, Walking, Eating, Sleeping, Playing, Gaming, Watching, Listening, Talking, Thinking, Loving, Living, Breathing, Being, Existing, etc.",
         "age": 17,
         "pic": "test_user.jpg"
@@ -143,6 +145,7 @@ def test_login():
         "sexual_orientation": "Heterosexual",
         "interested_in": "Men",
         "relationship_status": "Single",
+        "so_filter_choice": "true",
         "interests": "Reading, Writing, Coding, Hiking, Biking, Swimming, Running, Walking, Eating, Sleeping, Playing, Gaming, Watching, Listening, Talking, Thinking, Loving, Living, Breathing, Being, Existing, etc.",
         "age": 23,
         "pic": "test_user.jpg"
@@ -209,6 +212,7 @@ def test_retrieve_profile_information():
         "sexual_orientation": "Heterosexual",
         "interested_in": "Women",
         "relationship_status": "Married",
+        "so_filter_choice": "true",
         "interests": "Gardening, Reading, Writing Code, and Playing Video Games",
         "age": 22,
         "pic": "william_user.jpg"
@@ -274,6 +278,7 @@ def test_update_profile_DOB():
         "sexual_orientation": "Pansexual",
         "interested_in": "Anyone",
         "relationship_status": "Single",
+        "so_filter_choice": "true",
         "interests": "Writing poems, reading books, and watching movies",
         "age": 22,
         "pic": "kimmy_pic.jpg"
@@ -296,6 +301,7 @@ def test_update_profile_DOB():
         "sexual_orientation": "Heterosexual",
         "interested_in": "Women",
         "relationship_status": "Taken",
+        "so_filter_choice": "true",
         "interests": "Driving sports cars, boxing, and hitting the gym",
         "age": 26,
         "pic": "lalo_hernandez_profile_pic.jpg"
@@ -398,6 +404,7 @@ def test_search():
         "sexual_orientation": "Pansexual",
         "interested_in": "Anyone",
         "relationship_status": "Single",
+        "so_filter_choice": "true",
         "interests": "Writing poems, reading books, and watching movies",
         "age": 22,
         "pic": "kimmy_pic.jpg"

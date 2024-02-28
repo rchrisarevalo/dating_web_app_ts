@@ -9,7 +9,7 @@ mock_data_user_profiles = [{"username": "tim_johnson", "interests": "I like to f
                             "city_residence": "Mobile", "state_residence": "Alabama",
                             "sexual_orientation": "Heterosexual", "interested_in": "Women",
                             "uri": "akas191201982", "birth_month": "June", "birth_date": "19", "birth_year": "1985",
-                            "age": 38, "rating": 2.323},
+                            "age": 38, "so_filter_choice": "false", "rating": 2.323},
                            
                            {"username": "annie_white", "interests": "I like to work in the office", "gender": "Female",
                             "first_name": "Annie", "middle_name": "", "last_name": "White",
@@ -17,7 +17,7 @@ mock_data_user_profiles = [{"username": "tim_johnson", "interests": "I like to f
                             "city_residence": "Birmingham", "state_residence": "Alabama",
                             "sexual_orientation": "Heterosexual", "interested_in": "Men",
                             "uri": "19akasj1nana", "birth_month": "September", "birth_date": "23", "birth_year": "1978",
-                            "age": 44, "rating": -10.2912},
+                            "age": 44, "so_filter_choice": "true", "rating": -10.2912},
                            
                            {"username": "joshua_walter", "interests": "I work out at the gym and am interested in guys.", "gender": "Male",
                             "first_name": "Joshua", "middle_name": "Edward", "last_name": "Walter",
@@ -25,7 +25,7 @@ mock_data_user_profiles = [{"username": "tim_johnson", "interests": "I like to f
                             "city_residence": "Houston", "state_residence": "Texas",
                             "sexual_orientation": "Homosexual (Gay)", "interested_in": "Men",
                             "uri": "wkas9120amnasfuja0o", "birth_month": "July", "birth_date": "2", "birth_year": "2000",
-                            "age": 23, "rating": 0.2931},
+                            "age": 23, "so_filter_choice": "false", "rating": 0.2931},
                                        
                             {"username": "a_hernandez", "interests": "I love to work and play video games!", "gender": "Female",
                             "first_name": "Andrea", "middle_name": "Kimberly", "last_name": "Hernandez",
@@ -33,7 +33,7 @@ mock_data_user_profiles = [{"username": "tim_johnson", "interests": "I like to f
                             "city_residence": "Austin", "state_residence": "Texas",
                             "sexual_orientation": "Bisexual", "interested_in": "Men and Women",
                             "uri": "19akasj1nana", "birth_month": "June", "birth_date": "19", "birth_year": "1985",
-                            "age": 38, "rating": 0.21920}]
+                            "age": 38, "so_filter_choice": "true", "rating": 0.21920}]
 
 mock_logged_in_user_profile = [{"username": "kimmie_benavides", "interests": "I am a hard worker and push forward", "gender": "Female",
                                 "first_name": "Kimberly", "middle_name": "Elizabeth", "last_name": "Benavides",
@@ -41,7 +41,7 @@ mock_logged_in_user_profile = [{"username": "kimmie_benavides", "interests": "I 
                                 "city_residence": "Birmingham", "state_residence": "Alabama",
                                 "sexual_orientation": "Heterosexual", "interested_in": "Men",
                                 "uri": "a1928smaskcka", "birth_month": "August", "birth_date": "9", "birth_year": "2001",
-                                "age": 22, "rating": 23.120129}]
+                                "age": 22, "so_filter_choice": "true", "rating": 23.120129}]
 
 
 class TestMatchingAlgorithmRunTime(unittest.TestCase):
@@ -66,14 +66,14 @@ class TestMatchingAlgorithm(unittest.TestCase):
     # percentage.
     def test_match(self):
         self.setUp()
-        result = run_matching_algorithm(mock_data_user_profiles, mock_logged_in_user_profile)
-        self.assertEqual(run_matching_algorithm(mock_data_user_profiles, mock_logged_in_user_profile), result)
+        result = run_matching_algorithm(mock_data_user_profiles, mock_logged_in_user_profile, True)
+        self.assertEqual(run_matching_algorithm(mock_data_user_profiles, mock_logged_in_user_profile, True), result)
         self.doCleanups()
 
     def test_similarity_scores(self):
         self.setUp()
         
-        result = run_matching_algorithm(mock_data_user_profiles, mock_logged_in_user_profile)
+        result = run_matching_algorithm(mock_data_user_profiles, mock_logged_in_user_profile, True)
         
         # To accommodate the dynamic nature of this unit test when running all the tests altogether or 
         # running it individually, we will check if the first user in the array matches, as previous
@@ -92,8 +92,8 @@ class TestMatchingAlgorithm(unittest.TestCase):
         else:
             self.assertEqual(result[0]["username"], "brian_jones")
             self.assertEqual(result[1]["username"], "tim_johnson")
-            self.assertEqual(result[2]["username"], "annie_white")
-            self.assertEqual(result[3]["username"], "joshua_walter")
+            self.assertEqual(result[2]["username"], "joshua_walter")
+            self.assertEqual(result[3]["username"], "a_hernandez")
         
         self.doCleanups()
     
@@ -134,7 +134,7 @@ class TestMatchingAlgorithm(unittest.TestCase):
         
         # Provide the first 5 users to the algorithm to retrieve the top 5 users based on their similarities
         # to the logged in user, as well as their current user rating.
-        new_result = run_matching_algorithm(new_mock_data_user_profiles[0:5], mock_logged_in_user_profile)
+        new_result = run_matching_algorithm(new_mock_data_user_profiles[0:5], mock_logged_in_user_profile, False)
         
         # Test the results to see who are the top 5 users.
         self.assertEqual(new_result[0]["username"], 'brian_jones')
