@@ -9,9 +9,9 @@ env:
 
 on:
   push:
-    branches: [ "master", "DAT-121-Refactor-code-in-file-containing-routes" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "master", "DAT-121-Refactor-code-in-file-containing-routes" ]
+    branches: [ "main" ]
 
 permissions:
   contents: read
