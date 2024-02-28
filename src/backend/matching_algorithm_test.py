@@ -73,7 +73,7 @@ class TestMatchingAlgorithm(unittest.TestCase):
     def test_similarity_scores(self):
         self.setUp()
         
-        result = run_matching_algorithm(mock_data_user_profiles, mock_logged_in_user_profile, True)
+        result = run_matching_algorithm(mock_data_user_profiles, mock_logged_in_user_profile, False)
         
         # To accommodate the dynamic nature of this unit test when running all the tests altogether or 
         # running it individually, we will check if the first user in the array matches, as previous
@@ -92,8 +92,8 @@ class TestMatchingAlgorithm(unittest.TestCase):
         else:
             self.assertEqual(result[0]["username"], "brian_jones")
             self.assertEqual(result[1]["username"], "tim_johnson")
-            self.assertEqual(result[2]["username"], "joshua_walter")
-            self.assertEqual(result[3]["username"], "a_hernandez")
+            self.assertEqual(result[2]["username"], "annie_white")
+            self.assertEqual(result[3]["username"], "joshua_walter")
         
         self.doCleanups()
     
