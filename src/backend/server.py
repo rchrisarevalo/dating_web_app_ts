@@ -413,7 +413,6 @@ def check_login():
             return jsonify({"verified": False}), 401
         
     except db.DatabaseError:
-        print("Exception here!")
         return jsonify({"message": "There was an error retrieving information from the database. Please try again."}), 500
         
     except Exception as e:
@@ -2005,8 +2004,7 @@ def match():
         else:
             return [matches[0:request_info["initial_limit"]], False]
         
-    except KeyError as k:
-        print("Error:", k)
+    except KeyError:
         return jsonify({"message": "Failed to retrieve information from dictionary."}), 500
     
     except Exception as e:
