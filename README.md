@@ -18,7 +18,9 @@ Afterwards, move to the src/backend directory through your IDE terminal and inst
 
 Lastly, since this web app now uses PostgreSQL, you will need the database key to access it. If you need it, please feel free to contact me via Discord or email--preferably the former.
 
-* Before inserting the database key, you have to create a file called 'secret.env', which you use to store the necessary environment variables needed for this web app. Keep in mind that you should **NEVER** push the secret.env file into the repo under any circumstances. Doing so **DELIBERATELY** will result in your immediate removal from the repository for security reasons and to maintain the integrity of this application. The variables you will use to store your credentials are:
+* Before inserting the database key, you have to create a file called 'secret.env', which you use to store the necessary environment variables needed for this web app. 
+* Keep in mind that you should **NEVER** push the secret.env file into the repo under any circumstances. Doing so **DELIBERATELY** will result in your immediate removal from the repository for security reasons and to maintain the integrity of this application. 
+* The variables you will use to store your credentials are:
     * DB_KEY (the PostgreSQL database key to access its contents)
     * SK_KEY (a long, random key of your choosing that will be used to create a JWT token, which is used for persisting a user session when logging in)
     
