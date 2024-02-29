@@ -1,7 +1,10 @@
+// Import hooks from 'react' library and custom hooks.
 import { useEffect, useState } from "react";
 import { useFetchLogin } from "../hooks/useFetchLogin";
 import { useNotificationUpdate } from "../hooks/useNotificationUpdate";
 import { useFetchProfiles } from "../hooks/useFetchSearch";
+
+// Import necessary React Router DOM libraries to configure routes.
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 // Import components to create pages for both public and protected routes.
@@ -20,6 +23,7 @@ import { RecentMessages } from "../page-components/RecentMessages";
 import { SearchPage } from "../page-components/SearchPage";
 import { User } from "../page-components/User";
 import { Message } from "../page-components/Message";
+import { TOS } from "../page-components/TOS";
 import { UserNotExist } from "./UserNotExist";
 
 // Import socket connection.
@@ -44,22 +48,33 @@ export const RoutingSystem = () => {
 
         // Connect socket connection if user is authenticated.
         useEffect(() => {
+            // Connect the authenticated user to the socket if
+            // their login has been verified.
             if (!pending && !error && auth) {
                 connection.connect()
-            } else {
+            } 
+            
+            // Otherwise, disconnect them from the socket.
+            else {
                 connection.disconnect()
             }
 
+            // Connect the user to the socket to allow them to send real-time
+            // messages to other users.
             connection.on('connect', () => {
                 console.log("We are connecting!")
                 connection.emit('store-user-socket-id', username, connection.id)
             })
 
+            // Disconnect the user from the socket once they have logged out
+            // or if their session.
             connection.on('disconnect', () => {
                 console.log("Disconnected!")
                 connection.emit('remove-user-socket-id', username)
             })
 
+            // Cleanup function to prevent the socket connection
+            // from running more than once.
             return () => {
                 connection.off('connect')
             }
@@ -106,6 +121,7 @@ export const RoutingSystem = () => {
                         <PublicRoutes>
                             <Route index path="/" element={<Login />} />
                             <Route path="/signup" element={<SignUp />} />
+                            <Route path="/tos" element={<TOS />} />
                             <Route path="*" element={
                                 (domain_path === "profile" || domain_path === "message" ?
                                     <Navigate to="/" />
@@ -131,7 +147,7 @@ export const RoutingSystem = () => {
                                     <Route path={`/message/${user.username}`} element={<Message username={username} />} />
                                 </>
                             )}
-                            {/* <Route path="/tos" element={<TOS />} /> */}
+                            <Route path="/tos" element={<TOS />} />
                             <Route path="*" element={
                                 (path === "/" || path === "/signup" || path === `/profile/${username}`) ?
                                     <Navigate to="/profile" />
