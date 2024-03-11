@@ -9,9 +9,9 @@ env:
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "DAT-129-Write-backend-code-for-SO-filter-function-2" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "DAT-129-Write-backend-code-for-SO-filter-function-2" ]
 
 permissions:
   contents: read
