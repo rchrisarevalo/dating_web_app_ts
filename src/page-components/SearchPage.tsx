@@ -31,10 +31,10 @@ export const SearchPage = () => {
     }])
 
     useEffect(() => {
-        if (search_history.length !== 0) {
+        if (search_history.length !== 0 && !search_history, !pending && !error) {
             setSearchHistory(search_history)
         }
-    }, [search_history])
+    }, [search_history, pending, error])
 
     useEffect(() => {
         if (algo_config) {
@@ -67,21 +67,25 @@ export const SearchPage = () => {
                                 <br></br>
                                 {!currentSearchTerm ?
                                     <>
-                                        {searchHistory.map((term, i) =>
-                                            <div id="search-history-link" key={`search-history-term-${i}`}>
-                                                {typeof (term.search_term) !== "undefined" &&
-                                                    <>
-                                                        <div id="search-history-term">
-                                                            <input id={`search-term-${i}`} value={`${term.search_term}`} disabled></input>
-                                                        </div>
-                                                        <div id="search-history-options">
-                                                            <button><IoSearchOutline size={30} style={{ cursor: 'pointer' }} onClick={() => setCurrentSearchTerm(term.search_term)} /></button>
-                                                            <button onClick={() => clearSearchTerm(i, setSearchHistory)}><IoTrashBinOutline size={30} style={{ cursor: 'pointer' }} /></button>
-                                                        </div>
-                                                    </>
-                                                }
-                                            </div>
-                                        )}
+                                        {searchHistory.length !== 0 &&
+                                            <>
+                                                {searchHistory.map((term, i) =>
+                                                    <div id="search-history-link" key={`search-history-term-${i}`}>
+                                                        {typeof (term.search_term) !== "undefined" &&
+                                                            <>
+                                                                <div id="search-history-term">
+                                                                    <input id={`search-term-${i}`} value={`${term.search_term}`} disabled></input>
+                                                                </div>
+                                                                <div id="search-history-options">
+                                                                    <button><IoSearchOutline size={30} style={{ cursor: 'pointer' }} onClick={() => setCurrentSearchTerm(term.search_term)} /></button>
+                                                                    <button onClick={() => clearSearchTerm(i, setSearchHistory)}><IoTrashBinOutline size={30} style={{ cursor: 'pointer' }} /></button>
+                                                                </div>
+                                                            </>
+                                                        }
+                                                    </div>
+                                                )}
+                                            </>
+                                        }
                                         <br></br>
                                         {(!matched_profiles.pending && !user_profiles.pending) ?
                                             <>
