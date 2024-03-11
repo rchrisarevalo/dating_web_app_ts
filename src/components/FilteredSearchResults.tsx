@@ -33,8 +33,6 @@ export const FilteredSearchResults = (props: FilteredSearchResultsProps) => {
         username: ""
     }])
 
-    console.log(filteredResults)
-
     useEffect(() => {
         if (algo_config) {
             setFilteredResults(matchedProfiles.matchedProfiles.filter(result => (search_term.toLowerCase().substring(0, search_term.length)) === (result.first_name.toLowerCase().substring(0, search_term.length))))

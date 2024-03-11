@@ -138,8 +138,8 @@ export const BlockedUsers = () => {
                     <p>Are you sure you want to unblock <b>{`${unblockTargetUser}`}</b>?</p>
                 </Modal.Body>
                 <Modal.Footer>
-                    <button onClick={handleUnblock}>Yes</button>
-                    <button onClick={handleCloseModal}>No</button>
+                    <button onClick={handleUnblock} style={{border: 'none', background: 'black', color: 'white', padding: '7px 15px', borderRadius: '20px'}}>Yes</button>
+                    <button onClick={handleCloseModal} style={{border: 'none', background: 'black', color: 'white', padding: '7px 15px', borderRadius: '20px'}}>No</button>
                 </Modal.Footer>
             </Modal>
 
@@ -173,7 +173,7 @@ export const BlockedUsers = () => {
                             <b>Only up to 10 MB of data for each file is allowed.</b>
                         </Modal.Body>
                         <Modal.Footer>
-                            <input type="submit" />
+                            <input type="submit" style={{border: 'none', background: 'black', color: 'white', padding: '7px 15px', borderRadius: '20px'}} />
                         </Modal.Footer>
                     </form>
                 </Modal>

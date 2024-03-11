@@ -602,8 +602,10 @@ export const Update = (props: UpdateProps) => {
                                             {(profile.gender === "Male" || profile.gender === "Non-binary" || profile.gender !== "Female") && <option value="Homosexual (Gay)">Homosexual (Gay)</option>}
                                             <option value="Bisexual">Bisexual</option>
                                             <option value="Pansexual">Pansexual</option>
+                                            <option value="Queer">Queer</option>
                                             <option value="Asexual">Asexual</option>
                                             <option value="Deciding">Deciding</option>
+                                            <option value="I'd prefer not to say">I'd prefer not to say</option>
                                         </select>
                                         <br></br>
                                         <button value="change-sexual-orientation" id="change-sexual-orientation" onClick={display_change}>Cancel</button>

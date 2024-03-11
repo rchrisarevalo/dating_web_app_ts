@@ -43,17 +43,19 @@ def sexual_orientation_similarity(user_profile_records, logged_in_user_record):
         "Homosexual (Lesbian)": 3,
         "Bisexual": 4,
         "Pansexual": 5,
-        "Asexual": 6,
-        "Deciding": 7
+        "Queer": 6,
+        "Asexual": 7,
+        "Deciding": 8
     }
     
     interested_in_index = {
-        "Men": 8,
-        "Women": 9,
-        "Men and Women": 10,
-        "Deciding": 11,
+        "Males": 8,
+        "Females": 9,
+        "Males, Females": 10,
+        "Non-binary": 11,
         "Anyone": 12,
-        "Nobody": 13
+        "Deciding": 13,
+        "Nobody": 14
     }
     
     normalizer_vectorizer = Normalizer()
@@ -181,7 +183,6 @@ def relationship_status_similarity(user_profile_records, logged_in_user_record):
     return rs_similarity
 
 def age_similarity(user_profile_records, logged_in_user_record, index):
-    
     # Retrieve the ages of both the logged in user and profile user.
     retrieve_profile_user_age = user_profile_records[index]["age"]
     retrieve_logged_in_user_age = logged_in_user_record[0]["age"]
@@ -197,63 +198,70 @@ def elo_booster_factor(user_profile_records, index):
     
     return booster_factor
 
-def map_gender_interest_with_gender(matches={}, gender_interest="", current_user_SO="", current_user_gender=""):
-    if gender_interest == "Anyone" or gender_interest == "Deciding":
-        return True
-    
-    match_set = {matches["sexual_orientation"], matches["gender"], matches["interested_in"]}
-    current_user_set = {current_user_SO, current_user_gender, gender_interest}
-    
-    if current_user_SO == "Heterosexual" and not match_set.issubset(current_user_set):
-        return True
-    
-    elif current_user_SO == "Homosexual (Gay)" and match_set.issubset(current_user_set):
-        return True
-    
-    elif current_user_SO == "Homosexual (Lesbian)" and match_set.issubset(current_user_set):
-        return True
-
-    # if matches["gender"] in interested_genders and matches["sexual_orientation"] == current_user_sexual_orientation:
-    #     return True
-
-    # elif current_user_sexual_orientation == "Bisexual" and len(interested_genders) >= 2:
-    #     # If the current user is a bisexual male, then filter heterosexual male users.
-    #     if current_user_gender == "Male" and not (matches["gender"] == "Male" and matches["sexual_orientation"] == "Heterosexual"):
-    #         return True
+def filter_matches(matches: list[dict[str, any]], current_user: dict[str, any]) -> list[dict[str, any]]:
+    try:
+        # If the user is pansexual and/or is interested in anyone, regardless of gender,
+        # then return the list of matches.
+        if current_user["sexual_orientation"] == "Pansexual" or current_user["interested_in"] == "Anyone":
+            return matches
         
-    #     # If the current user is a bisexual female, then filter heterosexual female users.
-    #     elif current_user_gender == "Female" and not (matches["gender"] == "Female" and matches["sexual_orientation"] == "Heterosexual"):
-    #         return True
-
-    #     # Otherwise, if the user is another gender other than male or female...
-    #     elif current_user_gender != "Male" and current_user_gender != "Female":
-    #         # If the current user is bisexual and is of another gender, then filter heterosexual users 
-    #         # users not matching their gender interests/sexual orientation.
-    #         for interested_gender in interested_genders:
-    #             if not (matches["gender"] == interested_gender and matches["sexual_orientation"] == "Heterosexual"):
-    #                 return True
+        # Otherwise...
+        else:
+            # Turn the gender interests of each match into sets to use for the filter
+            # function logic below.
+            for m in matches:
+                m["interested_in"] = set(m["interested_in"].replace("s", "").split(", "))
             
-
-def filter_matches(matches=[{}], gender_interest="", sexual_orientation="", gender=""):
-    filter_matches = list(filter(lambda m: map_gender_interest_with_gender(m, gender_interest, sexual_orientation, gender), matches))
-    filter_matches = list(filter(lambda k: (k.pop("gender"), k.pop("sexual_orientation"), k.pop("interested_in")), filter_matches))
-    return filter_matches
+            # Do the same as above, but with the current user's gender interests.
+            current_user["interested_in"] = set(current_user["interested_in"].replace("s", "").split(", "))
+            
+            # List that will store user's filtered matches based on their gender interests.
+            filter_matches = []
+            
+            # Iterate through each match.
+            for match in matches:
+                # If the match's gender is in the set of the current user's gender interests,
+                # and the current user's gender is in the set of the match's gender interests,
+                # then append the match's profile to the list.
+                if match["gender"] in current_user["interested_in"] and current_user["gender"] in match["interested_in"]:
+                    filter_matches.append(match)
+                    
+                # Otherwise, if the current user identifies as anything other than male
+                # or female (e.g. non-binary, etc.)...
+                elif current_user["gender"] != "Male" and current_user["gender"] != "Female":
+                    # Check if the match's gender is included in the current user's
+                    # gender interests set. If it is, then append the match's
+                    # profile to the list.
+                    if match["gender"] in current_user["interested_in"]:
+                        filter_matches.append(match)
+            
+            # Remove sensitive keys from displayment in response when viewed through "Inspect Element"
+            # settings.
+            for f in filter_matches:
+                f.pop("sexual_orientation", None)
+                f.pop("gender", None)
+                f.pop("interested_in", None)
+            
+            return filter_matches
+    
+    except KeyError:
+        raise KeyError
 
 def heap_sort(heap_list, use_so_filter, logged_in_user_profile):
-    heap = PQ.Heap()
+    h = PQ.Heap()
 
     for record in heap_list:
-        heap.insert(record[0], record[1], record[2], 
-                    record[3], record[4], record[5],
-                    record[6], record[7], record[8], 
-                    record[9], record[10], record[11],
-                    record[12], record[13], record[14],
-                    record[15], record[16], record[17])
+        h.insert(record[0], record[1], record[2], 
+                 record[3], record[4], record[5],
+                 record[6], record[7], record[8], 
+                 record[9], record[10], record[11],
+                 record[12], record[13], record[14],
+                 record[15], record[16], record[17])
     
     # Now remove them to put into sorted list.
     # i.e. heap sort (runs in O(n log n) time).
-    while len(heap.heap) != 0:
-        heap.remove()
+    while len(h.heap) != 0:
+        h.remove()
     
     # Put the sorted items into a list (runs in O(n) time).    
     similar_users = [{"username": record[1], "interests": record[2], 
@@ -263,14 +271,14 @@ def heap_sort(heap_list, use_so_filter, logged_in_user_profile):
                       "interested_in": record[9],
                       "uri": record[10],
                       "gender": record[12],
-                      "age": record[17]} for record in heap.sorted_list]
+                      "age": record[17]} for record in h.sorted_list]
     
     if use_so_filter:
-        similar_users = filter_matches(similar_users, gender_interest=logged_in_user_profile["interested_in"], sexual_orientation=logged_in_user_profile["sexual_orientation"], gender=logged_in_user_profile["gender"])
+        similar_users = filter_matches(similar_users, logged_in_user_profile)
     
     return similar_users
 
-def run_algo(profile_records=[{}], logged_in_user_record=[{}], use_so_filter=bool):
+def run_algo(profile_records: list[dict[str, any]], logged_in_user_record: list[dict[str, any]], use_so_filter: bool):
     # This list will be used to calculate the average similarity between the logged in user
     # and another user that is using the dating app.
     similarity_values = []

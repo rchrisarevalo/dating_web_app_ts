@@ -804,15 +804,26 @@ def check_recommendation_settings():
 def change_recommendation_settings():
     data = request.get_json()
     username = request.cookies.get("username")
+    query = request.args.get('rs')
     
     db = create_connection()
     cursor = db.cursor()
     
     try:
-        params = [data["check_value"], username]
-        statement = "UPDATE Recommendation_Settings SET used=%s WHERE username=%s"
-        cursor.execute(statement, params)
-        db.commit()
+        if query == 'match':
+            params = [data["check_value"], username]
+            statement = "UPDATE Recommendation_Settings SET used=%s WHERE username=%s"
+            cursor.execute(statement, params)
+            db.commit()
+        
+        elif query == 'so_filter':
+            params = [data["check_value"], username]
+            statement = "UPDATE Recommendation_Settings SET use_so_filter=%s WHERE username=%s"
+            cursor.execute(statement, params)
+            db.commit()
+            
+        else:
+            return jsonify({"message": "Invalid query or request."}), 400
         
         return jsonify({"message": data["check_value"]}), 200
     
@@ -2004,7 +2015,8 @@ def match():
         else:
             return [matches[0:request_info["initial_limit"]], False]
         
-    except KeyError:
+    except KeyError as k:
+        print(f"Key error: {k}")
         return jsonify({"message": "Failed to retrieve information from dictionary."}), 500
     
     except Exception as e:
