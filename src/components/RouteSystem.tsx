@@ -123,7 +123,7 @@ export const RoutingSystem = () => {
                             <Route path="/signup" element={<SignUp />} />
                             <Route path="/tos" element={<TOS />} />
                             <Route path="*" element={
-                                (domain_path === "profile" || domain_path === "message" ?
+                                (domain_path === "profile" || domain_path === "message" || domain_path === "user" ?
                                     <Navigate to="/" />
                                     :
                                     <Error404 errorInvoked={true} status_code={status_code} />
