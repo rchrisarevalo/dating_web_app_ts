@@ -12,15 +12,22 @@ interface PrivacySettingsProps {
 export const PrivacySettings = (props: PrivacySettingsProps) => {
     const { username } = props
 
-    const { algo_config } = useFetchAlgoConfig("http://localhost:5000/privacy/check_recommendation_settings")
+    const { algo_config, use_so_filter } = useFetchAlgoConfig("http://localhost:5000/privacy/check_recommendation_settings")
 
     const [displayModal, setDisplayModal] = useState(false)
+    const [displaySOFilterModal, setDisplaySOFilterModal] = useState(false)
     const [check, setCheck] = useState(algo_config)
+    const [SOCheck, setSOCheck] = useState(false)
 
-    const handleOpenRecommendModal = () => setDisplayModal(true);
+    const handleOpenRecommendModal = () => setDisplayModal(true)
     const handleCloseRecommendModal = () => {
         setDisplayModal(false)
         setCheck(algo_config)
+    }
+
+    const handleOpen_SO_Filter_Modal = () => setDisplaySOFilterModal(true)
+    const handleClose_SO_Filter_Modal = () => {
+        setDisplaySOFilterModal(false)
     }
 
     // Function that keeps track of the state of the check variable.
@@ -29,6 +36,14 @@ export const PrivacySettings = (props: PrivacySettingsProps) => {
             setCheck(false)
         } else {
             setCheck(true)
+        }
+    }
+
+    const handle_SO_Filter_Check = () => {
+        if (SOCheck) {
+            setSOCheck(false)
+        } else {
+            setSOCheck(true)
         }
     }
 
@@ -42,7 +57,7 @@ export const PrivacySettings = (props: PrivacySettingsProps) => {
             check_variable = "false"
         }
 
-        fetch('http://localhost:5000/privacy/change_recommendation_settings', {
+        fetch('http://localhost:5000/privacy/change_recommendation_settings?rs=match', {
             method: 'PUT',
             credentials: 'include',
             body: JSON.stringify({
@@ -71,11 +86,49 @@ export const PrivacySettings = (props: PrivacySettingsProps) => {
         setDisplayModal(false)
     }
 
+    const submitSOFilterSetting = async () => {
+        const so_filter_check_box = (document.getElementById("so-filter-check") as HTMLInputElement)
+        let check_value = ""
+
+        if (so_filter_check_box.checked) {
+            check_value = "true"
+        } else {
+            check_value = "false"
+        }
+
+        fetch('http://localhost:5000/privacy/change_recommendation_settings?rs=so_filter', {
+            method: 'PUT',
+            credentials: 'include',
+            body: JSON.stringify({
+                username: username,
+                check_value: check_value
+            }),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json()
+            } else {
+                throw res.status
+            }
+        }).then((data) => {
+            if (data.message === 'true') {
+                setSOCheck(true)
+            } else {
+                setSOCheck(false)
+            }
+        })
+
+        setDisplaySOFilterModal(false)
+    }
+
     // useEffect was used to change the status of the check state variable after
     // running the handleCheck function.
     useEffect(() => {
         setCheck(algo_config)
-    }, [algo_config])
+        setSOCheck(use_so_filter)
+    }, [algo_config, use_so_filter])
 
     return (
         <div className="privacy-settings-container">
@@ -89,6 +142,11 @@ export const PrivacySettings = (props: PrivacySettingsProps) => {
                 <h3>Use Matching Algorithm</h3>
                 <br></br>
                 <i>If you wish, click on this setting to configure if you want users recommended to you based on your interests, city and state residence, etc.</i>
+            </button>
+            <button className="privacy-settings-option" onClick={handleOpen_SO_Filter_Modal}>
+                <h3>Use Sexual Orientation Filter</h3>
+                <br></br>
+                <i>Filter users based on your sexual orientation and gender preference if you wish to do so.</i>
             </button>
             <Link className="privacy-settings-option" to="/profile/options/privacy/download_information">
                 <h3>Download Your Information</h3>
@@ -112,6 +170,19 @@ export const PrivacySettings = (props: PrivacySettingsProps) => {
                 <Modal.Footer>
                     <button onClick={submitRecommendationSetting} style={{border: 'none', background: 'black', color: 'white', padding: '7px 15px', borderRadius: '20px'}}>Confirm</button>
                     <button onClick={handleCloseRecommendModal} style={{border: 'none', background: 'black', color: 'white', padding: '7px 15px', borderRadius: '20px'}}>Cancel</button>
+                </Modal.Footer>
+            </Modal>
+            <Modal show={displaySOFilterModal} onHide={handleClose_SO_Filter_Modal} keyboard={false} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Change sexual orientation filter settings</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {SOCheck ? <input type="checkbox" checked onClick={handle_SO_Filter_Check} id="so-filter-check"></input> : <input type="checkbox" onClick={handle_SO_Filter_Check} id="so-filter-check"></input>}
+                    <label style={{marginRight: '10px', marginLeft: '10px'}}><b>Use sexual orientation filter</b></label>
+                </Modal.Body>
+                <Modal.Footer>
+                    <button onClick={submitSOFilterSetting} style={{border: 'none', background: 'black', color: 'white', padding: '7px 15px', borderRadius: '20px'}}>Confirm</button>
+                    <button onClick={handleClose_SO_Filter_Modal} style={{border: 'none', background: 'black', color: 'white', padding: '7px 15px', borderRadius: '20px'}}>Cancel</button>
                 </Modal.Footer>
             </Modal>
         </div>
