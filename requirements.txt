@@ -10,4 +10,4 @@ gunicorn==21.2.0
 Werkzeug==3.0.1
 PyJWT==2.8.0
 waitress==3.0.0
-pytest==8.0.2
+pytest==8.1.1
