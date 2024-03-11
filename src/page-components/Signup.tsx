@@ -27,7 +27,7 @@ export const SignUp = () => {
         height_inches: "",
         gender: "Female",
         sexual_orientation: "Heterosexual",
-        interested_in: "Men",
+        interested_in: "Males",
         so_filter_choice: "",
         relationship_status: "Single",
         interests: "",
@@ -309,6 +309,7 @@ export const SignUp = () => {
 
                                 <option value="Bisexual">Bisexual</option>
                                 <option value="Pansexual">Pansexual</option>
+                                <option value="Queer">Queer</option>
                                 <option value="Asexual">Asexual</option>
                                 <option value="Deciding">Deciding</option>
                                 <option value="I'd prefer not to say">I'd prefer not to say</option>
@@ -318,11 +319,14 @@ export const SignUp = () => {
                             <label>Interested In</label>
                             <br></br>
                             <select id="interested-in-check" required onChange={(e) => setForm({...form, interested_in: e.target.value})}>
-                                <option value="Men">Men</option>
-                                <option value="Women">Women</option>
-                                <option value="Men and Women">Men and Women</option>
+                                <option value="Males">Males</option>
+                                <option value="Females">Females</option>
+                                <option value="Males, Females">Males, Females</option>
+                                <option value="Enbies">Non-binary</option>
                                 <option value="Anyone">Anyone</option>
                                 <option value="Deciding">Deciding</option>
+                                <option value="Nobody">Nobody</option>
+                                <option value="Multiple gender interests">Multiple gender interests</option>
                                 <option value="I'd prefer not to say">I'd prefer not to say</option>
                             </select>
                             <br></br>
@@ -342,10 +346,10 @@ export const SignUp = () => {
                                 </i>
                             </label>
                             <br></br>
-                            <select id="so-filter-check" required onChange={(e) => setForm({...form, so_filter_choice: (e.target.value === "Yes" ? "True" : "False")})}>
+                            <select id="so-filter-check" required onChange={(e) => setForm({...form, so_filter_choice: e.target.value})}>
                                 <option value="Select">Select</option>
-                                <option value="Yes">Yes</option>
-                                <option value="No">No</option>
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
                             </select>
                         </div>
                         <div className="relationship-status-buttons">
