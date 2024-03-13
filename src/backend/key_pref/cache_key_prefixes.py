@@ -4,8 +4,11 @@ def user_profile_cache():
     # If the current user views another person's profile, then
     # set the cache to allow for the latter's profile to load
     # faster the next time they visit.
-    if request.args.get("u"):
-        return f"{request.cookies.get('user_session')}-{request.args.get('u')}-vwd-profile"
+    data: dict = request.get_json()
+    
+    if "username" in data:
+        other_user_username = data["username"]
+        return f"{request.cookies.get('user_session')}-{other_user_username}-vwd-profile"
     
     # Otherwise, if they are visiting their own profile,
     # set the cache to allow for it to load faster.
