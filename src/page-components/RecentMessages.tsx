@@ -64,6 +64,10 @@ export const RecentMessages = () => {
         })
     }
 
+    useEffect(() => {
+        console.log(pending, error)
+    }, [pending, error])
+
     const handleRatingSubmission = (user_rating_details: Record<string, string>) => {
         handleRating(user_rating_details.rating_type, user_rating_details.username)
     }
