@@ -209,22 +209,45 @@ def determine_account_registration_age(cursor, username, new_birth_month, new_bi
     
 # Function that verifies the user's credentials.
 def user_verified(username=str, password=str, cursor=p.extensions.cursor):
+    # Retrieve the username and password of the current user from the database
+    # to verify the credentials they entered in the login page.
     statement = "SELECT U.username, U.password FROM Users U WHERE U.username=%s"
     params = [username]
     cursor.execute(statement, params)
     
+    # Append the column names into the "keys" list.
     keys = [attr.name for attr in cursor.description]
-    values = [value for value in cursor.fetchall()][0]
-
-    user = {user_key: user_column for user_key, user_column in zip(keys, values)}
     
-    password_verified = bcrypt.check_password_hash(user["password"], password)
-    username_verified = True if user["username"] == username else False
+    # Append the record values into the "values" list.
+    values = [value for value in cursor.fetchall()]
     
-    if username_verified and password_verified:
-        return True
-    else:
+    # If either of the two lists are empty, then return false
+    # to indicate that the record of the user does not exist.
+    if not keys or not values:
         return False
+    
+    # Otherwise...
+    else:
+        # Update the "values" variable by accessing the record of the user
+        # from the same list stored in the "values" variable.
+        values = values[0]
+
+        # Store the user's information in a dictionary using dictionary comprehension
+        # to easily access their username and password when verifying their
+        # credentials.
+        user = {user_key: user_column for user_key, user_column in zip(keys, values)}
+        
+        # Verify credentials.
+        password_verified = bcrypt.check_password_hash(user["password"], password)
+        username_verified = True if user["username"] == username else False
+        
+        # If both the username and password are verified, return True.
+        if username_verified and password_verified:
+            return True
+        
+        # Otherwise, return False.
+        else:
+            return False
     
     
 # Function that retrieves user's profile picture.
@@ -313,7 +336,6 @@ async def login():
         return {"error": "The token that was generated was invalid"}, 498
     
     except Exception as e:
-        print("Exception:", e)
         return {"error": "Exception thrown"}, 500
     
     finally:
@@ -433,24 +455,32 @@ def profile():
         U.birth_year, P2.uri FROM Profiles P, Users U, Photos P2 
         WHERE P.username=%s AND P.username=U.username AND P.username=P2.username
     '''
-
-    username = request.args.get("u")
-
-    # If the username has not been provided in the query, store the 
-    # cookie value of the query from the request made in the client 
-    # in the 'username' variable.
-    if username == None:
+    
+    data: dict = request.get_json()
+    username: str = ""
+    
+    # If the provided username in the JSON body request
+    # from the client is not present, then use the
+    # current user's username (if and only if the
+    # request is associated with said current user).
+    if "username" not in data:
         username = request.cookies.get("username")
         
-    db = create_connection()
-    cursor = db.cursor()
+    # However, if it does when retrieving the profile details of
+    # another user, store their username from the JSON body
+    # request into the username variable.
+    else:
+        username = data["username"]
+        
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
-    params = [username]
+    params: list = [username]
     
     try:
         cursor.execute(statement, params)
         
-        profile_info = []
+        profile_info: list[dict[str, any]] = [{}]
         
         try:
             profile_info = [
@@ -482,6 +512,9 @@ def profile():
     
     except db.DatabaseError as e:
         return jsonify({"message": "Failed to retrieve profile information!"}), 500
+    
+    except Exception as e:
+        return jsonify({"message": "A server error happened. Please try again."}), 500
     
     finally:
         terminate_connection(db)
@@ -531,13 +564,13 @@ def update_profile_pic():
             # Clear the cache.
             cache.clear()
 
-            return redirect("http://localhost:3000/profile/options#update")
+            return redirect("http://localhost:5173/profile/options/update")
 
         except RequestEntityTooLarge:
-            return redirect(location="http://localhost:3000/profile/options/", Response={"status": "You can only upload an image that is 1 MB or less."})
+            return redirect(location="http://localhost:5173/profile/options/update", Response={"status": "You can only upload an image that is 1 MB or less."})
     
     except Exception as e:
-        return redirect(location="http://localhost:3000/profile/options/")
+        return redirect(location="http://localhost:5173/profile/options/update")
     
     finally:
         terminate_connection(db)
@@ -652,15 +685,15 @@ def update_username():
 @server.route("/update_profile/height", methods=["PUT"])
 @check_token
 def update_height():
-    data = request.get_json()
-    db = create_connection()
-    cursor = db.cursor()
+    data: dict = request.get_json()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
-    new_height = int(str(data["new_height_feet"])) + "'" + int(str(data["new_height_inches"])) + "''"
+    new_height: str = data["new_height_feet"] + "'" + data["new_height_inches"] + "''"
     
     try:
-        statement = "UPDATE Profiles SET height=%s WHERE username=%s"
-        params = [new_height, request.cookies.get("username")]
+        statement: str = "UPDATE Profiles SET height=%s WHERE username=%s"
+        params: list = [new_height, request.cookies.get("username")]
         cursor.execute(statement, params)
         db.commit()
         
@@ -1407,8 +1440,8 @@ def check_messaged_users():
 @server.route("/retrieve_messages", methods=["POST"])
 @check_token
 def retrieve_messages():
-    db = create_connection()
-    cursor = db.cursor()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     data = request.get_json()
     sender = request.cookies.get("username")
     
@@ -1659,22 +1692,41 @@ def update_password():
 @server.route("/delete_account", methods=["POST"])
 @check_token
 def delete_account():
-    username = request.cookies.get("username")
-    db = create_connection()
-    cursor = db.cursor()
+    # Retrieve username from cookie.
+    username: str = request.cookies.get("username")
+
+    # Stores inputted password from client.
+    data: dict = request.get_json()
+    
+    # Initialize the database connection and cursor.
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     try:
-        statement = "DELETE FROM Users WHERE username=%s"
-        params = [username]
+        # Verify password before proceeding with actual account deletion.
+        statement: str = "SELECT password FROM Users WHERE username=%s"
+        params: list = [username]
         cursor.execute(statement, params)
-        db.commit()
         
-        session_cookie = make_response({"message": "Session terminated."})
+        retrieved_password = [db_pwd[0] for db_pwd in cursor.fetchall()][0]
         
-        session_cookie.set_cookie('user_session', value="", max_age=0, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
-        session_cookie.set_cookie('username', value="", max_age=0, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
+        password_verified: bool = bcrypt.check_password_hash(retrieved_password, data["password"])
         
-        return session_cookie
+        if password_verified:
+            statement: str = "DELETE FROM Users WHERE username=%s"
+            params: list = [username]
+            cursor.execute(statement, params)
+            db.commit()
+            
+            session_cookie = make_response({"message": "Session terminated."})
+            
+            session_cookie.set_cookie('user_session', value="", max_age=0, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
+            session_cookie.set_cookie('username', value="", max_age=0, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
+        
+            return session_cookie
+
+        else:
+            return jsonify({"message": "Incorrect password!"}), 401
     
     except db.DatabaseError:
         return jsonify({"message": "Failed to delete account!"}), 500

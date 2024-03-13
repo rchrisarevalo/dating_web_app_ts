@@ -69,6 +69,7 @@ export const Update = (props: UpdateProps) => {
         fetch("http://localhost:5000/profile", {
             method: 'POST',
             credentials: 'include',
+            body: JSON.stringify({}),
             headers: {
                 'Content-Type': 'application/json'
             }
@@ -214,6 +215,7 @@ export const Update = (props: UpdateProps) => {
             }).catch((error) => {
                 console.log(error)
                 setError(true)
+                window.location.reload()
             })
             setDOBChange(false)
         } else {
@@ -642,7 +644,10 @@ export const Update = (props: UpdateProps) => {
                                 <br></br>
                                 <br></br>
                                 <b>Bio</b>
-                                <p>{`${profile.bio}`}</p>
+                                {/* Split the bio into paragraphs in case the user decided to write it in that manner. */}
+                                {profile.bio.split("\n").map((b, par_i) =>
+                                    <p key={`paragraph-${par_i}`}>{`${b}`}</p>
+                                )}
                                 {change ?
                                     <div className="change-inputs">
                                         <textarea id="bio-change" rows={10} cols={40} value={handleBioText} onChange={handle_bio_text}></textarea>

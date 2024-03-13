@@ -21,6 +21,10 @@ export const Message = (props: MessageProps) => {
     const [submit, setSubmit] = useState(false)
     const [charLimit, setCharLimit] = useState(0)
     const [connection] = useState(socket_conn)
+    const [messageLog, setMessageLog] = useState([{
+        message_from: "",
+        message: ""
+    }])
 
     const retrieve_receive_user_from_path = currentRoute.pathname.split("/message/")[1]
 
@@ -38,14 +42,21 @@ export const Message = (props: MessageProps) => {
         }
     }, [error, pending])
 
+    // Scroll to bottom of page if message is submitted.
+    useEffect(() => {
+        if (submit) {
+            setTimeout(() => {
+                window.scrollTo(0, document.body.scrollHeight)
+            }, 1000)
+        }
+    }, [submit])
+
     // Update list of messages for recipient.
     useEffect(() => {
         if (connection.active) {
             // After the server emits the updated list, then
             // update it on the recipient's end.
             connection.on('recipient-message', () => {
-                console.log("Received something!")
-
                 setSubmit(true)
 
                 // If the recipient happens to be in the same browser
@@ -90,6 +101,13 @@ export const Message = (props: MessageProps) => {
         connection,
         retrieve_receive_user_from_path])
 
+    // Store messages in list.
+    useEffect(() => {
+        if (!error && !pending) {
+            setMessageLog(messages)
+        }
+    }, [messages, error, pending])    
+
     //                    MESSAGE HANDLING SECTION                    //
     // =============================================================  //
     const handleSubmitMessage = () => {
@@ -128,7 +146,7 @@ export const Message = (props: MessageProps) => {
             connection.emit('update-notification-counter', retrieve_receive_user_from_path)
 
             // Send updated message list to server so that client can receive it.
-            connection.emit('sender-message', messages, retrieve_receive_user_from_path)
+            connection.emit('sender-message', messageLog, retrieve_receive_user_from_path)
 
             // Clear the message after the user has submitted it.
             setCurrentMsg("")
@@ -139,10 +157,9 @@ export const Message = (props: MessageProps) => {
             setTimeout(() => {
                 // Scroll to the bottom after logged in user
                 // sends message.
-                console.log("Scrolling!")
                 window.scrollTo(0, document.body.scrollHeight)
                 setSubmit(false)
-            }, 100)
+            }, 1000)
         })
     }
 
@@ -196,9 +213,28 @@ export const Message = (props: MessageProps) => {
                                     <>
                                         {!error ?
                                             <>
-                                                {messages.length !== 0 ?
+                                                {(messageLog.length !== 0) ?
                                                     <>
-                                                        {messages}
+                                                        {messageLog.map(msg =>
+                                                            <div className="chat-message">
+                                                                {msg.message_from === username &&
+                                                                    <div className="chat-box">
+                                                                        <p id="sender-username">{`${username}`}</p>
+                                                                        <div className="sender-text">
+                                                                            <p>{msg.message}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                }
+                                                                {msg.message_from === retrieve_receive_user_from_path &&
+                                                                    <div className="chat-box">
+                                                                        <p id="recipient-username">{`${retrieve_receive_user_from_path}`}</p>
+                                                                        <div className="recipient-text">
+                                                                            <p>{msg.message}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                }
+                                                            </div>
+                                                        )}
                                                         {sender_is_typing &&
                                                             <div className="chat-message" style={{ position: 'relative' }}>
                                                                 <div className="chat-box">
@@ -241,6 +277,7 @@ export const Message = (props: MessageProps) => {
                                         <br></br>
                                         <button onSubmit={() => handleSubmitMessage} id="message-submit"><IoSendSharp /></button>
                                     </div>
+                                    {displayCharLimit === true && <span id="char-msg-limit">{`${charLimit}/200`}</span>}
                                 </form>
                             </div>
                         </footer>
@@ -274,9 +311,9 @@ export const Message = (props: MessageProps) => {
                                     <>
                                         {!error ?
                                             <>
-                                                {(!pending && messages.length !== 0) ?
+                                                {(!pending && messageLog.length !== 0) ?
                                                     <>
-                                                        {messages.map(msg =>
+                                                        {messageLog.map(msg =>
                                                             <div className="chat-message">
                                                                 {msg.message_from === username &&
                                                                     <div className="chat-box">

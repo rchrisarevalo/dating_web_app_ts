@@ -26,6 +26,7 @@ export const Profile = () => {
         fetch("http://localhost:5000/profile", {
             method: 'POST',
             credentials: 'include',
+            body: JSON.stringify({}),
             headers: {
                 'Content-Type': 'application/json'
             }

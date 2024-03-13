@@ -5,12 +5,14 @@ import { socket_conn } from '../functions/SocketConn';
 export const useNotificationUpdate = (currentUser: string, connection: typeof socket_conn) => {
 
     const [notificationCounter, setNotificationCounter] = useState(0)
+    const [error, setError] = useState(false)
+    const [pending, setPending] = useState(true)
 
     const path = useLocation()
 
     // Load current user's notification count in initial load.
     useEffect(() => {
-        if (!currentUser) {
+        if (currentUser) {
             fetch(`http://localhost:5000/retrieve_notification_count?username=${currentUser}`, {
                 method: 'POST',
                 credentials: 'include',
@@ -20,10 +22,16 @@ export const useNotificationUpdate = (currentUser: string, connection: typeof so
             }).then((res) => {
                 if (res.ok) {
                     return res.json()
+                } else {
+                    throw res.status
                 }
             }).then((data) => {
+                setPending(false)
+                setError(false)
                 setNotificationCounter(data.notification_counter)
             }).catch((error) => {
+                setPending(false)
+                setError(true)
                 console.log(error)
             })
         }
@@ -116,5 +124,5 @@ export const useNotificationUpdate = (currentUser: string, connection: typeof so
         }
     }, [connection, path, currentUser])
 
-    return { notification_counter: notificationCounter }
+    return { notification_counter: notificationCounter, notification_error: error, notification_pending: pending }
 }

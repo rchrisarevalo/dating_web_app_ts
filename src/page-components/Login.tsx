@@ -117,8 +117,8 @@ export const Login = () => {
                         <Link to="/signup">Sign Up</Link>
                     </div>
                 </form>
-                <Footer />
             </div>
+            <Footer />
             <Modal show={displayModal} onHide={handleClose} keyboard={false} backdrop="static" centered>
                 {authenticated ?
                     <>

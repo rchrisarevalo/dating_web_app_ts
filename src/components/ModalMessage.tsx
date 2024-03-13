@@ -1,5 +1,3 @@
-import { useState } from 'react'
-
 // Will use the Modal component from React Bootstrap,
 // which is licensed under the MIT License.
 //
@@ -9,17 +7,15 @@ import Modal from 'react-bootstrap/Modal'
 
 interface ModalMessageProps {
     children: React.ReactNode
+    displayModal: boolean,
+    setDisplayModal: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 export const ModalMessage = (props: ModalMessageProps) => {
-    const { children } = props
-
-    const [displayModal, setDisplayModal] = useState(false)
-
-    const closeModal = () => setDisplayModal(false)
+    const { children, displayModal, setDisplayModal } = props
 
     return (
-        <Modal show={displayModal} onHide={closeModal}>
+        <Modal show={displayModal} onHide={() => setDisplayModal(false)} keyboard={false} backdrop="static" centered>
             { children }
         </Modal>
     )

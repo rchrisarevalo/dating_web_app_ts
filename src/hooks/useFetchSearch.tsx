@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { CalculateBirthday } from "../functions/CalculateBirthday";
-import { MatchProfiles } from "../types/searchProfiles";
+import { MatchProfiles } from "../types/types.config";
 
 export const useFetchAlgoConfig = (endpoint: string) => {
     const [algoConfig, setAlgoConfig] = useState(false)

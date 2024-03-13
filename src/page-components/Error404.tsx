@@ -43,10 +43,11 @@ export const Error404 = (props: Error404Props) => {
                         </div>
                     </div>
                     :
-                    <div className="error-container">
+                    <div className="error-container" style={{position: 'fixed'}}>
                         <div className="error-message">
                             <h1><b style={{fontWeight: '1000'}}>Uh oh! It appears that your account has been suspended for violating our Terms of Service.</b></h1>
-                            <p>If you believe that our decision was wrong, please feel free to submit an appeal. Just kidding, we do <b>NOT</b> have an appeals process.</p>
+                            <p>If you believe that our decision was wrong, please feel free to submit an appeal. Unfortunately, we do <b>not</b> have an appeals process yet.</p>
+                            <p>Stay tuned for an update on when the appeals process is available as the app is currently in development.</p>
                             <button style={{borderRadius: '25px', padding: '7px 30px', marginTop: '30px', marginBottom: '30px', border: 'none', fontWeight: '1000', textTransform: 'uppercase'}} onClick={handleLogout}>
                                 Sign Out
                             </button>

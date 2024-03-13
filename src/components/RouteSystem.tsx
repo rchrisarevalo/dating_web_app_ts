@@ -81,7 +81,7 @@ export const RoutingSystem = () => {
         }, [connection])
 
         // Fetch user's current notification counter.
-        const { notification_counter } = useNotificationUpdate(username, connection)
+        const { notification_counter, notification_error, notification_pending } = useNotificationUpdate(username, connection)
         
         // This section is executed when the user navigates another page through
         // their browser's search bar or if they are opening their browser while
@@ -92,7 +92,7 @@ export const RoutingSystem = () => {
         return (
             <>
                 { (path !== "/tos" && domain_path !== "message" && domain_path !== "user") ?
-                    <Nav username={username} notificationCounter={notification_counter} />
+                    <Nav username={username} notificationCounter={notification_counter} error={notification_error} pending={notification_pending} />
                     :
                     <></>
                 }

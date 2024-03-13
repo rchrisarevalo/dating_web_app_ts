@@ -7,3 +7,8 @@ export type MatchProfiles = {
     uri: "",
     username: ""
 }
+
+export type ConfirmPwd = {
+    password: string,
+    confirm_password: string
+}

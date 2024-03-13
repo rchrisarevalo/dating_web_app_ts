@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Loading } from './Loading'
 import { insertSearchTerm } from '../functions/searchHistoryFunctions'
 
-import { MatchProfiles } from '../types/searchProfiles'
+import { MatchProfiles } from '../types/types.config'
 
 interface FilteredSearchResultsProps {
     search_term: string,

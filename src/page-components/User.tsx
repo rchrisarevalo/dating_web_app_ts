@@ -40,7 +40,7 @@ export const User = (props: UserProps) => {
     // useEffect hook will use the user's username to retrieve basic
     // profile information, such as their name, bio, age, etc.
     useEffect(() => {
-        fetch(`http://localhost:5000/profile?u=${retrieve_username_from_path}`, {
+        fetch(`http://localhost:5000/profile`, {
             method: 'POST',
             credentials: 'include',
             body: JSON.stringify({

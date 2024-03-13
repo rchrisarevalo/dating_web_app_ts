@@ -3,7 +3,11 @@ import { Link } from 'react-router-dom';
 import { CalculateBirthday } from '../functions/CalculateBirthday';
 import { listStatesTerritories } from '../functions/listStatesTerritories';
 
-import logo from '../images/logo.png'
+import logo from '../images/logo.png';
+
+import { Footer } from '../components/Footer';
+import { ModalMessage } from '../components/ModalMessage';
+import Modal from 'react-bootstrap/Modal';
 
 export const SignUp = () => {
     const [signUpStatusMsg, setSignUpStatusMsg] = useState("")
@@ -36,6 +40,10 @@ export const SignUp = () => {
         checkmarked: false
     })
 
+    const [displayModal, setDisplayModal] = useState(false)
+    const [successModal, setDisplaySuccessModal] = useState(false)
+    const [failModal, setDisplayFailModal] = useState(false)
+
     const handleDOB = () => {
         const dob = (document.getElementById("date-of-birth") as HTMLInputElement).value
 
@@ -62,9 +70,6 @@ export const SignUp = () => {
                 birth_year: dob.split("-")[0], 
                 age: CalculateBirthday(month_name_object[dob.split("-")[1]], parseInt(dob.split("-")[2]), parseInt(dob.split("-")[0]))
             })
-            setSignUpStatusMsg("")
-        } else {
-            setSignUpStatusMsg(`You cannot set your date of birth past the year ${new Date().getFullYear()}.`)
         }
     }
 
@@ -80,10 +85,17 @@ export const SignUp = () => {
         }
     }
 
+    const handleAgreement = () => {
+        if (!displayModal) {
+            setDisplayModal(true)
+        }
+    }
+
     const handleSignUp = () => {
-        console.log("Hi there!")
         if (form.checkmarked) {
+            setDisplayModal(false)
             if (isUnderage(form.age, form.state)) {
+                setDisplayFailModal(true)
                 if (form.state === "Alabama" || form.state === "Nebraska") {
                     setSignUpStatusMsg(`You must be 19 or older in the state of ${form.state} to register for an account.`)
                 } else if (form.state === "Mississippi") {
@@ -111,8 +123,10 @@ export const SignUp = () => {
                     }
                 }).then((data) => {
                     if (data.message === "Failed!") {
+                        setDisplayFailModal(true)
                         setSignUpStatusMsg("This username has been taken!")
                     } else {
+                        setDisplaySuccessModal(true)
                         setSignUpStatusMsg("Sign up successful!")
 
                         fetch("http://localhost:5000/login", {
@@ -140,6 +154,7 @@ export const SignUp = () => {
                 })
             }
         } else {
+            setDisplayFailModal(true)
             setSignUpStatusMsg("Click on the check mark if you want to register for an account.")
         }
     }
@@ -206,7 +221,7 @@ export const SignUp = () => {
                         If you have any questions, please feel free to refer to the <b>Terms of Service</b> or the <b>Privacy Policy</b>.
                     </i>
                 </h5>
-                <form onSubmit={(e) => {e.preventDefault(); handleSignUp()}}>
+                <form onSubmit={(e) => {e.preventDefault(); handleAgreement()}}>
                     <div className="form-wrapper">
                         <label>First Name</label>
                         <br></br>
@@ -377,20 +392,52 @@ export const SignUp = () => {
                         {uploadedPic !== "" ? <img src={`data:image/png;base64,${uploadedPic}`} alt="uploaded-pic" id="uploaded-pic"></img> : <></>}
                         <br></br>
                         <input type="file" required id="upload-pic-input" onChange={handleImage} name="pic"/>
-                        <div className="agreement">
-                            <input type="checkbox" required id="checkmark-agreement" onChange={(e) => {setForm({...form, checkmarked: e.target.checked})}} />
-                            <p id="agreement-age-statement">By clicking this checkmark, you agree that you are 18 years or older to use this Service.</p>
-                        </div>
-                        <div className="signup-page-button">
+                        <div className="signup-page-button" id="signup-button">
                             <Link to="/">Back</Link>
                             <button onClick={() => handleSignUp}>Sign Up</button>
                         </div>
                     </div>
                 </form>
-                <div className="signup-status">
-                    <p>{`${signUpStatusMsg}`}</p>
-                </div>
+                <ModalMessage displayModal={displayModal} setDisplayModal={setDisplayModal}>
+                    <Modal.Header closeButton>
+                        <Modal.Title>Agreement</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                        By clicking the checkmark below, you agree that you are <b>18 years or older</b> -- <b>19 if you reside in Nebraska or Alabama, or 21 if you reside in Mississippi</b> --
+                        to use the Service.
+                    </Modal.Body>
+                    <Modal.Body>
+                        Failure to provide valid information and subsequent discovery of said invalid information will result in your account 
+                        being <b>permanently terminated</b> to protect the safety of our users and to maintain the integrity of the Service.
+                    </Modal.Body>
+                    <Modal.Body>
+                        <input type="checkbox" required id="checkmark-agreement" onChange={(e) => {setForm({...form, checkmarked: e.target.checked})}} /><i style={{marginLeft: '10px'}}>By clicking this checkmark, you agree with the above.</i>
+                    </Modal.Body>
+                    <Modal.Footer>
+                        {form.checkmarked ? 
+                            <button onClick={() => handleSignUp()} style={{border: 'none', background: 'black', color: 'white', padding: '7px 15px', borderRadius: '20px'}}>Confirm</button> 
+                            : 
+                            <button style={{border: 'none', background: 'black', color: 'white', padding: '7px 15px', borderRadius: '20px'}} disabled>Confirm</button>}
+                    </Modal.Footer>
+                </ModalMessage>
+                <ModalMessage displayModal={successModal} setDisplayModal={setDisplayModal}>
+                    <Modal.Header>
+                        <Modal.Title>Sign up successful!</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                        You successfully signed up for an account! Redirecting you to your profile page...
+                    </Modal.Body>
+                </ModalMessage>
+                <ModalMessage displayModal={failModal} setDisplayModal={setDisplayModal}>
+                    <Modal.Header closeButton>
+                        <Modal.Title>Sign up failed!</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                        {signUpStatusMsg}
+                    </Modal.Body>
+                </ModalMessage>
             </div>
+            <Footer />
         </div>
     )
 }

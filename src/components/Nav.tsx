@@ -10,7 +10,9 @@ import MediaQuery from "react-responsive";
 // Interface containing navigation bar props.
 interface NavProps {
     username: string,
-    notificationCounter: number
+    notificationCounter: number,
+    error: boolean,
+    pending: boolean
 }
 
 interface UserNavProps {
@@ -20,7 +22,7 @@ interface UserNavProps {
 }
 
 export const Nav = (props: NavProps) => {
-    const { username, notificationCounter } = props
+    const { username, notificationCounter, error, pending } = props
 
     const path = useLocation()
 
@@ -59,7 +61,7 @@ export const Nav = (props: NavProps) => {
                     </div>
                     <div id="profile-nav-col">
                         <Link to={`/profile/options/`}><IoSettingsOutline size={20} style={{ marginBottom: 2 }} /></Link>
-                        <Link to={`/profile/recent_messages`}><NotificationCounter counter={notificationCounter} /><IoChatboxEllipsesOutline size={20} /></Link>
+                        <Link to={`/profile/recent_messages`}><NotificationCounter counter={notificationCounter} pending={pending} error={error} /><IoChatboxEllipsesOutline size={20} /></Link>
                         <Link to={`/profile/search`}><IoSearchOutline size={20} style={{ marginBottom: 2 }} /></Link>
                     </div>
                     <div id="profile-nav-col">
@@ -76,7 +78,7 @@ export const Nav = (props: NavProps) => {
                         */
                     }
                     <li><Link to={`/profile/options`}><IoSettingsOutline size={30} />Settings</Link></li>
-                    <li><Link to={"/profile/recent_messages"}><NotificationCounter counter={notificationCounter} /><IoChatboxEllipsesOutline size={30} />Messages</Link></li>
+                    <li><Link to={"/profile/recent_messages"}><NotificationCounter counter={notificationCounter} error={error} pending={pending} /><IoChatboxEllipsesOutline size={30} />Messages</Link></li>
                     <li><Link to={`/profile/search`}><IoSearchOutline size={30} />Search</Link></li>
                     {((path.pathname !== '/profile') && (path.pathname !== '/profile/')) ?
                         <li><Link to={`/profile`}><ProfilePicture /></Link></li>
