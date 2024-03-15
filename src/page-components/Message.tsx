@@ -219,7 +219,7 @@ export const Message = (props: MessageProps) => {
                                                             <div className="chat-message">
                                                                 {msg.message_from === username &&
                                                                     <div className="chat-box">
-                                                                        <p id="sender-username">{`${username}`}</p>
+                                                                        <p id="sender-username">{`You`}</p>
                                                                         <div className="sender-text">
                                                                             <p>{msg.message}</p>
                                                                         </div>
@@ -227,7 +227,7 @@ export const Message = (props: MessageProps) => {
                                                                 }
                                                                 {msg.message_from === retrieve_receive_user_from_path &&
                                                                     <div className="chat-box">
-                                                                        <p id="recipient-username">{`${retrieve_receive_user_from_path}`}</p>
+                                                                        <p id="recipient-username">{`${receiver_name}`}</p>
                                                                         <div className="recipient-text">
                                                                             <p>{msg.message}</p>
                                                                         </div>
@@ -317,7 +317,7 @@ export const Message = (props: MessageProps) => {
                                                             <div className="chat-message">
                                                                 {msg.message_from === username &&
                                                                     <div className="chat-box">
-                                                                        <p id="sender-username">{`${username}`}</p>
+                                                                        <p id="sender-username">{'You'}</p>
                                                                         <div className="sender-text">
                                                                             <p>{msg.message}</p>
                                                                         </div>
@@ -325,7 +325,7 @@ export const Message = (props: MessageProps) => {
                                                                 }
                                                                 {msg.message_from === retrieve_receive_user_from_path &&
                                                                     <div className="chat-box">
-                                                                        <p id="recipient-username">{`${retrieve_receive_user_from_path}`}</p>
+                                                                        <p id="recipient-username">{`${receiver_name}`}</p>
                                                                         <div className="recipient-text">
                                                                             <p>{msg.message}</p>
                                                                         </div>

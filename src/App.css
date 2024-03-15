@@ -1671,8 +1671,8 @@ hr {
   padding: 2vh 3vh;
   padding-bottom: 2px;
   margin-right: auto;
-  border-radius: 50px;
-  width: 50%;
+  border-radius: 1.5vh;
+  width: 45%;
   background-color: rgb(158, 53, 172);
   box-shadow: 0 0 7px black;
 }
@@ -1681,8 +1681,8 @@ hr {
   padding: 2vh 3vh;
   padding-bottom: 2px;
   margin-left: auto;
-  border-radius: 50px;
-  width: 50%;
+  border-radius: 1.5vh;
+  width: 45%;
   background-color: rgb(73, 42, 197);
   box-shadow: 0 0 7px black;
 }
