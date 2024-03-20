@@ -1,11 +1,12 @@
-from flask import Flask, request, redirect, make_response, jsonify, send_file, render_template
+from flask import Flask, request, redirect, make_response, jsonify, send_file
 from functools import wraps
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from flask_caching import Cache
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import RequestEntityTooLarge
-from waitress import serve
 import psycopg2 as p
 import base64
 from dotenv import load_dotenv
@@ -19,9 +20,10 @@ from rating_sys import (calculate_rating,
                         update_rating, 
                         delete_rating, 
                         insert_rating)
-
-from key_pref.cache_key_prefixes import (user_profile_cache, search_results_cache, 
-                                         match_algo_cache, user_profiles_cache_key,
+from key_pref.cache_key_prefixes import (user_profile_cache, 
+                                         search_results_cache, 
+                                         match_algo_cache, 
+                                         user_profiles_cache_key,
                                          logged_in_user_profile_cache_key)
 
 PATH = 'secret.env'
@@ -30,7 +32,7 @@ server = Flask(__name__)
 server.config["MAX_CONTENT_LENGTH"] = 1 * 1000 * 1000
 server.config["SECRET_KEY"] = os.urandom(100).hex()
 server.config["CACHE_TYPE"] = 'redis'
-CORS(server, supports_credentials=True, origins=["http://localhost:3000", "http://localhost:5173"], max_age=dt.timedelta(hours=1).seconds)
+CORS(server, supports_credentials=True, origins=["http://localhost:5173"], max_age=dt.timedelta(hours=1).seconds)
 
 # Load the .env file from the path specified above.
 load_dotenv(PATH)
@@ -42,17 +44,23 @@ DB_KEY=os.getenv('DB_KEY') if os.getenv("SK_KEY") else os.environ["SK_KEY"]
 bcrypt = Bcrypt(server)
 
 cache = Cache(server, config={'CACHE_TYPE': 'SimpleCache'})
+limit = Limiter(
+    key_func=get_remote_address,
+    app=server,
+    default_limits=["500 per day"],
+    storage_uri="memory://"
+)
 
 def create_connection() -> p.extensions.connection:
     try:
-        db = p.connect(DB_KEY)
+        db: p.extensions.connection = p.connect(DB_KEY)
         
         return db
     
     except p.DatabaseError as e:
         return "error"
 
-def terminate_connection(db=p.extensions.connection):
+def terminate_connection(db: p.extensions.connection):
     db.close()
 
 # Custom wrapper to check the validation of a token.
@@ -274,7 +282,49 @@ def using_so_filter(username=str, cursor=p.extensions.cursor):
         return True
     else:
         return False
+
+# Function that checks if a record already exists in the database
+# of the current user visiting the specific profile they are
+# searching.
+def retrieve_visitor_record(username: str, visiting_user_username: str, cursor: p.extensions.cursor) -> bool:
+    # Retrieve the record containing the current user's username 
+    # and the username of the user the former is visiting.
+    statement = "SELECT visitor, visitee FROM Visits WHERE visitor=%s AND visitee=%s"
+    params = [username, visiting_user_username]
+    cursor.execute(statement, params)
     
+    # Store the record in a list.
+    record = [record[0] for record in cursor.fetchall()]
+    
+    # If the visitor/visitee record is not empty, then log the visit
+    # with the existing record.
+    if record:
+        return True
+    
+    # Otherwise, create a new log.
+    else:
+        return False
+
+# Function that updates the visit count of the current user to a specific profile,
+# regardless of whether they have visited it or not.
+def log_visit(username: str, visiting_user_username: str, db: p.extensions.connection, cursor: p.extensions.cursor):  
+    # If a record already exists, then update the count of the number of times
+    # the current user has visited that specific profile.
+    if retrieve_visitor_record(username, visiting_user_username, cursor):
+        statement = "CALL update_profile_visit(%s, %s, %s)"
+        params = [username, visiting_user_username, "now()"]
+        cursor.execute(statement, params)
+        db.commit()
+        
+    # Otherwise, create a log so that the visit count can be updated
+    # in the future each time the current user visits the same
+    # profile.
+    else:
+        statement = "CALL create_visitor_log(%s, %s, %s)"
+        params = [username, visiting_user_username, "now()"]
+        cursor.execute(statement, params)
+        db.commit()    
+        
 
 @server.route("/", methods=["GET"])
 async def index():
@@ -300,8 +350,8 @@ async def login():
     # Handle exceptions in case a malicious actor attempts to make
     # unauthorized requests to any of the endpoints below.
     try:
-        db = create_connection()
-        cursor = db.cursor()
+        db: p.extensions.connection = create_connection()
+        cursor: p.extensions.cursor = db.cursor()
         verified_user = user_verified(data["username"], data["password"], cursor)
         
         if verified_user:
@@ -363,9 +413,9 @@ async def logout():
 
 @server.route("/signup", methods=["POST"])
 async def signup():
-    data = request.get_json()
-    db = create_connection()
-    cursor = db.cursor()
+    data: dict = request.get_json()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     hash_password = bcrypt.generate_password_hash(data["password"], 10).decode('utf-8')
     
@@ -413,8 +463,8 @@ def check_login():
     username_cookie = request.cookies.get("username")
     
     try:
-        db = create_connection()
-        cursor = db.cursor()
+        db: p.extensions.connection = create_connection()
+        cursor: p.extensions.cursor = db.cursor()
         
         statement = "SELECT username FROM Banned WHERE username=%s"
         params = [username_cookie]
@@ -439,6 +489,30 @@ def check_login():
         
     except Exception as e:
         print(e)
+        return jsonify({"message": "Server error. Please try again."}), 500
+    
+    finally:
+        db.close()
+        
+    
+@server.route("/visit", methods=["POST"])
+@check_token
+@limit.limit("1/5 minutes", key_func=lambda: (request.cookies.get("username"), request.get_json()["visiting_user"]))
+def visit():
+    data: dict = request.get_json()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
+    current_user: str = request.cookies.get("username")
+    
+    try:
+        log_visit(current_user, data["visiting_user"], db, cursor)
+        
+        return jsonify({"message": "Successfully counted visit!"}), 200
+    
+    except db.DatabaseError:
+        return jsonify({"message": "There was an error logging the profile visit. Please try again."}), 500
+    
+    except Exception:
         return jsonify({"message": "Server error. Please try again."}), 500
     
     finally:
@@ -539,8 +613,8 @@ def retrieve_pic():
 @server.route("/update_profile_pic", methods=["POST", "GET"])
 @check_token
 def update_profile_pic():
-    db = create_connection()
-    cursor = db.cursor()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     try:
         try:
             # The name within the bracket of the .files and .form functions
@@ -579,9 +653,9 @@ def update_profile_pic():
 @server.route("/update_profile/name", methods=["PUT"])
 @check_token
 def update_name():
-    data = request.get_json()
-    db = create_connection()
-    cursor = db.cursor()
+    data: dict = request.get_json()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     try:
         # Update first, middle name, and last name of user where possible in the Users table.
@@ -615,9 +689,9 @@ def update_name():
 @server.route("/update_profile/DOB", methods=["PUT"])
 @check_token
 def update_DOB():
-    data = request.get_json()
-    db = create_connection()
-    cursor = db.cursor()
+    data: dict = request.get_json()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     try:
         # Check if the user was lying about their DOB when they originally registered for an account.
@@ -656,9 +730,9 @@ def update_DOB():
 @server.route("/update_profile/username", methods=["PUT"])
 @check_token
 def update_username():
-    data = request.get_json()
-    db = create_connection()
-    cursor = db.cursor()
+    data: dict = request.get_json()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     try:
         statement = "UPDATE Users SET username=%s WHERE username=%s"
@@ -712,9 +786,9 @@ def update_height():
 @server.route("/update_profile/gender", methods=["PUT"])
 @check_token
 def update_gender():
-    data = request.get_json()
-    db = create_connection()
-    cursor = db.cursor()
+    data: dict = request.get_json()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     try:
         statement = "UPDATE Profiles SET gender=%s WHERE username=%s"
@@ -737,9 +811,9 @@ def update_gender():
 @server.route("/update_profile/sexual_orientation", methods=["PUT"])
 @check_token
 def update_sexual_orientation():
-    data = request.get_json()
-    db = create_connection()
-    cursor = db.cursor()
+    data: dict = request.get_json()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     try:
         statement = "UPDATE Profiles SET sexual_orientation=%s WHERE username=%s"
@@ -762,9 +836,9 @@ def update_sexual_orientation():
 @server.route("/update_profile/relationship_status", methods=["PUT"])
 @check_token
 def update_relationship_status():
-    data = request.get_json()
-    db = create_connection()
-    cursor = db.cursor()
+    data: dict = request.get_json()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     try:
         statement = "UPDATE Profiles SET relationship_status=%s WHERE username=%s"
@@ -787,9 +861,9 @@ def update_relationship_status():
 @server.route("/update_profile/bio", methods=["PUT"])
 @check_token
 def update_bio():
-    data = request.get_json()
-    db = create_connection()
-    cursor = db.cursor()
+    data: dict = request.get_json()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     try:
         statement = "UPDATE Profiles SET interests=%s WHERE username=%s"
@@ -813,8 +887,8 @@ def update_bio():
 @check_token
 def check_recommendation_settings():
     username = request.cookies.get("username")
-    db = create_connection()
-    cursor = db.cursor()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     try:
         statement = "SELECT used, use_so_filter FROM Recommendation_Settings WHERE username=%s"
@@ -835,23 +909,23 @@ def check_recommendation_settings():
 @server.route("/privacy/change_recommendation_settings", methods=["PUT"])
 @check_token
 def change_recommendation_settings():
-    data = request.get_json()
-    username = request.cookies.get("username")
-    query = request.args.get('rs')
+    data: dict = request.get_json()
+    username: str = request.cookies.get("username")
+    query: str = request.args.get('rs')
     
-    db = create_connection()
-    cursor = db.cursor()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     try:
         if query == 'match':
-            params = [data["check_value"], username]
-            statement = "UPDATE Recommendation_Settings SET used=%s WHERE username=%s"
+            params: list = [data["check_value"], username]
+            statement: str = "UPDATE Recommendation_Settings SET used=%s WHERE username=%s"
             cursor.execute(statement, params)
             db.commit()
         
         elif query == 'so_filter':
-            params = [data["check_value"], username]
-            statement = "UPDATE Recommendation_Settings SET use_so_filter=%s WHERE username=%s"
+            params: list = [data["check_value"], username]
+            statement: str = "UPDATE Recommendation_Settings SET use_so_filter=%s WHERE username=%s"
             cursor.execute(statement, params)
             db.commit()
             
@@ -875,7 +949,7 @@ def change_recommendation_settings():
 def download_data():
     if request.method == "POST":
         # Retrieve payload information.
-        requested_info = request.get_json()
+        requested_info: dict = request.get_json()
         
         # Boolean variable that will act as a status marker
         # if the user requested data to be downloaded.
@@ -888,8 +962,8 @@ def download_data():
 
         try:
             # Create database connection and cursor.
-            db = create_connection()
-            cursor = db.cursor()
+            db: p.extensions.connection = create_connection()
+            cursor: p.extensions.cursor = db.cursor()
 
             # Compare the confirmed password entered by the user after they have clicked the button
             # to download their data with their password stored in the database.
@@ -1010,8 +1084,8 @@ def download_data():
 @server.route("/report_user", methods=["POST"])
 @check_token
 def report_user():
-    db = create_connection()
-    cursor = db.cursor()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     try:
         reporting_user = request.form['reporting-user']
         reported_user = request.form['reported-user']
@@ -1067,7 +1141,7 @@ def report_user():
             query = "INSERT INTO Reports (reporting_user, reported_user, date_and_time, reason, document1, document2, document3, report_status) VALUES (%s, %s, now(), %s, %s, %s, %s, %s)"
             cursor.execute(query, db_info)
             
-            return redirect("http://localhost:3000/privacy/options/view_blocked_users")
+            return redirect("http://localhost:5173/privacy/options/view_blocked_users")
         
         except RequestEntityTooLarge as l:
             return {"message": l}
@@ -1100,9 +1174,9 @@ def search():
         ORDER BY P.last_name, P.first_name
     '''
     
-    db = create_connection()
-    cursor = db.cursor()
-    data = request.get_json()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
+    data: dict = request.get_json()
     
     params = [data["username"] for u in range(0, 3)]
     
@@ -1141,8 +1215,8 @@ def search():
 @server.route("/retrieve_search_history", methods=["POST"])
 @check_token
 def retrieve_search_history():
-    db = create_connection()
-    cursor = db.cursor()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     try:
         statement = '''
@@ -1166,9 +1240,9 @@ def retrieve_search_history():
 @server.route("/insert_search_history", methods=["POST"])
 @check_token
 def insert_search_history():
-    db = create_connection()
-    cursor = db.cursor()
-    data = request.get_json()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
+    data: dict = request.get_json()
     
     try:
         # Attempt to retrieve the search term from the database associated with the user's search
@@ -1227,8 +1301,8 @@ def insert_search_history():
 @server.route("/clear_search_history", methods=["POST"])
 @check_token
 def clear_search_history():
-    db = create_connection()
-    cursor = db.cursor()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     try:
         statement = "DELETE FROM Search_History WHERE username=%s"
@@ -1253,8 +1327,8 @@ def clear_search_history_term():
     username = request.cookies.get("username")
     params = [username, search_term]
     
-    db = create_connection()
-    cursor = db.cursor()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     try:
         statement = "DELETE FROM Search_History WHERE username=%s AND search_term=%s"
@@ -1286,8 +1360,8 @@ def clear_search_history_term():
 @check_token
 # @cache.cached(timeout=300, key_prefix=user_profiles_cache_key)
 def get_user_profiles():
-    db = create_connection()
-    cursor = db.cursor()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     try:
         statement = '''
@@ -1343,8 +1417,8 @@ def get_user_profiles():
 @check_token
 # @cache.cached(timeout=300, key_prefix=logged_in_user_profile_cache_key)
 def get_logged_in_user_profile():
-    db = create_connection()
-    cursor = db.cursor()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     try:
         statement = '''
@@ -1396,8 +1470,9 @@ def get_logged_in_user_profile():
 @server.route("/check_messaged_users", methods=["POST"])
 @check_token
 def check_messaged_users():
-    db = create_connection()
-    cursor = db.cursor()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
+    
     try:
         statement = '''
             SELECT R.user1, R.user2, R.message, R.date_and_time 
@@ -1474,9 +1549,9 @@ def retrieve_messages():
 @server.route("/post_message", methods=["POST"])
 @check_token
 def post_message():
-    db = create_connection()
-    cursor = db.cursor()
-    data = request.get_json()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
+    data: dict = request.get_json()
     sender = request.cookies.get("username")
     
     try:
@@ -1565,9 +1640,9 @@ def post_message():
 @server.route("/retrieve_message_profile_pics", methods=["POST"])
 @check_token
 def retrieve_message_profile_pics():
-    data = request.get_json()
-    db = create_connection()
-    cursor = db.cursor()
+    data: dict = request.get_json()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     try:
         statement = "SELECT uri FROM Photos WHERE username=%s"
@@ -1594,8 +1669,8 @@ def retrieve_message_profile_pics():
 @check_token
 def retrieve_notification_count():
     username = request.args.get("username")
-    db = create_connection()
-    cursor = db.cursor()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     if username:
         try:
@@ -1621,8 +1696,8 @@ def retrieve_notification_count():
 @check_token
 def clear_notification_count():
     username = request.args.get("username")
-    db = create_connection()
-    cursor = db.cursor()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     try:
         statement = "UPDATE Notifications SET notification_counter=%s WHERE username=%s"
@@ -1652,12 +1727,12 @@ def clear_notification_count():
 @server.route("/update_password", methods=["PUT"])
 @check_token
 def update_password():
-    data = request.get_json()
+    data: dict = request.get_json()
     username = request.cookies.get("username")
     new_password = bcrypt.generate_password_hash(data["new_password"], 10).decode('utf-8')
     
-    db = create_connection()
-    cursor = db.cursor()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     try:
         statement = "SELECT password FROM Users WHERE username=%s"
@@ -1738,9 +1813,9 @@ def delete_account():
 @server.route("/block", methods=["POST"])
 @check_token
 def block():
-    data = request.get_json()
-    db = create_connection()
-    cursor = db.cursor()
+    data: dict = request.get_json()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     username = request.cookies.get("username")
     
     # If the user is not blocked, but the logged in user (the blocker) is intending
@@ -1787,7 +1862,7 @@ def block():
             # to block another user, but the latter had already performed the operation
             # earlier.            
             else:
-                return redirect("http://localhost:3000/")
+                return redirect("http://localhost:5173/")
         
         except db.DatabaseError:
             return jsonify({"message": "Failed to check edge case."}), 500
@@ -1821,8 +1896,8 @@ def block():
 def retrieve_blocked_users():
     username = request.cookies.get("username")
     
-    db = create_connection()
-    cursor = db.cursor()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     try:
         statement = '''
@@ -1856,9 +1931,9 @@ def retrieve_blocked_users():
 @server.route("/retrieve_block_status", methods=["POST"])
 @check_token
 def retrieve_block_status():
-    data = request.get_json()
-    db = create_connection()
-    cursor = db.cursor()
+    data: dict = request.get_json()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
     
     try:
         statement = '''
@@ -1903,8 +1978,9 @@ def get_location():
 @server.route("/rating", methods=["POST"])
 @check_token
 def rating():
-    db = create_connection()
-    cursor = db.cursor()
+    db: p.extensions.connection = create_connection()
+    cursor: p.extensions.cursor = db.cursor()
+    
     try:
         rating_type = request.args.get('rt')
         username = request.args.get('user')

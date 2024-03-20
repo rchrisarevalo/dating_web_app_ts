@@ -5,6 +5,8 @@ import { UserNav } from '../components/Nav'
 import { Loading } from '../components/Loading'
 import { MobileFooter } from '../components/MobileFooter'
 
+import { useLogVisit } from '../hooks/useLogVisit'
+
 interface UserProps {
     username: string
 }
@@ -73,6 +75,8 @@ export const User = (props: UserProps) => {
             setError(true)
         })
     }, [retrieve_username_from_path])
+
+    useLogVisit(retrieve_username_from_path)
 
     // Retrieve user's blocked status.
     useEffect(() => {

@@ -21,13 +21,45 @@ class Heap:
         return int((2 * i) + 2)
 
     # Runs in O(log n) time.
-    def insert(self, x, username, interests, first_name, middle_name, last_name, city_residence, 
-               state_residence, sexual_orientation, interested_in, uri, relationship_status, 
-               gender, height, birth_month, birth_date, birth_year, age):
-        self.heap.append((x, username, interests, first_name, 
-                          middle_name, last_name, city_residence, state_residence, 
-                          sexual_orientation, interested_in, uri, relationship_status, 
-                          gender, height, birth_month, birth_date, birth_year, age))
+    def insert(self, 
+               x, 
+               username, 
+               interests, 
+               first_name, 
+               middle_name, 
+               last_name, 
+               city_residence, 
+               state_residence, 
+               sexual_orientation, 
+               interested_in, 
+               uri, 
+               relationship_status, 
+               gender, 
+               height, 
+               birth_month, 
+               birth_date, 
+               birth_year, 
+               age):
+        
+        self.heap.append((x, 
+                          username, 
+                          interests, 
+                          first_name, 
+                          middle_name, 
+                          last_name, 
+                          city_residence, 
+                          state_residence, 
+                          sexual_orientation, 
+                          interested_in, 
+                          uri, 
+                          relationship_status, 
+                          gender, 
+                          height, 
+                          birth_month, 
+                          birth_date, 
+                          birth_year, 
+                          age))
+        
         i = len(self.heap) - 1
 
         self.bubbleUp(i)
