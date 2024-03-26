@@ -235,13 +235,6 @@ def filter_matches(matches: list[dict[str, any]], current_user: dict[str, any]) 
                     if match["gender"] in current_user["interested_in"]:
                         filter_matches.append(match)
             
-            # Remove sensitive keys from displayment in response when viewed through "Inspect Element"
-            # settings.
-            for f in filter_matches:
-                f.pop("sexual_orientation", None)
-                f.pop("gender", None)
-                f.pop("interested_in", None)
-            
             return filter_matches
     
     except KeyError:
@@ -264,18 +257,36 @@ def heap_sort(heap_list, use_so_filter, logged_in_user_profile):
         h.remove()
     
     # Put the sorted items into a list (runs in O(n) time).    
-    similar_users = [{"username": record[1], "interests": record[2], 
-                      "first_name": record[3], 
-                      "city_residence": record[6], "state_residence": record[7],
-                      "sexual_orientation": record[8],
-                      "interested_in": record[9],
-                      "uri": record[10],
-                      "gender": record[12],
-                      "age": record[17]} for record in h.sorted_list]
+    similar_users = [
+                        {
+                            "city_residence": record[6],
+                            "first_name": record[3],
+                            "interests": record[2],
+                            "state_residence": record[7],
+                            "uri": record[10],
+                            "username": record[1],
+                            "sexual_orientation": record[8],
+                            "interested_in": record[9],
+                            "uri": record[10],
+                            "gender": record[12],
+                            "age": record[17]
+                        } 
+                        for record in h.sorted_list
+                    ]
     
+    # If the user decided to use the SO filter, filter their matches.
     if use_so_filter:
         similar_users = filter_matches(similar_users, logged_in_user_profile)
+        
+    # Remove sensitive keys from displayment in response when viewed through "Inspect Element"
+    # settings.
+    for s in similar_users:
+        s.pop("sexual_orientation", None)
+        s.pop("gender", None)
+        s.pop("interested_in", None)
     
+    # Return the list of users who were matched according to the user's attributes,
+    # regardless of whether they used the SO filter or not.
     return similar_users
 
 def run_algo(profile_records: list[dict[str, any]], logged_in_user_record: list[dict[str, any]], use_so_filter: bool):

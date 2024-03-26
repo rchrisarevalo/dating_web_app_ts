@@ -5,6 +5,8 @@ import { UserNav } from '../components/Nav'
 import { Loading } from '../components/Loading'
 import { MobileFooter } from '../components/MobileFooter'
 
+import { useLogVisit } from '../hooks/useLogVisit'
+
 interface UserProps {
     username: string
 }
@@ -74,6 +76,8 @@ export const User = (props: UserProps) => {
         })
     }, [retrieve_username_from_path])
 
+    useLogVisit(retrieve_username_from_path)
+
     // Retrieve user's blocked status.
     useEffect(() => {
         fetch("http://localhost:5000/retrieve_block_status", {
@@ -116,7 +120,12 @@ export const User = (props: UserProps) => {
                             </div>
                             <div className="profile-page-bio">
                                 <h1>{`${profile.name}, ${profile.age}`}</h1>
-                                <p>{`${profile.interests}`}</p>
+                                {profile.interests.split("\n").map((paragraph, i) => 
+                                    <p key={`profile-interests-paragraph-${i}`}>
+                                        {paragraph}
+                                        <br></br>
+                                    </p>
+                                )}
                             </div>
                             <div className="profile-page-details">
                                 <div className="profile-page-details-row">

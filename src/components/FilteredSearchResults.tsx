@@ -61,7 +61,12 @@ export const FilteredSearchResults = (props: FilteredSearchResultsProps) => {
                                                         <div id="user-profile-figure-container">
                                                             <h3>{`${result.first_name}, ${result.age}`}</h3>
                                                             <p id="user-profile-details">{`${result.city_residence}, ${result.state_residence}`}</p>
-                                                            <p id="user-profile-details">{`${result.interests}`}</p>
+                                                            {/* <p id="user-profile-details">{`${result.interests}`}</p> */}
+                                                            {result.interests.split("\n").map((paragraph) => 
+                                                                <p id="user-profile-details">
+                                                                    <i>{`${paragraph}`}</i>
+                                                                </p>
+                                                            )}
                                                             <Link to={`/user/${result.username}`} onClick={() => insertSearchTerm()}>View</Link>
                                                         </div>
                                                     </figure>

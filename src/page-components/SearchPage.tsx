@@ -12,9 +12,20 @@ export const SearchPage = () => {
     const { algo_config, use_so_filter } = useFetchAlgoConfig("http://localhost:5000/privacy/check_recommendation_settings")
     const { search_history, pending, error } = useFetchSearchHistory("http://localhost:5000/retrieve_search_history")
 
-    const user_profiles = useFetchProfiles("http://localhost:5000/get_user_profiles")
+    const user_profiles = useFetchProfiles("http://localhost:5000/get_user_profiles?t=user_profiles")
+    const visited_profiles = useFetchProfiles("http://localhost:5000/get_user_profiles?t=visits")
     const current_profile = useFetchProfiles("http://localhost:5000/get_logged_in_user_profile")
-    const matched_profiles = useFetchMatches(user_profiles.profiles, current_profile.profiles, user_profiles.pending, user_profiles.error, current_profile.pending, current_profile.error, use_so_filter, "http://localhost:5000/match")
+    const matched_profiles = useFetchMatches(user_profiles.profiles, 
+                                             visited_profiles.profiles,
+                                             current_profile.profiles, 
+                                             user_profiles.pending, 
+                                             visited_profiles.pending,
+                                             current_profile.pending, 
+                                             user_profiles.error,
+                                             visited_profiles.error, 
+                                             current_profile.error, 
+                                             use_so_filter, 
+                                             "http://localhost:5000/match")
 
     const [currentSearchTerm, setCurrentSearchTerm] = useState("")
     const [results, setResults] = useState([{
@@ -103,7 +114,11 @@ export const SearchPage = () => {
                                                                             <div id="user-profile-figure-container">
                                                                                 <h3>{`${result.first_name}, ${result.age}`}</h3>
                                                                                 <p id="user-profile-details">{`${result.city_residence}, ${result.state_residence}`}</p>
-                                                                                <p id="user-profile-details">{`${result.interests}`}</p>
+                                                                                {result.interests.split("\n").map((paragraph) => 
+                                                                                    <p id="user-profile-details">
+                                                                                        <i>{`${paragraph}`}</i>
+                                                                                    </p>
+                                                                                )}
                                                                                 <Link to={`/user/${result.username}`} onClick={() => insertSearchTerm()}>View</Link>
                                                                             </div>
                                                                         </figure>
