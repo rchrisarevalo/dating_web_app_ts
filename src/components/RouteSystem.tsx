@@ -37,7 +37,7 @@ interface RoutesProps {
 
 export const RoutingSystem = () => {
     const { auth, pending, error, username, profile_pic, status_code } = useFetchLogin()
-    const profile_data = useFetchProfiles("http://localhost:5000/get_user_profiles")
+    const profile_data = useFetchProfiles("http://localhost:5000/get_user_profiles?t=user_profiles")
     const path = useLocation().pathname
     const domain_path = path.split("/")[1]
 

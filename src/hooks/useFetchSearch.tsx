@@ -101,6 +101,7 @@ export const useFetchProfiles = (endpoint: string) => {
             }).then((data) => {
                 // Include the age of the user to their profile object using their DOB.
                 data.map((profile: { [x: string]: unknown; birth_month: string; birth_date: string; birth_year: string; }) => profile["age"] = CalculateBirthday(profile.birth_month, parseInt(profile.birth_date), parseInt(profile.birth_year)))
+                
                 setPending(false)
                 setProfiles(data)
             }).catch((error) => {
@@ -115,10 +116,17 @@ export const useFetchProfiles = (endpoint: string) => {
     return { profiles, pending, error }
 }
 
-export const useFetchMatches = (userProfiles: MatchProfiles[], currentUserProfile: MatchProfiles[], 
-                                usersPending: boolean, profilePending: boolean, 
-                                usersError: boolean, profileError: boolean, 
-                                use_so_filter: boolean, match_endpoint: string) => {
+export const useFetchMatches = (userProfiles: MatchProfiles[],
+                                visitedProfiles: MatchProfiles[], 
+                                currentUserProfile: MatchProfiles[],
+                                usersPending: boolean, 
+                                visitedProfilesPending: boolean,
+                                profilePending: boolean, 
+                                usersError: boolean,
+                                visitedProfilesError: boolean, 
+                                profileError: boolean, 
+                                use_so_filter: boolean, 
+                                match_endpoint: string) => {
     
     // State variable to store the matched profiles.
     const [matchedProfiles, setMatchedProfiles] = useState<MatchProfiles[]>([{
@@ -139,14 +147,15 @@ export const useFetchMatches = (userProfiles: MatchProfiles[], currentUserProfil
     useEffect(() => {
         const fetchMatches = async () => {
             // If the user profiles and the current user's profile are done loading...
-            if (!usersPending && !profilePending) {
+            if (!usersPending && !profilePending && !visitedProfilesPending) {
                 // And if there are no errors loading two sets of profiles...
-                if (!usersError && !profileError) {
+                if (!usersError && !profileError && !visitedProfilesError) {
 
                     // Object storing user's profiles, the profile of the logged in user,
                     // and the number of searches that will be retrieved.
                     const user_data = {
                         users: userProfiles,
+                        visited_users: visitedProfiles,
                         logged_in_user: currentUserProfile,
                         use_so_filter: use_so_filter,
                         initial_limit: 100
@@ -178,9 +187,17 @@ export const useFetchMatches = (userProfiles: MatchProfiles[], currentUserProfil
             }
         }
         fetchMatches()
-    }, [match_endpoint, userProfiles, currentUserProfile, 
-        profilePending, usersPending, usersError, 
-        profileError, use_so_filter])
+    }, [match_endpoint, 
+        userProfiles,
+        visitedProfiles, 
+        currentUserProfile, 
+        profilePending,
+        visitedProfilesPending, 
+        usersPending, 
+        usersError, 
+        visitedProfilesError,
+        profileError, 
+        use_so_filter])
 
     // Return the matched profiles in an array full of objects, as well as the request status.
     return { matchedProfiles, pending, error }

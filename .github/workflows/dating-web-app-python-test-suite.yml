@@ -9,9 +9,9 @@ env:
 
 on:
   push:
-    branches: [ "main", "DAT-135-Migrate-from-ElephantSQL-to-Aiven" ]
+    branches: [ "main", "DAT-142-Implement-feature-that-puts-most-visited-users-by-current-user-on-top" ]
   pull_request:
-    branches: [ "main", "DAT-135-Migrate-from-ElephantSQL-to-Aiven" ]
+    branches: [ "main", "DAT-142-Implement-feature-that-puts-most-visited-users-by-current-user-on-top" ]
 
 permissions:
   contents: read

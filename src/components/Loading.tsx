@@ -6,7 +6,7 @@ interface LoadingProps {
 }
 
 export const Loading = (props: LoadingProps) => {
-    const [seconds, setSeconds] = useState(5)
+    const [seconds, setSeconds] = useState(1000)
 
     const reloadFunc = () => {
         window.location.reload()
@@ -22,7 +22,7 @@ export const Loading = (props: LoadingProps) => {
 
             setTimeout(() => {
                 window.location.reload()
-            }, 5000)
+            }, 1000000)
         }
     }, [error, seconds])
 

@@ -120,7 +120,12 @@ export const User = (props: UserProps) => {
                             </div>
                             <div className="profile-page-bio">
                                 <h1>{`${profile.name}, ${profile.age}`}</h1>
-                                <p>{`${profile.interests}`}</p>
+                                {profile.interests.split("\n").map((paragraph, i) => 
+                                    <p key={`profile-interests-paragraph-${i}`}>
+                                        {paragraph}
+                                        <br></br>
+                                    </p>
+                                )}
                             </div>
                             <div className="profile-page-details">
                                 <div className="profile-page-details-row">
