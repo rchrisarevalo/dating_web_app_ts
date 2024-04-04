@@ -1,4 +1,6 @@
 from flask import request
+from fastapi import Request
+import asyncio
 
 def user_profile_cache():
     # If the current user views another person's profile, then
@@ -42,3 +44,11 @@ def logged_in_user_profile_cache_key():
     # the user is viewing their profile, not when they are in the search page.
     if request.cookies.get("user_session") and request.cookies.get("username"):
         return f"{request.cookies.get('user_session')}-logged-in-profile-{request.cookies.get('username')}"
+
+def visit_key_func(request: Request):
+    data: dict = asyncio.run(request.json())
+    username = request.cookies.get("username")
+    visiting_user = data.get("visiting_user")
+    
+    return (username, visiting_user)
+    
