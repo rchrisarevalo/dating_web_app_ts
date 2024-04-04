@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 import os
 import psycopg2
 import jwt
-import json
 
 load_dotenv('secret.env')
 db = psycopg2.connect(os.getenv('DB_KEY'))
