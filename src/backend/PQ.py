@@ -157,7 +157,7 @@ class Heap:
                         # Update the current index with the right child index.
                         i = self.rightChild(i)
 
-                        # Recursively call function to "bubble down" the element down the heap/
+                        # Recursively call function to "bubble down" the element down the heap.
                         self.bubbleDown(i)
 
                 # Exception block if, again, the index is out of range.
