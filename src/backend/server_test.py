@@ -1,4 +1,4 @@
-from fastapi_server import server
+from server import server
 from fastapi.testclient import TestClient
 from dotenv import load_dotenv
 import os

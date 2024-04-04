@@ -86,39 +86,39 @@ jobs:
     - name: Check if root route is working.
       run: |
         cd src/backend
-        pytest fastapi_server_test.py::test_simple_route -v
+        pytest server_test.py::test_simple_route -v
 
     - name: User should sign up if they are of or over the age of majority in their jurisdiction.
       run: |
         cd src/backend
-        pytest fastapi_server_test.py::test_signup -v
+        pytest server_test.py::test_signup -v
 
     - name: User should be unable to sign up for an account if they are under the age of majority in their jurisdiction.
       run: |
         cd src/backend
-        pytest fastapi_server_test.py::test_signup_if_underage -v
+        pytest server_test.py::test_signup_if_underage -v
     
     - name: User should be able to log in if they have an account.
       run: |
         cd src/backend
-        pytest fastapi_server_test.py::test_login -v
+        pytest server_test.py::test_login -v
     
     - name: Prevent a user from logging in if they do not have a valid token.
       run: |
         cd src/backend
-        pytest fastapi_server_test.py::test_login_with_invalid_token -v
+        pytest server_test.py::test_login_with_invalid_token -v
 
     - name: Retrieve a user's profile information if they are currently logged in.
       run: |
         cd src/backend
-        pytest fastapi_server_test.py::test_retrieve_profile_information -v
+        pytest server_test.py::test_retrieve_profile_information -v
 
     - name: Allow users to change their DOB if they registered for an account using a valid DOB. Otherwise, suspend/ban their account if they did not do so.
       run: |
         cd src/backend
-        pytest fastapi_server_test.py::test_update_profile_DOB -v
+        pytest server_test.py::test_update_profile_DOB -v
     
     - name: User should search for other users based on a specific keyword they enter into the search bar.
       run: |
         cd src/backend
-        pytest fastapi_server_test.py::test_search -v
+        pytest server_test.py::test_search -v
