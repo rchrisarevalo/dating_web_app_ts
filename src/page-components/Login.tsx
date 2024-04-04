@@ -43,6 +43,7 @@ export const Login = () => {
                 if (res.ok) {
                     return res.json()
                 } else {
+                    console.log(res.statusText)
                     throw res.status
                 }
             }).then((data) => {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { CalculateBirthday } from "../functions/CalculateBirthday";
-import { MatchProfiles } from "../types/types.config";
+import { MatchProfiles, UserBirthday } from "../types/types.config";
 
 export const useFetchAlgoConfig = (endpoint: string) => {
     const [algoConfig, setAlgoConfig] = useState(false)
@@ -100,8 +100,11 @@ export const useFetchProfiles = (endpoint: string) => {
                 }
             }).then((data) => {
                 // Include the age of the user to their profile object using their DOB.
-                data.map((profile: { [x: string]: unknown; birth_month: string; birth_date: string; birth_year: string; }) => profile["age"] = CalculateBirthday(profile.birth_month, parseInt(profile.birth_date), parseInt(profile.birth_year)))
-                
+                data.map((profile: UserBirthday) => 
+                    profile.age = CalculateBirthday(profile.birth_month, 
+                                                    parseInt(profile.birth_date), 
+                                                    parseInt(profile.birth_year))
+                )
                 setPending(false)
                 setProfiles(data)
             }).catch((error) => {

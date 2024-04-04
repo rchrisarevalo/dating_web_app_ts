@@ -135,7 +135,7 @@ export const BlockedUsers = () => {
                     <Modal.Title>{`Unblock ${unblockTargetUser}?`}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    <p>Are you sure you want to unblock <b>{`${unblockTargetUser}`}</b>?</p>
+                    <p style={{marginBottom: 0}}>Are you sure you want to unblock <b>{`${unblockTargetUser}`}</b>?</p>
                 </Modal.Body>
                 <Modal.Footer>
                     <button onClick={handleUnblock} style={{border: 'none', background: 'black', color: 'white', padding: '7px 15px', borderRadius: '20px'}}>Yes</button>

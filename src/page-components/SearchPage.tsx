@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom'
 import { IoFunnelOutline, IoHelpOutline, IoSearchOutline, IoTrashBinOutline } from 'react-icons/io5'
 
 import { useFetchAlgoConfig, useFetchSearchHistory, useFetchProfiles, useFetchMatches } from "../hooks/useFetchSearch"
-import { Loading } from '../components/Loading'
 import { FilteredSearchResults } from '../components/FilteredSearchResults'
 
 import { clearSearchTerm, insertSearchTerm } from '../functions/searchHistoryFunctions'
+
+import Spinner from 'react-bootstrap/Spinner'
 
 export const SearchPage = () => {
     const { algo_config, use_so_filter } = useFetchAlgoConfig("http://localhost:5000/privacy/check_recommendation_settings")
@@ -15,17 +16,17 @@ export const SearchPage = () => {
     const user_profiles = useFetchProfiles("http://localhost:5000/get_user_profiles?t=user_profiles")
     const visited_profiles = useFetchProfiles("http://localhost:5000/get_user_profiles?t=visits")
     const current_profile = useFetchProfiles("http://localhost:5000/get_logged_in_user_profile")
-    const matched_profiles = useFetchMatches(user_profiles.profiles, 
-                                             visited_profiles.profiles,
-                                             current_profile.profiles, 
-                                             user_profiles.pending, 
-                                             visited_profiles.pending,
-                                             current_profile.pending, 
-                                             user_profiles.error,
-                                             visited_profiles.error, 
-                                             current_profile.error, 
-                                             use_so_filter, 
-                                             "http://localhost:5000/match")
+    const matched_profiles = useFetchMatches(user_profiles.profiles,
+        visited_profiles.profiles,
+        current_profile.profiles,
+        user_profiles.pending,
+        visited_profiles.pending,
+        current_profile.pending,
+        user_profiles.error,
+        visited_profiles.error,
+        current_profile.error,
+        use_so_filter,
+        "http://localhost:5000/match")
 
     const [currentSearchTerm, setCurrentSearchTerm] = useState("")
     const [results, setResults] = useState([{
@@ -66,9 +67,9 @@ export const SearchPage = () => {
             <div className="search-page-row">
                 <h1>SEARCH FOR USER</h1>
                 <br></br>
-                {!pending ?
+                {(!pending && !matched_profiles.pending && !user_profiles.pending) ?
                     <>
-                        {!error ?
+                        {(!error && !matched_profiles.error && !user_profiles.pending) ?
                             <>
                                 <form className="search-page-col" onSubmit={(e) => e.preventDefault()}>
                                     <input id="search-input" type="search" placeholder="Enter a search term..." value={currentSearchTerm} onChange={(e) => setCurrentSearchTerm(e.target.value)} autoComplete='off' required />
@@ -98,46 +99,36 @@ export const SearchPage = () => {
                                             </>
                                         }
                                         <br></br>
-                                        {(!matched_profiles.pending && !user_profiles.pending) ?
-                                            <>
-                                                {(!matched_profiles.error && !user_profiles.pending) ?
-                                                    <>
-                                                        {results.length !== 0 ?
-                                                            <>
-                                                                {results.map((result, i) =>
-                                                                    <>
-                                                                        <figure id="new-card" key={`profile-${i}`}>
-                                                                            <div id="new-card-image">
-                                                                                <img src={`data:image/png;base64,${result.uri}`} alt="search-profile-pic"></img>
-                                                                            </div>
-                                                                            <br></br>
-                                                                            <div id="user-profile-figure-container">
-                                                                                <h3>{`${result.first_name}, ${result.age}`}</h3>
-                                                                                <p id="user-profile-details">{`${result.city_residence}, ${result.state_residence}`}</p>
-                                                                                {result.interests.split("\n").map((paragraph) => 
-                                                                                    <p id="user-profile-details">
-                                                                                        <i>{`${paragraph}`}</i>
-                                                                                    </p>
-                                                                                )}
-                                                                                <Link to={`/user/${result.username}`} onClick={() => insertSearchTerm()}>View</Link>
-                                                                            </div>
-                                                                        </figure>
-                                                                        <br></br>
-                                                                        <br></br>
-                                                                    </>
-                                                                )}
-                                                            </>
-                                                            :
-                                                            <h5 style={{ marginTop: '50px' }}>There are no search results to display.</h5>
-                                                        }
-                                                    </>
-                                                    :
-                                                    <Loading error={true} />
-                                                }
-                                            </>
-                                            :
-                                            <Loading error={false} />
-                                        }
+                                        <>
+                                            {results.length !== 0 ?
+                                                <>
+                                                    {results.map((result, i) =>
+                                                        <>
+                                                            <figure id="new-card" key={`profile-${i}`}>
+                                                                <div id="new-card-image">
+                                                                    <img src={`data:image/png;base64,${result.uri}`} alt="search-profile-pic"></img>
+                                                                </div>
+                                                                <br></br>
+                                                                <div id="user-profile-figure-container">
+                                                                    <h3>{`${result.first_name}, ${result.age}`}</h3>
+                                                                    <p id="user-profile-details">{`${result.city_residence}, ${result.state_residence}`}</p>
+                                                                    {result.interests.split("\n").map((paragraph) =>
+                                                                        <p id="user-profile-details">
+                                                                            <i>{`${paragraph}`}</i>
+                                                                        </p>
+                                                                    )}
+                                                                    <Link to={`/user/${result.username}`} onClick={() => insertSearchTerm()}>View</Link>
+                                                                </div>
+                                                            </figure>
+                                                            <br></br>
+                                                            <br></br>
+                                                        </>
+                                                    )}
+                                                </>
+                                                :
+                                                <h5 style={{ marginTop: '50px' }}>There are no search results to display.</h5>
+                                            }
+                                        </>
                                     </>
                                     :
                                     <>
@@ -146,11 +137,16 @@ export const SearchPage = () => {
                                 }
                             </>
                             :
-                            <Loading error={true} />
+                            <div className="loading-match-page">
+                                <p>Error!</p>
+                            </div>
                         }
                     </>
                     :
-                    <Loading error={false} />
+                    <div className="loading-match-page">
+                        <Spinner animation='border' />
+                        <p>Loading the best matches for you...</p>
+                    </div>
                 }
             </div>
         </div>

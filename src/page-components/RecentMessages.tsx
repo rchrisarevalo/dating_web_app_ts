@@ -5,6 +5,8 @@ import { IoHeartOutline, IoHeart, IoHeartDislikeOutline,
          IoHeartHalfOutline } from "react-icons/io5"
 import { Loading } from '../components/Loading'
 
+import { RatingSubmission } from '../types/types.config'
+
 export const RecentMessages = () => {
 
     const [retrieveUsername, setRetrieveUsername] = useState("")
@@ -37,6 +39,7 @@ export const RecentMessages = () => {
             setRecentMessagedUsers(data)
             setRetrieveUsername(data.username)
             setPending(false)
+            setError(false)
         }).catch((error) => {
             console.log(error)
             setPending(false)
@@ -44,8 +47,8 @@ export const RecentMessages = () => {
         })
     }, [])
 
-    const handleRating = (rating_type: string, username: string) => {
-        fetch(`http://localhost:5000/rating?rt=${rating_type}&user=${username}`, {
+    const handleRatingSubmission = (user_rating_details: RatingSubmission) => {
+        fetch(`http://localhost:5000/rating?rt=${user_rating_details.rating_type}&user=${user_rating_details.username}`, {
             method: 'POST',
             credentials: 'include',
             headers: {
@@ -62,14 +65,6 @@ export const RecentMessages = () => {
         }).catch((error) => {
             console.log(error)
         })
-    }
-
-    useEffect(() => {
-        console.log(pending, error)
-    }, [pending, error])
-
-    const handleRatingSubmission = (user_rating_details: Record<string, string>) => {
-        handleRating(user_rating_details.rating_type, user_rating_details.username)
     }
 
     return (
@@ -199,7 +194,7 @@ export const RecentMessages = () => {
                             : 
                             <b id="recent-messages-empty">You haven't messaged anyone recently!</b>
                         :
-                        <Loading error={error} />
+                        <Loading error={true} />
                     }
                 </>
                 :

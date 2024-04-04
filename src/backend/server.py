@@ -1,36 +1,31 @@
-from flask import Flask, request, redirect, make_response, jsonify, send_file
-from functools import wraps
-from flask_cors import CORS
-from flask_bcrypt import Bcrypt
-from flask_caching import Cache
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from werkzeug.utils import secure_filename
-from werkzeug.exceptions import RequestEntityTooLarge
-import psycopg2 as p
-import base64
+from fastapi import FastAPI, Request, Response, HTTPException, Depends, APIRouter
+from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
+from passlib.context import CryptContext
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from dotenv import load_dotenv
-import os
-import jwt
-import json
-import datetime as dt
 from main import run_matching_algorithm
 from rating_sys import (calculate_rating, 
                         average_rating, 
                         update_rating, 
                         delete_rating, 
                         insert_rating)
-from key_pref.cache_key_prefixes import (user_profile_cache, 
-                                         search_results_cache)
+from key_pref.key_prefixes import visit_key_func
+
+import jwt
+import datetime as dt
+import psycopg2 as p
+import base64
+import json
+import os
 import sys
+import asyncio
 
 PATH = 'secret.env'
 
-server = Flask(__name__)
-server.config["MAX_CONTENT_LENGTH"] = 1 * 1000 * 1000
-server.config["SECRET_KEY"] = os.urandom(100).hex()
-server.config["CACHE_TYPE"] = 'redis'
-CORS(server, supports_credentials=True, origins=["http://localhost:5173"], max_age=dt.timedelta(hours=1).seconds)
+server = FastAPI(debug=True)
 
 # Load the .env file from the path specified above.
 load_dotenv(PATH)
@@ -39,16 +34,25 @@ load_dotenv(PATH)
 SK_KEY=os.getenv('SK_KEY') if os.getenv("SK_KEY") else os.environ["SK_KEY"]
 DB_KEY=os.getenv('DB_KEY') if os.getenv("SK_KEY") else os.environ["SK_KEY"]
 
-bcrypt = Bcrypt(server)
+server.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
 
-cache = Cache(server, config={'CACHE_TYPE': 'SimpleCache'})
+context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 
 limit = Limiter(
     key_func=get_remote_address,
-    app=server,
-    default_limits=["500 per day"],
-    storage_uri="memory://"
+    default_limits=["500/minute"],
+    storage_uri="memory://",
+    strategy="fixed-window"
 )
+
+server.state.limiter = limit
+server.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 def create_connection() -> p.extensions.connection:
     try:
@@ -61,100 +65,32 @@ def create_connection() -> p.extensions.connection:
 
 def terminate_connection(db: p.extensions.connection):
     db.close()
-
-# Custom wrapper to check the validation of a token.
-#
-# Documentation to create custom wrapper:
-# https://docs.python.org/3/library/functools.html#functools.wraps
-# https://flask.palletsprojects.com/en/1.1.x/patterns/viewdecorators/
-def async_check_token(f):
-    @wraps(f)
-    async def check_token_func(*args, **kwargs):
-        if request.cookies.get("user_session") != None:
+    
+async def check_token(request: Request):
+    if request.cookies.get("user_session") != None:
             try:
                 decode_token = jwt.decode(request.cookies.get("user_session"), str(SK_KEY), ["HS256"], verify=True)
-                
-                # When wanting to continue with making a request to a specific endpoint,
-                # after validating the token, return f(*args, **kwargs) to do so.
-                response = await f(*args, **kwargs)
-                return response
+                return True
             
             except jwt.InvalidTokenError:
-                return jsonify({"message": "Invalid token!"}), 498
+                raise HTTPException(498, {"message": "Invalid token!"})
             
             except RuntimeError as r:
                 print(f"There was an error in line {sys.exc_info()[-1].tb_lineno}: {r}")
-                return jsonify({"message": "There was a run time error. Please try again."}), 500
+                raise HTTPException(500, {"message": "There was a run time error. Please try again."})
             
             except jwt.InvalidKeyError:
-                return jsonify({"message": "Invalid key used."}), 403
+                raise HTTPException(403, {"message": "Invalid key used."})
             
-        else:
-            return jsonify({"message": "Can't access API endpoint."}), 401
-    
-    return check_token_func
-
-def sync_check_token(f):
-    @wraps(f)
-    def sync_check_token_wrapper(*args, **kwargs):
-        if request.cookies.get("user_session") != None:
-            try:
-                decode_token = jwt.decode(request.cookies.get("user_session"), str(SK_KEY), ["HS256"], verify=True)
-                
-                # When wanting to continue with making a request to a specific endpoint,
-                # after validating the token, return f(*args, **kwargs) to do so.
-                response = f(*args, **kwargs)
-                return response
-            
-            except jwt.InvalidTokenError:
-                return jsonify({"message": "Invalid token!"}), 498
-            
-            except RuntimeError as r:
-                print(f"There was an error in line {sys.exc_info()[-1].tb_lineno}: {r}")
-                return jsonify({"message": "There was a run time error. Please try again."}), 500
-            
-            except jwt.InvalidKeyError:
-                return jsonify({"message": "Invalid key used."}), 403
-            
-        else:
-            return jsonify({"message": "Can't access API endpoint."}), 401
-        
-    return sync_check_token_wrapper
-    
-
-def cache_endpoint(timeout=300, key_prefix="view/%s"):
-    def wrapper(f):
-        @wraps(f)
-        async def async_cache_wrapper(*args, **kwargs): 
-            current_cache = cache.get(key_prefix())
-            
-            if current_cache is not None:
-                return current_cache
-            else:
-                response = await f(*args, **kwargs)
-                cache.set(key_prefix(), response, timeout=timeout)
-                
-                return response
-        
-        return async_cache_wrapper
-    
-    return wrapper
-       
-
-@server.before_request
-def configure():
-    if request.endpoint == "match":
-        server.config["MAX_CONTENT_LENGTH"] = 5 * 1000 * 1000
-    elif request.endpoint == "report_user":
-        server.config["MAX_CONTENT_LENGTH"] = 10 * 1000 * 1000
     else:
-        server.config["MAX_CONTENT_LENGTH"] = 1 * 1000 * 1000
-        
+        raise HTTPException(status_code=401, detail={"message": "Can't access API endpoint."})
 
+protected_route = APIRouter(dependencies=[Depends(check_token)])
+    
 # Checks to see if either user1 or user2 has messaged the other
 # recently by retrieving their most recent chat in the Recent
 # table.        
-def check_recent_message_records(cursor, user1, user2):
+async def check_recent_message_records(cursor: p.extensions.cursor, user1: str, user2: str) -> bool:
     # Retrieve recent message records between user1 and user2 from the Recent table.
     statement = 'SELECT * FROM Recent WHERE (user1=%s AND user2=%s) OR (user1=%s AND user2=%s)'
     params = [user1, user2, user2, user1]
@@ -172,10 +108,10 @@ def check_recent_message_records(cursor, user1, user2):
     # not contacted each other.
     else:
         return False
-
+    
 # Verifies user age when they register for an account, or if they change their
 # date of birth in their account settings.  
-def verify_age(age, state_residence):
+async def verify_age(age: int, state_residence: str) -> bool:
     # If the user's state residence is in Alabama or Nebraska, and they are 19 or above
     # return True to verify that they are of age to register for an account.
     if (state_residence == 'Alabama' or state_residence == 'Nebraska') and (age >= 19):
@@ -208,7 +144,12 @@ def verify_age(age, state_residence):
 # they are banned from using the web application.
 #
 # Otherwise, they can proceed to use the web application.
-def determine_account_registration_age(cursor, username, new_birth_month, new_birth_date, new_birth_year):          
+async def determine_account_registration_age(cursor: p.extensions.cursor, 
+                                             username: str, 
+                                             new_birth_month: str, 
+                                             new_birth_date: str, 
+                                             new_birth_year: str) -> bool:
+              
     statement = "SELECT account_creation_timestamp, birth_month, birth_date, birth_year, state FROM Users WHERE username=%s"
     params = [username]
     cursor.execute(statement, params)
@@ -253,7 +194,7 @@ def determine_account_registration_age(cursor, username, new_birth_month, new_bi
     
     # If the user was of age when they registered for an account,
     # they can proceed to change their date of birth.
-    if verify_age(age, state_residence):
+    if await verify_age(age, state_residence):
         return True
     
     # However, if they were underage, their account is banned.
@@ -261,7 +202,7 @@ def determine_account_registration_age(cursor, username, new_birth_month, new_bi
         return False
     
 # Function that verifies the user's credentials.
-def user_verified(username=str, password=str, cursor=p.extensions.cursor):
+async def user_verified(username: str, password: str, cursor: p.extensions.cursor) -> bool:
     # Retrieve the username and password of the current user from the database
     # to verify the credentials they entered in the login page.
     statement = "SELECT U.username, U.password FROM Users U WHERE U.username=%s"
@@ -291,7 +232,7 @@ def user_verified(username=str, password=str, cursor=p.extensions.cursor):
         user = {user_key: user_column for user_key, user_column in zip(keys, values)}
         
         # Verify credentials.
-        password_verified = bcrypt.check_password_hash(user["password"], password)
+        password_verified = context.verify(password, user["password"])
         username_verified = True if user["username"] == username else False
         
         # If both the username and password are verified, return True.
@@ -301,22 +242,26 @@ def user_verified(username=str, password=str, cursor=p.extensions.cursor):
         # Otherwise, return False.
         else:
             return False
-    
-    
+        
 # Function that retrieves user's profile picture.
-def retrieve_profile_pic(username=str, cursor=p.extensions.cursor):
+async def retrieve_profile_pic(username: str, cursor: p.extensions.cursor) -> str:
     statement = "SELECT uri FROM Photos WHERE username=%s"
     params = [username]
     cursor.execute(statement, params)
     
-    photo = [record[0] for record in cursor.fetchall()][0]
+    photo = [record[0] for record in cursor.fetchall()]
+    
+    if not photo:
+        return ""
+    
+    photo = photo[0]
     photo = bytes(photo).decode('utf-8')
     
     return photo
-    
+
 # Function that checks whether a user decided to filter other users
 # from their search results based on their sexual orientation.
-def using_so_filter(username=str, cursor=p.extensions.cursor):
+async def using_so_filter(username: str, cursor: p.extensions.cursor) -> bool:
     statement = "SELECT use_so_filter FROM Recommendation_Settings WHERE username=%s"
     params = [username]
     cursor.execute(statement, params)
@@ -327,11 +272,11 @@ def using_so_filter(username=str, cursor=p.extensions.cursor):
         return True
     else:
         return False
-
+    
 # Function that checks if a record already exists in the database
 # of the current user visiting the specific profile they are
 # searching.
-def retrieve_visitor_record(username: str, visiting_user_username: str, cursor: p.extensions.cursor) -> bool:
+async def retrieve_visitor_record(username: str, visiting_user_username: str, cursor: p.extensions.cursor) -> bool:
     # Retrieve the record containing the current user's username 
     # and the username of the user the former is visiting.
     statement = "SELECT visitor, visitee FROM Visits WHERE visitor=%s AND visitee=%s"
@@ -349,13 +294,16 @@ def retrieve_visitor_record(username: str, visiting_user_username: str, cursor: 
     # Otherwise, create a new log.
     else:
         return False
-
+    
 # Function that updates the visit count of the current user to a specific profile,
 # regardless of whether they have visited it or not.
-async def log_visit(username: str, visiting_user_username: str, db: p.extensions.connection, cursor: p.extensions.cursor):  
+async def log_visit(username: str, 
+                    visiting_user_username: str, 
+                    db: p.extensions.connection, 
+                    cursor: p.extensions.cursor) -> None:  
     # If a record already exists, then update the count of the number of times
     # the current user has visited that specific profile.
-    if retrieve_visitor_record(username, visiting_user_username, cursor):
+    if await retrieve_visitor_record(username, visiting_user_username, cursor):
         statement = "CALL update_profile_visit(%s, %s, %s)"
         params = [username, visiting_user_username, "now()"]
         cursor.execute(statement, params)
@@ -370,7 +318,7 @@ async def log_visit(username: str, visiting_user_username: str, db: p.extensions
         cursor.execute(statement, params)
         db.commit()
         
-def include_visits(matches: list[dict[str, any]], visited_profiles: list[dict[str, any]]):
+async def include_visits(matches: list[dict[str, any]], visited_profiles: list[dict[str, any]]) -> list[dict[str, any]]:
     # Remove any keys from the visited_profiles list that don't match those
     # in the matches list.
     for v in visited_profiles:
@@ -390,19 +338,17 @@ def include_visits(matches: list[dict[str, any]], visited_profiles: list[dict[st
     # and remaining_matches lists in that order to first
     # display the most visited users first before displaying
     # the most similar matches.
-    final_matches_output = most_visited_profiles + remaining_matches
+    final_matches_output: list[dict[str, any]] = most_visited_profiles + remaining_matches
     
     return final_matches_output
-        
 
-@server.route("/", methods=["GET"])
+@server.get("/")
 async def index():
     return {"status": "Working!"}
 
-    
-@server.route("/login", methods=["POST"])
-async def login():
-    data = request.form
+@server.post("/login")
+async def login(request: Request, response: Response):
+    data = await request.form()
     
     # Create a payload storing the user's username, their role,
     # the date they submitted their request to generate a token,
@@ -411,7 +357,7 @@ async def login():
     payload = {
         "username": data["username"],
         "role": "User",
-        "iss": request.origin,
+        "iss": request.headers.get('referer'),
         "iat": dt.datetime.now(),
         "exp": int((dt.datetime.now() + dt.timedelta(hours=2, minutes=0)).timestamp())
     }
@@ -421,7 +367,7 @@ async def login():
     try:
         db: p.extensions.connection = create_connection()
         cursor: p.extensions.cursor = db.cursor()
-        verified_user = user_verified(data["username"], data["password"], cursor)
+        verified_user = await user_verified(data["username"], data["password"], cursor)
         
         if verified_user:
             # Create a token so that it can be stored in a cookie and act
@@ -429,68 +375,60 @@ async def login():
             # or accessing API endpoints.
             generate_token = jwt.encode(payload, key=SK_KEY, algorithm='HS256')
             
-            profile_pic = retrieve_profile_pic(data["username"], cursor)
-            
-            # Make the response if the cookie is successfully stored.
-            store_token_cookie = make_response({"verified": True, "profile_pic": profile_pic, "token": generate_token})
-            
+            profile_pic = await retrieve_profile_pic(data["username"], cursor)
+
             # Configure the cookie's settings (such as securing it and making it an HttpOnly cookie to prevent users from using JavaScript to manipulate it through unauthorized means).
-            store_token_cookie.set_cookie(key="user_session", value=generate_token, max_age=dt.timedelta(hours=2, minutes=0).seconds, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
-            store_token_cookie.set_cookie(key="username", value=data["username"], max_age=dt.timedelta(hours=2, minutes=0).seconds, path="/", domain="localhost", httponly=True, secure=True, samesite='strict')
+            response.set_cookie(key="user_session", value=generate_token, max_age=dt.timedelta(hours=2, minutes=0).seconds, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
+            response.set_cookie(key="username", value=data["username"], max_age=dt.timedelta(hours=2, minutes=0).seconds, path="/", domain="localhost", httponly=True, secure=True, samesite='strict')
             
             # Return response.
-            return store_token_cookie
+            return {"verified": True, "profile_pic": profile_pic, "token": generate_token}
         
         else:
             raise jwt.InvalidKeyError
     
     # Handle exceptions with JWT token should they occur.   
     except jwt.InvalidKeyError:
-        return {"error": "You provided an invalid key"}, 401
+        raise HTTPException(401, {"error": "You provided an invalid key"})
 
     except jwt.InvalidSignatureError:
-        return {"error": "You provided an invalid signature"}, 403
+        raise HTTPException(403, {"error": "You provided an invalid signature"})
     
     except jwt.InvalidTokenError:
-        return {"error": "The token that was generated was invalid"}, 498
+        raise HTTPException(498, {"error": "The token that was generated was invalid"})
     
     except Exception as e:
-        return {"error": "Exception thrown"}, 500
+        raise HTTPException(500, {"error": e})
     
     finally:
-        db.close()
-    
-    
-@server.route("/logout", methods=["POST"])
-async def logout():
+        terminate_connection(db)
+        
+@server.post("/logout")
+async def logout(request: Request, response: Response):
     # Check to see if the cookie exists.
     if request.cookies.get("user_session") != None:
-        # Set up a response to start manipulating the cookie.
-        end_res = make_response({"message": "Cookie has been deleted!"}, 200)
-        
         # Destroy both the user_session and username cookies to render the tokens unusable by any malicious actors.
-        end_res.set_cookie(key="user_session", value=request.cookies.get("user_session"), max_age=0, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
-        end_res.set_cookie(key="username", value="", max_age=0, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
+        response.set_cookie(key="user_session", value=request.cookies.get("user_session"), max_age=0, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
+        response.set_cookie(key="username", value="", max_age=0, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
         
         # Return the response indicating that the cookies have been deleted.
-        return end_res
+        return {"message": "Cookie has been deleted!"}
     
     # If the cookie does not exist, return an error message.
     else:
-        return {"message": "Cookie does not exist. It may have expired or not have existed. Logging out..."}, 500
-
-
-@server.route("/signup", methods=["POST"])
-async def signup():
-    data: dict = request.get_json()
+        raise HTTPException(500, {"message": "Cookie does not exist. It may have expired or not have existed. Logging out..."})
+    
+@server.post("/signup")
+async def signup(request: Request):
+    data: dict = await request.json()
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
-    hash_password = bcrypt.generate_password_hash(data["password"], 12).decode('utf-8')
+    hash_password = context.hash(data["password"])
     
     height = str(int(data["height_feet"])) + "'" + str(int(data["height_inches"])) + "''"
     
-    age_verified = verify_age(data["age"], data["state"])
+    age_verified = await verify_age(data["age"], data["state"])
     
     if age_verified:
         try:
@@ -531,23 +469,21 @@ async def signup():
             db.commit()
             
         except db.DatabaseError:
-            return jsonify({"message": "An error occurred with the database. Please try again later."}), 500
+            return {"message": "An error occurred with the database. Please try again later."}, 500
         
         except Exception:
-            return jsonify({"message": "A server error has occurred. Please try again later."}), 500
+            return {"message": "A server error has occurred. Please try again later."}, 500
         
         finally:
-            db.close()
+            terminate_connection(db)
             
-        return jsonify({"message": "Successfully registered for an account!"}), 200
+        return {"message": "Successfully registered for an account!"}
     
     else:
-        return jsonify({"message": "Failed to verify account. You are underage."}), 403
-        
-        
-@server.route('/check_login', methods=["POST"])
-@async_check_token
-async def check_login():
+        raise HTTPException(403, {"message": "Failed to verify account. You are underage."})
+    
+@protected_route.post("/check_login")
+async def check_login(request: Request):
     session_tok = request.cookies.get("user_session")
     username_cookie = request.cookies.get("username")
     
@@ -562,55 +498,50 @@ async def check_login():
         keys = [attr.name for attr in cursor.description]
         values = [value for value in cursor.fetchall()]
         
-        user = {key: value[0] for key, value in zip(keys, values)}
+        user = {key: value[0] for key, value in zip(keys, values) if keys and values}
         
         if "username" in user and user["username"] == username_cookie:
-            return jsonify({"verified": False}), 403
-        
+            raise HTTPException(403, {"verified": False})
+
         if session_tok != None and username_cookie != None:
-            profile_pic = retrieve_profile_pic(username_cookie, cursor)
-            return jsonify({"verified": True, "username": username_cookie, "profile_pic": profile_pic}), 200
+            profile_pic = await retrieve_profile_pic(username_cookie, cursor)
+            return {"verified": True, "username": username_cookie, "profile_pic": profile_pic}
         else:
-            return jsonify({"verified": False}), 401
+            raise HTTPException(401, {"verified": False})
         
     except db.DatabaseError:
-        return jsonify({"message": "There was an error retrieving information from the database. Please try again."}), 500
+        raise HTTPException(500, {"message": "There was an error retrieving information from the database. Please try again."})
         
     except Exception as e:
         print(e)
-        return jsonify({"message": "Server error. Please try again."}), 500
+        raise HTTPException(500, {"message": "Server error. Please try again."})
     
     finally:
-        db.close()
+        terminate_connection(db)
         
-    
-@server.route("/visit", methods=["POST"])
-@sync_check_token
-@limit.limit("1/5 minutes", key_func=lambda: (request.cookies.get("username"), request.get_json()["visiting_user"]))
-def visit():
-    data: dict = request.get_json()
+@protected_route.post("/visit")
+@limit.limit("1/5 minutes", key_func=visit_key_func)
+def visit(request: Request):
+    data: dict = asyncio.run(request.json())
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
     current_user: str = request.cookies.get("username")
     
     try:
-        log_visit(current_user, data["visiting_user"], db, cursor)
-        return jsonify({"message": "Successfully counted visit!"}), 200
+        asyncio.run(log_visit(current_user, data["visiting_user"], db, cursor))
+        return {"message": "Successfully counted visit!"}
     
     except db.DatabaseError:
-        return jsonify({"message": "There was an error logging the profile visit. Please try again."}), 500
+        return {"message": "There was an error logging the profile visit. Please try again."}, 500
     
     except Exception:
-        return jsonify({"message": "Server error. Please try again."}), 500
+        return {"message": "Server error. Please try again."}, 500
     
     finally:
         terminate_connection(db)
-
-
-@server.route("/profile", methods=["POST"])
-@async_check_token
-@cache_endpoint(timeout=300, key_prefix=user_profile_cache)
-async def profile():
+        
+@protected_route.post("/profile")
+def profile(request: Request):
     statement = '''
         SELECT P.username, P.first_name, P.middle_name, P.last_name, P.interests, P.height, P.gender, 
         P.sexual_orientation, P.relationship_status, U.birth_month, U.birth_date, 
@@ -618,7 +549,7 @@ async def profile():
         WHERE P.username=%s AND P.username=U.username AND P.username=P2.username
     '''
     
-    data: dict = request.get_json()
+    data: dict = asyncio.run(request.json())
     username: str = ""
     
     # If the provided username in the JSON body request
@@ -665,87 +596,63 @@ async def profile():
             ][0]
             
             if profile_info:
-                return jsonify(profile_info), 200
+                return profile_info
             else:
-                return jsonify(profile_info), 500
+                return profile_info, 500
         
         except:
-            return jsonify(profile_info), 200
+            return profile_info
     
     except db.DatabaseError as e:
-        return jsonify({"message": "Failed to retrieve profile information!"}), 500
+        return {"message": "Failed to retrieve profile information!"}, 500
     
     except RuntimeError as r:
         print(f"There was an error in line {sys.exc_info()[-1].tb_lineno}: {r}")
-        return jsonify({"message": "There was a run time error. Please try again."}), 500
+        return {"message": "There was a run time error. Please try again."}, 500
     
     except Exception as e:
-        return jsonify({"message": "A server error happened. Please try again."}), 500
+        return {"message": "A server error happened. Please try again."}, 500
     
     finally:
         terminate_connection(db)
-
-
-@server.route("/retrieve_pic", methods=["POST"])
-async def retrieve_pic():
-    pic = request.files['pic']
-    secure_pic_filename = secure_filename(pic.filename)
-    pic.save("../images/%s" % secure_pic_filename)
-    
-    with open("../images/%s" % secure_pic_filename, "rb") as f:
-        pic_file = f.read()
-        base64_pic_file = base64.b64encode(pic_file).decode('utf-8')
-        f.close()
         
-    os.remove("../images/%s" % secure_pic_filename)
+@server.post("/retrieve_pic")
+async def retrieve_pic(request: Request):
+    form_data = await request.form()
+    pic = await form_data.get('pic').read()
+    pic = base64.b64encode(bytes(pic)).decode('utf-8')
     
-    return jsonify({"pic": base64_pic_file}), 200
+    return {"pic": pic}
 
-
-@server.route("/update_profile_pic", methods=["POST", "GET"])
-@async_check_token
-async def update_profile_pic():
+@protected_route.route("/update_profile_pic", methods=["POST", "GET"])
+async def update_profile_pic(request: Request):
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
+    
     try:
-        try:
-            # The name within the bracket of the .files and .form functions
-            # represent the name that was defined in the HTML input tag.
-            req = request.files['new-profile-pic']
-            username = request.cookies.get("username") if request.cookies.get("username") is not None else ""
-            secure = secure_filename(req.filename)
-            req.save('../images/%s' % secure)
+        # The name within the bracket of the .files and .form functions
+        # represent the name that was defined in the HTML input tag.
+        req = await request.form()
+        username = request.cookies.get("username") if request.cookies.get("username") is not None else ""
+        image_uri = bytes(base64.b64encode(await req.get('new-profile-pic').read())).decode('utf-8')
+        
+        # Commit new profile pic to database.
+        update_information = [image_uri, username]
+        update_stmt = "UPDATE Photos SET uri=%s WHERE username=%s"
+        cursor.execute(update_stmt, update_information)
+        db.commit()
 
-            if os.path.isfile("../images/%s" % secure):
-                with open('../images/%s' % secure, "rb") as f:
-                    new_image = f.read()
-                    base64_image_info = base64.b64encode(new_image).decode('utf-8')
-                    update_information = [base64_image_info, username]
-                    update_stmt = "UPDATE Photos SET uri=%s WHERE username=%s"
-                    cursor.execute(update_stmt, update_information)
-                    db.commit()
-
-                os.remove('../images/%s' % secure)
-
-            # Clear the cache.
-            cache.clear()
-
-            return redirect("http://localhost:5173/profile/options/update")
-
-        except RequestEntityTooLarge:
-            return redirect(location="http://localhost:5173/profile/options/update", Response={"status": "You can only upload an image that is 1 MB or less."})
+        return RedirectResponse("http://localhost:5173/profile/options/update")
     
     except Exception as e:
-        return redirect(location="http://localhost:5173/profile/options/update")
+        return RedirectResponse(location="http://localhost:5173/profile/options/update")
     
     finally:
         terminate_connection(db)
         
-
-@server.route("/update_profile/name", methods=["PUT"])
-@async_check_token
-async def update_name():
-    data: dict = request.get_json()
+@protected_route.put("/update_profile/name")
+async def update_name(request: Request):
+    data: dict = await request.json()
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
@@ -763,31 +670,28 @@ async def update_name():
             cursor.execute(statement, params)
             db.commit()
             
-            # Clear the cache.
-            cache.clear()
-            
-            return jsonify({"message": "Successfully updated name!"}), 200
+            return {"message": "Successfully updated name!"}
             
         except db.DatabaseError:
-            return jsonify({"message": "Failed to update name."}), 500
+            return {"message": "Failed to update name."}, 500
         
     except db.DatabaseError:
-        return jsonify({"message": "Failed to update name!"}), 500
+        return {"message": "Failed to update name!"}, 500
     
     finally:
         terminate_connection(db)
         
-        
-@server.route("/update_profile/DOB", methods=["PUT"])
-@async_check_token
-async def update_DOB():
-    data: dict = request.get_json()
+@protected_route.put("/update_profile/DOB")
+async def update_DOB(request: Request):
+    data: dict = await request.json()
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
         # Check if the user was lying about their DOB when they originally registered for an account.
-        they_told_the_truth = determine_account_registration_age(cursor, request.cookies.get("username"), data["birth_month"], data["birth_date"], data["birth_year"])
+        they_told_the_truth = await determine_account_registration_age(cursor, request.cookies.get("username"), data["birth_month"], data["birth_date"], data["birth_year"])
+        
+        print(they_told_the_truth)
         
         # If they did tell the truth about their DOB when originally registering for their account, 
         # they can go ahead and change it.
@@ -797,10 +701,7 @@ async def update_DOB():
             cursor.execute(statement, params)
             db.commit()
         
-            # Clear the cache.
-            cache.clear()
-        
-            return jsonify({"message": "Successfully updated birthday!"}), 200
+            return {"message": "Successfully updated birthday!"}
         
         # Otherwise, insert their username into the Banned table to ban them from using the service.
         else:
@@ -809,20 +710,18 @@ async def update_DOB():
             cursor.execute(statement, params)
             db.commit()
             
-            return jsonify({"message": "Failed to update birthday. You were underage when you originally registered for an account."}), 403
+            raise HTTPException(403, {"message": "Failed to update birthday. You were underage when you originally registered for an account."})
 
     except db.DatabaseError as e:
         print(e)
-        return jsonify({"message": "Error updating date of birth!"}), 500
+        raise HTTPException(500, {"message": "Error updating date of birth!"})
     
     finally:
         terminate_connection(db)
         
-
-@server.route("/update_profile/username", methods=["PUT"])
-@async_check_token
-async def update_username():
-    data: dict = request.get_json()
+@protected_route.put("/update_profile/username")
+async def update_username(request: Request, response: Response):
+    data: dict = await request.json()
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
@@ -833,25 +732,19 @@ async def update_username():
         cursor.execute(statement, params)
         db.commit()
         
-        # Clear the cache.
-        cache.clear()
+        response.set_cookie("username", data["new_username"], max_age=dt.timedelta(hours=2).seconds, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
         
-        new_username_cookie = make_response({"cookie": "%s" % data["new_username"]})
-        new_username_cookie.set_cookie("username", data["new_username"], max_age=dt.timedelta(hours=2).seconds, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
-        
-        return new_username_cookie
+        return {"cookie": "%s" % data["new_username"]}
     
     except db.DatabaseError:
         return {"message": "Error updating username!"}
     
     finally:
         terminate_connection(db)
-    
-    
-@server.route("/update_profile/height", methods=["PUT"])
-@async_check_token
-async def update_height():
-    data: dict = request.get_json()
+        
+@protected_route.put("/update_profile/height")
+async def update_height(request: Request):
+    data: dict = await request.json()
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
@@ -863,22 +756,17 @@ async def update_height():
         cursor.execute(statement, params)
         db.commit()
         
-        # Clear the cache.
-        cache.clear()
-        
-        return jsonify({"message": "Successfully updated height!"}), 200
+        return {"message": "Successfully updated height!"}
     
     except db.DatabaseError:
-        return jsonify({"message": "Error updating height."}), 500
+        return {"message": "Error updating height."}, 500
         
     finally:
         terminate_connection(db)
-    
-    
-@server.route("/update_profile/gender", methods=["PUT"])
-@async_check_token
-async def update_gender():
-    data: dict = request.get_json()
+        
+@protected_route.put("/update_profile/gender")
+async def update_gender(request: Request):
+    data: dict = await request.json()
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
@@ -886,24 +774,19 @@ async def update_gender():
         statement = "UPDATE Profiles SET gender=%s WHERE username=%s"
         params = [data["new_gender"], request.cookies.get("username")]
         cursor.execute(statement, params)
-        db.commit()
+        db.commit() 
         
-        # Clear the cache.
-        cache.clear()
-        
-        return jsonify({"message": "Successfully updated gender!"}), 200
+        return {"message": "Successfully updated gender!"}
         
     except db.DatabaseError:
-        return jsonify({"message": "Error updating gender."}), 500
+        return {"message": "Error updating gender."}, 500
         
     finally:
         terminate_connection(db)
         
-
-@server.route("/update_profile/sexual_orientation", methods=["PUT"])
-@async_check_token
-async def update_sexual_orientation():
-    data: dict = request.get_json()
+@protected_route.put("/update_profile/sexual_orientation")
+async def update_sexual_orientation(request: Request):
+    data: dict = await request.json()
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
@@ -913,22 +796,17 @@ async def update_sexual_orientation():
         cursor.execute(statement, params)
         db.commit()
         
-        # Clear the cache.
-        cache.clear()
-        
-        return jsonify({"message": "Successfully updated sexual orientation!"}), 200
+        return {"message": "Successfully updated sexual orientation!"}
         
     except db.DatabaseError:
-        return jsonify({"message": "Error updating sexual orientation."}), 500
+        return {"message": "Error updating sexual orientation."}, 500
         
     finally:
         terminate_connection(db)
         
-
-@server.route("/update_profile/relationship_status", methods=["PUT"])
-@async_check_token
-async def update_relationship_status():
-    data: dict = request.get_json()
+@protected_route.put("/update_profile/relationship_status")
+async def update_relationship_status(request: Request):
+    data: dict = await request.json()
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
@@ -937,23 +815,18 @@ async def update_relationship_status():
         params = [data["new_relationship_status"], request.cookies.get("username")]
         cursor.execute(statement, params)
         db.commit()
-        
-        # Clear the cache.
-        cache.clear()
-        
-        return jsonify({"message": "Successfully updated relationship status!"}), 200
+
+        return {"message": "Successfully updated relationship status!"}
     
     except db.DatabaseError:
-        return jsonify({"message": "Error updating relationship status."}), 500
+        return {"message": "Error updating relationship status."}, 500
     
     finally:
         terminate_connection(db)
         
-
-@server.route("/update_profile/bio", methods=["PUT"])
-@async_check_token
-async def update_bio():
-    data: dict = request.get_json()
+@protected_route.put("/update_profile/bio")
+async def update_bio(request: Request):
+    data: dict = await request.json()
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
@@ -963,21 +836,16 @@ async def update_bio():
         cursor.execute(statement, params)
         db.commit()
         
-        # Clear the cache.
-        cache.clear()
-        
-        return jsonify({"message": "Successfully updated bio!"}), 200
+        return {"message": "Successfully updated bio!"}
     
     except db.DatabaseError:
-        return jsonify({"message": "Error updating bio."}), 500
+        return {"message": "Error updating bio."}, 500
     
     finally:
         terminate_connection(db)
-    
-
-@server.route("/privacy/check_recommendation_settings", methods=["POST"])
-@async_check_token
-async def check_recommendation_settings():
+        
+@protected_route.post('/privacy/check_recommendation_settings')
+def check_recommendation_settings(request: Request):
     username = request.cookies.get("username")
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
@@ -987,23 +855,21 @@ async def check_recommendation_settings():
         params = [username]
         cursor.execute(statement, params)
         
-        used = [{"used": records[0], "use_so_filter": records[1] if using_so_filter(username, cursor) else "false"} for records in cursor][0]
+        used = [{"used": records[0], "use_so_filter": records[1] if asyncio.run(using_so_filter(username, cursor)) else "false"} for records in cursor][0]
         
-        return jsonify(used), 200
+        return used
     
     except db.DatabaseError:
-        return jsonify({"message": "Failed to retrieve recommendation settings for user."}), 500
+        return {"message": "Failed to retrieve recommendation settings for user."}, 500
     
     finally:
         terminate_connection(db)
         
-
-@server.route("/privacy/change_recommendation_settings", methods=["PUT"])
-@async_check_token
-async def change_recommendation_settings():
-    data: dict = request.get_json()
+@protected_route.put("/privacy/change_recommendation_settings")
+async def change_recommendation_settings(request: Request):
+    data: dict = await request.json()
     username: str = request.cookies.get("username")
-    query: str = request.args.get('rs')
+    query: str = request.query_params.get("t")
     
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
@@ -1022,26 +888,24 @@ async def change_recommendation_settings():
             db.commit()
             
         else:
-            return jsonify({"message": "Invalid query or request."}), 400
+            return {"message": "Invalid query or request."}, 400
         
-        return jsonify({"message": data["check_value"]}), 200
+        return {"message": data["check_value"]}
     
     except db.DatabaseError:
-        return jsonify({"message": "Failed to update recommendation settings."}), 500
+        return {"message": "Failed to update recommendation settings."}, 500
     
     except Exception:
-        return jsonify({"message": "A server error has occurred. Please try again later."})
+        return {"message": "A server error has occurred. Please try again later."}, 500
     
     finally:
         terminate_connection(db)
- 
- 
-@server.route("/privacy/download_data", methods=["POST", "GET"])
-@async_check_token
-async def download_data():
+        
+@protected_route.route("/privacy/download_data", methods=["POST", "GET"])
+async def download_data(request: Request):
     if request.method == "POST":
         # Retrieve payload information.
-        requested_info: dict = request.get_json()
+        requested_info: dict = await request.json()
         
         # Boolean variable that will act as a status marker
         # if the user requested data to be downloaded.
@@ -1065,7 +929,7 @@ async def download_data():
             password = [p[0] for p in cursor][0]
             
             # Verify the entered password with the hash of the retrieved password.
-            password_verified = bcrypt.check_password_hash(password, requested_info["confirmed_password"])
+            password_verified = await user_verified(request.cookies.get("username"), password, cursor)
             
             # If their password was successfully verified, then proceed.
             if password_verified:
@@ -1147,116 +1011,109 @@ async def download_data():
                     with open("user_info.json", "w") as f:
                         json.dump(json_user_info, f)
                         
-                    return jsonify({"message": "Successfully downloaded data!"}), 200
+                    return {"message": "Successfully downloaded data!"}
                 
                 # Otherwise, cancel their request if they did not select any of the
                 # following options.
                 else:
-                    return jsonify({"message": "User did not request data. Cancelling request..."}), 400
+                    return {"message": "User did not request data. Cancelling request..."}, 400
                 
             # If not, return an error message telling the user that they entered the wrong password.
             else:
-                return jsonify({"message": "Failed to verify password. Please try again."}), 403
+                return {"message": "Failed to verify password. Please try again."}, 403
         
         except db.DatabaseError:
-            return jsonify({"message": "Failed to connect to database."}), 500
+            return {"message": "Failed to connect to database."}, 500
         
         except Exception as e:
-            print(e)
-            return jsonify({"message": "Exception was thrown"}), 500
+            return {"message": "Exception was thrown"}, 500
         
         finally:
             terminate_connection(db)
     
     elif request.method == "GET":
         if os.path.isfile("user_info.json"):
-            return send_file("user_info.json", as_attachment=True)
-
-
-@server.route("/report_user", methods=["POST"])
-@async_check_token
-async def report_user():
-    db: p.extensions.connection = create_connection()
-    cursor: p.extensions.cursor = db.cursor()
-    try:
-        reporting_user = request.form['reporting-user']
-        reported_user = request.form['reported-user']
-        reason = request.form['reason-description']
+            json_file = open("user_info.json", "rb")
+            return StreamingResponse(json_file)
         
-        # To store any files uploaded by user.
-        files_list = []
+# @protected_route.post("/report_user")
+# async def report_user(request: Request):
+#     db: p.extensions.connection = create_connection()
+#     cursor: p.extensions.cursor = db.cursor()
+#     try:
+#         data = await request.form()
+#         reporting_user = data['reporting-user']
+#         reported_user = data['reported-user']
+#         reason = data['reason-description']
         
-        # Default report status when user is making their report.
-        status = "Pending"  
+#         # To store any files uploaded by user.
+#         files_list = []
         
-        # To store information that will be used to insert into the database.
-        db_info = [reporting_user, reported_user, reason, "", "", "", status]
+#         # Default report status when user is making their report.
+#         status = "Pending"  
         
-        try:
-            # Section that separately handles each of the three files
-            # provided that at least one of them was uploaded.
-            if secure_filename(request.files['file1'].filename) != "":
-                file1 = request.files['file1']
-                secure_file1 = secure_filename(file1.filename)
-                file1.save("../documents/%s" % secure_file1)
-                files_list.append(secure_file1)
+#         # To store information that will be used to insert into the database.
+#         db_info = [reporting_user, reported_user, reason, "", "", "", status]
         
-            if secure_filename(request.files['file2'].filename) != "":
-                file2 = request.files['file2']
-                secure_file2 = secure_filename(file2.filename)
-                file2.save("../documents/%s" % secure_file2)
-                files_list.append(secure_file2)
+#         try:
+#             # Section that separately handles each of the three files
+#             # provided that at least one of them was uploaded.
+#             if secure_filename(request.files['file1'].filename) != "":
+#                 file1 = request.files['file1']
+#                 secure_file1 = secure_filename(file1.filename)
+#                 file1.save("../documents/%s" % secure_file1)
+#                 files_list.append(secure_file1)
+        
+#             if secure_filename(request.files['file2'].filename) != "":
+#                 file2 = request.files['file2']
+#                 secure_file2 = secure_filename(file2.filename)
+#                 file2.save("../documents/%s" % secure_file2)
+#                 files_list.append(secure_file2)
             
-            if secure_filename(request.files['file3'].filename) != "":
-                file3 = request.files['file3']
-                secure_file3 = secure_filename(file3.filename)
-                file3.save('../documents/%s' % secure_file3)
-                files_list.append(secure_file3)
+#             if secure_filename(request.files['file3'].filename) != "":
+#                 file3 = request.files['file3']
+#                 secure_file3 = secure_filename(file3.filename)
+#                 file3.save('../documents/%s' % secure_file3)
+#                 files_list.append(secure_file3)
             
-            db_info_index_for_docs = 3
+#             db_info_index_for_docs = 3
             
-            # Go through each file and store the base64 version into the db_info
-            # array for use when inserting it into the database.      
-            for file_doc in files_list:
-                if os.path.isfile('../documents/%s' % file_doc):
-                    with open('../documents/%s' % file_doc, "rb") as f:
-                        current_file = f.read()
-                        base64_encoding_file = base64.b64encode(current_file).decode('utf-8')
-                        db_info[db_info_index_for_docs] = base64_encoding_file
-                        db_info_index_for_docs += 1
+#             # Go through each file and store the base64 version into the db_info
+#             # array for use when inserting it into the database.      
+#             for file_doc in files_list:
+#                 if os.path.isfile('../documents/%s' % file_doc):
+#                     with open('../documents/%s' % file_doc, "rb") as f:
+#                         current_file = f.read()
+#                         base64_encoding_file = base64.b64encode(current_file).decode('utf-8')
+#                         db_info[db_info_index_for_docs] = base64_encoding_file
+#                         db_info_index_for_docs += 1
                     
-                    # Close and remove the file temporarily stored in the documents folder.
-                    f.close()
-                    os.remove("../documents/%s" % file_doc)
+#                     # Close and remove the file temporarily stored in the documents folder.
+#                     f.close()
+#                     os.remove("../documents/%s" % file_doc)
             
              
-            query = "INSERT INTO Reports (reporting_user, reported_user, date_and_time, reason, document1, document2, document3, report_status) VALUES (%s, %s, now(), %s, %s, %s, %s, %s)"
-            cursor.execute(query, db_info)
+#             query = "INSERT INTO Reports (reporting_user, reported_user, date_and_time, reason, document1, document2, document3, report_status) VALUES (%s, %s, now(), %s, %s, %s, %s, %s)"
+#             cursor.execute(query, db_info)
             
-            return redirect("http://localhost:5173/privacy/options/view_blocked_users")
+#             return RedirectResponse("http://localhost:5173/privacy/options/view_blocked_users")
         
-        except RequestEntityTooLarge as l:
-            return {"message": l}
+#         except db.DatabaseError as e:
+#             return {"message": e}
         
-        except db.DatabaseError as e:
-            return {"message": e}
+#         except Exception as e:
+#             return {"message": e}
         
-        except Exception as e:
-            return {"message": e}
-        
-    except Exception as e:
-        return {"message": e}
+#     except Exception as e:
+#         return {"message": e}
     
-    finally:
-        terminate_connection(db)
-        # Configure memory size back to 1 MB.
-        server.config["MAX_CONTENT_LENGTH"] = 1 * 1000 * 1000
+#     finally:
+#         terminate_connection(db)
+#         # Configure memory size back to 1 MB.
+#         server.config["MAX_CONTENT_LENGTH"] = 1 * 1000 * 1000
 
-
-@server.route("/search", methods=['POST'])
-@async_check_token
-@cache_endpoint(timeout=300, key_prefix=search_results_cache)
-async def search():
+@protected_route.post("/search")
+async def search(request: Request):
     statement = '''
         SELECT P.*, U.birth_month, U.birth_date, U.birth_year, P2.uri FROM Profiles P, Users U, Photos P2 
         WHERE P.username!=%s AND P.username=U.username AND P.username=P2.username
@@ -1268,7 +1125,7 @@ async def search():
     
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
-    data: dict = request.get_json()
+    data: dict = await request.json()
     
     params = [data["username"] for u in range(0, 3)]
     
@@ -1295,18 +1152,16 @@ async def search():
                           }
                           for results in cursor]
         
-        return jsonify(search_results), 200
+        return search_results
     
     except db.DatabaseError as e:
-        return jsonify({"message": "Failed to retrieve search terms! %s" % e}), 500
+        return {"message": "Failed to retrieve search terms! %s" % e}, 500
     
     finally:
         terminate_connection(db)
-
-
-@server.route("/retrieve_search_history", methods=["POST"])
-@async_check_token
-async def retrieve_search_history():
+        
+@protected_route.post("/retrieve_search_history")
+def retrieve_search_history(request: Request):
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
@@ -1320,21 +1175,19 @@ async def retrieve_search_history():
         
         search_terms = [{"search_term": record[0]} for record in cursor]
         
-        return jsonify(search_terms), 200
+        return search_terms
     
     except db.DatabaseError as e:
-        return jsonify({"message": e}), 500
+        return {"message": e}, 500
     
     finally:
         terminate_connection(db)
         
-
-@server.route("/insert_search_history", methods=["POST"])
-@async_check_token
-async def insert_search_history():
+@protected_route.post("/insert_search_history")
+def insert_search_history(request: Request):
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
-    data: dict = request.get_json()
+    data: dict = asyncio.run(request.json())
     
     try:
         # Attempt to retrieve the search term from the database associated with the user's search
@@ -1363,7 +1216,7 @@ async def insert_search_history():
             db.commit()
             
             # Return a status code of 200 to indicate that the search term has been inserted.
-            return jsonify({"message": "Search term has been inserted!"}), 200
+            return {"message": "Search term has been inserted!"}
 
         # If the search term does exist, then...
         else:
@@ -1378,21 +1231,19 @@ async def insert_search_history():
             db.commit()
             
             # Return a status code of 200 to indicate the search term date and time have been updated.
-            return jsonify({"message": "Search term time has been updated!"}), 200
+            return {"message": "Search term time has been updated!"}
     
     except db.DatabaseError:
-        return jsonify({"message": "Could not find search term!"}), 500
+        return {"message": "Could not find search term!"}, 500
     
     except Exception as e:
-        return jsonify({"message": "Failed to insert or update search term."}), 500
+        return {"message": "Failed to insert or update search term."}, 500
     
     finally:
         terminate_connection(db)
-    
-
-@server.route("/clear_search_history", methods=["POST"])
-@async_check_token
-async def clear_search_history():
+        
+@protected_route.post("/clear_search_history")
+async def clear_search_history(request: Request):
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
@@ -1403,19 +1254,17 @@ async def clear_search_history():
         cursor.execute(statement, params)
         db.commit()
         
-        return jsonify({"message": "Search history cleared!"}), 200
+        return {"message": "Search history cleared!"}
     
     except db.DatabaseError as e:
-        return jsonify({"message": e}), 500
+        return {"message": e}, 500
     
     finally:
         terminate_connection(db)
         
-
-@server.route("/clear_search_history_term", methods=["POST"])
-@async_check_token
-async def clear_search_history_term():
-    search_term = request.args.get("search_term")
+@protected_route.post("/clear_search_history_term")
+async def clear_search_history_term(request: Request):
+    search_term = request.query_params.get("search_term")
     username = request.cookies.get("username")
     params = [username, search_term]
     
@@ -1436,39 +1285,42 @@ async def clear_search_history_term():
             
             updated_search_history = [{"search_term": record[0]} for record in cursor]
             
-            return jsonify(updated_search_history), 200
+            return updated_search_history
         
         except db.DatabaseError as e:
-            return jsonify({"message": "Failed to retrieve updated search history!"}), 500
+            return {"message": "Failed to retrieve updated search history!"}, 500
         
     except db.DatabaseError as e:
-        return jsonify({"message": "Invalid username or search term!"}), 500
+        return {"message": "Invalid username or search term!"}, 500
     
     finally:
         terminate_connection(db)
         
-        
-@server.route("/get_user_profiles", methods=["POST"])
-@async_check_token
-# @cache.cached(timeout=300, key_prefix=user_profiles_cache_key)
-async def get_user_profiles():
+@protected_route.post("/get_user_profiles")
+def get_user_profiles(request: Request):
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
-        if request.args.get("t") == "user_profiles":
+        if request.query_params.get("t") == "user_profiles":
             statement = '''
                 SELECT P.username, P.interests, P.height, P.gender, P.sexual_orientation, 
                 P.interested_in, P.state_residence, P.city_residence, P.relationship_status, 
                 P.first_name, P.middle_name, P.last_name, P2.uri,
-                U.birth_month, U.birth_date, U.birth_year, R.rating FROM Profiles P, 
-                Photos P2, Users U, Ratings R WHERE P.username!=%s
-                AND P.username=P2.username AND P.username=U.username
-                AND R.username=P.username
-                AND (P.username NOT IN (SELECT B.blockee FROM Blocked B WHERE (B.blockee=P.username AND B.blocker=%s))
-                AND P.username NOT IN (SELECT B.blocker FROM Blocked B WHERE (B.blocker=P.username AND B.blockee=%s))
-                AND P.username NOT IN (SELECT B.username FROM Banned B WHERE B.username=P.username))
-                ORDER BY last_name, first_name
+                U.birth_month, U.birth_date, U.birth_year, R.rating FROM Profiles P
+                INNER JOIN Photos P2 ON P2.username=P.username
+                INNER JOIN Users U ON U.username=P.username
+                INNER JOIN Ratings R ON R.username=P.username
+                WHERE P.username!=%s
+                AND P.username NOT IN (
+                    SELECT COALESCE(B.blockee, B.blocker) FROM Blocked B
+                    WHERE (B.blockee=P.username OR B.blocker=P.username)
+                    AND (B.blockee=%s OR B.blocker=%s)
+                )
+                AND P.username NOT IN (
+                    SELECT B2.username FROM Banned B2 WHERE B2.username=P.username
+                )
+                ORDER BY P.last_name, P.first_name
             '''
             params = [request.cookies.get("username") for u in range(0, 3)]
             
@@ -1497,20 +1349,29 @@ async def get_user_profiles():
                 for record in cursor
             ]
             
-            return jsonify(profiles), 200
+            return profiles
 
-        elif request.args.get("t") == "visits":        
+        elif request.query_params.get("t") == "visits":        
             statement = '''
                 SELECT P.username, P.interests, P.first_name, P.city_residence, P.state_residence, P2.uri,
-                U.birth_month, U.birth_date, U.birth_year FROM Profiles P, 
-                Photos P2, Users U, Visits V WHERE P.username!=%s
-                AND P.username=P2.username AND P.username=U.username
-                AND V.visitee=P.username
-                AND V.visitor=%s
-                AND (P.username NOT IN (SELECT B.blockee FROM Blocked B WHERE (B.blockee=P.username AND B.blocker=%s))
-                AND P.username NOT IN (SELECT B.blocker FROM Blocked B WHERE (B.blocker=P.username AND B.blockee=%s))
-                AND P.username NOT IN (SELECT B.username FROM Banned B WHERE B.username=P.username))
-                ORDER BY V.visit_count DESC
+		        U.birth_month, U.birth_date, U.birth_year FROM Profiles P
+                INNER JOIN Photos P2 ON P2.username=P.username
+                INNER JOIN Users U ON U.username=P.username
+                INNER JOIN Ratings R ON R.username=P.username
+                INNER JOIN Visits V ON V.visitor=%s AND V.visitee=P.username
+                WHERE P.username!=%s
+                AND P.username NOT IN (
+                    SELECT COALESCE(B.blockee, B.blocker) FROM Blocked B
+                    WHERE (B.blockee=P.username OR B.blocker=P.username)
+                    AND (B.blockee=%s OR B.blocker=%s)
+                )
+                AND P.username NOT IN (
+                    SELECT B2.username FROM Banned B2 WHERE B2.username!=P.username
+                )
+                AND P.username NOT IN (
+                    SELECT B2.username FROM Banned B2 WHERE B2.username=P.username
+                )
+                ORDER BY P.last_name, P.first_name
             '''
             params = [request.cookies.get("username") for u in range(0, 4)]
             cursor.execute(statement, params)
@@ -1530,22 +1391,19 @@ async def get_user_profiles():
                 for record in cursor
             ]
             
-            return jsonify(visits)
+            return visits
     
     except db.DatabaseError as e:
-        return jsonify({"message": "Failed to get basic profile details!"}), 500
+        return {"message": "Failed to get basic profile details!"}, 500
     
     except Exception as e:
-        return jsonify({"message": "There was a server error. Please try again!"}), 500
+        return {"message": "There was a server error. Please try again!"}, 500
     
     finally:
         terminate_connection(db)
-
-
-@server.route("/get_logged_in_user_profile", methods=["POST"])
-@async_check_token
-# @cache.cached(timeout=300, key_prefix=logged_in_user_profile_cache_key)
-async def get_logged_in_user_profile():
+        
+@protected_route.post("/get_logged_in_user_profile")
+def get_logged_in_user_profile(request: Request):
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
@@ -1587,32 +1445,40 @@ async def get_logged_in_user_profile():
             for record in cursor
         ]
         
-        return jsonify(profiles), 200
+        return profiles
     
     except db.DatabaseError as e:
-        return jsonify({"message": "Failed to get basic profile details!"}), 500
+        return {"message": "Failed to get basic profile details!"}, 500
     
     finally:
         terminate_connection(db)
-    
-
-@server.route("/check_messaged_users", methods=["POST"])
-@async_check_token
-async def check_messaged_users():
+        
+@protected_route.post("/check_messaged_users")
+def check_messaged_users(request: Request):
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
         statement = '''
-            SELECT R.user1, R.user2, R.message, R.date_and_time 
-            AS sent_time, P.first_name, P2.uri, UR.rating_type FROM Recent R 
-            INNER JOIN Profiles P ON R.user1=%s AND R.user2=P.username
-            AND (P.username NOT IN (SELECT B.blockee FROM Blocked B WHERE (B.blockee=P.username AND B.blocker=%s))
-            AND P.username NOT IN (SELECT B.blocker FROM Blocked B WHERE (B.blocker=P.username AND B.blockee=%s))
-            AND P.username NOT IN (SELECT B.username FROM Banned B WHERE B.username=P.username))
-            INNER JOIN Photos P2 ON P.username=P2.username
-            LEFT JOIN User_Rating_Labels UR ON UR.rater=R.user1 AND UR.ratee=R.user2
-            ORDER BY sent_time DESC
+            SELECT * FROM (
+                SELECT DISTINCT ON (M.message_from, M.message_to) M.message_from as user1, M.message_to as user2, M.message, 
+                to_char(M.date_and_time AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago', 'FMMonth DD, YYYY, HH12:MI AM') 
+                AS sent_time, P.first_name, P2.uri, UR.rating_type 
+                FROM Messages M 
+                INNER JOIN Profiles P ON M.message_to=P.username
+                INNER JOIN Photos P2 ON P.username=P2.username
+                LEFT JOIN User_Rating_Labels UR ON UR.rater=M.message_from AND UR.ratee=M.message_to
+                WHERE M.message_from=%s
+                AND P.username NOT IN (
+                    SELECT COALESCE(B.blockee, B.blocker) FROM Blocked B
+                    WHERE (B.blockee=P.username OR B.blocker=P.username)
+                    AND (B.blockee=%s OR B.blocker=%s)
+                )
+                AND P.username NOT IN (
+                    SELECT B2.username FROM Banned B2 WHERE B2.username=P.username
+                )
+                ORDER BY M.message_from, M.message_to, M.date_and_time DESC
+            ) ORDER BY sent_time DESC;
         '''
         params = [request.cookies.get("username") for u in range(0, 3)]
         
@@ -1631,23 +1497,20 @@ async def check_messaged_users():
             for record in cursor
         ]
         
-        return jsonify(messages), 200
+        return messages
 
-    except db.DatabaseError as e:
-        print(e)
-        return jsonify({"message": "Failed to retrieve messaged users."}), 500
+    except db.DatabaseError:
+        return {"message": "Failed to retrieve messaged users."}, 500
     
     finally:
         terminate_connection(db)
-    
-
-@server.route("/retrieve_messages", methods=["POST"])
-@async_check_token
-async def retrieve_messages():
+        
+@protected_route.post("/retrieve_messages")
+async def retrieve_messages(request: Request):
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
-    data = request.get_json()
-    sender = request.cookies.get("username")
+    data: dict = await request.json()
+    sender: str = request.cookies.get("username")
     
     try:
         params = [sender, data["receiver"], data["receiver"], sender]
@@ -1666,22 +1529,20 @@ async def retrieve_messages():
             for record in cursor
         ]
         
-        return jsonify(messages), 200
+        return messages
         
     except db.DatabaseError as e:
-        return jsonify({"message": "Failed to retrieve messages."}), 500
+        return {"message": "Failed to retrieve messages."}, 500
     
     finally:
         terminate_connection(db)
         
-        
-@server.route("/post_message", methods=["POST"])
-@async_check_token
-async def post_message():
+@protected_route.post("/post_message")
+async def post_message(request: Request):
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
-    data: dict = request.get_json()
-    sender = request.cookies.get("username")
+    data: dict = await request.json()
+    sender: str = request.cookies.get("username")
     
     try:
         statement = '''
@@ -1695,35 +1556,35 @@ async def post_message():
         
         # Variable that checks whether either the sender or recipient has messaged
         # one or the other.
-        messaged = check_recent_message_records(cursor, sender, data["recipient_user"])
+        messaged = await check_recent_message_records(cursor, sender, data["recipient_user"])
         
-        if not messaged:
-            statement = '''
-                INSERT INTO Recent (user1, user2, message, date_and_time) VALUES (%s, %s, %s, now())
-            '''
-            params = [sender, data["recipient_user"], data["message"]]
+        # if not messaged:
+        #     statement = '''
+        #         INSERT INTO Recent (user1, user2, message, date_and_time) VALUES (%s, %s, %s, now())
+        #     '''
+        #     params = [sender, data["recipient_user"], data["message"]]
             
-            cursor.execute(statement, params)
-            db.commit()
+        #     cursor.execute(statement, params)
+        #     db.commit()
             
-            statement = '''
-                INSERT INTO Recent (user1, user2, message, date_and_time) VALUES (%s, %s, %s, now())
-            '''
-            params = [data["recipient_user"], sender, data["message"]]
+        #     statement = '''
+        #         INSERT INTO Recent (user1, user2, message, date_and_time) VALUES (%s, %s, %s, now())
+        #     '''
+        #     params = [data["recipient_user"], sender, data["message"]]
             
-            cursor.execute(statement, params)
-            db.commit()
+        #     cursor.execute(statement, params)
+        #     db.commit()
         
-        else:
-            statement = '''
-                UPDATE Recent SET message=%s, date_and_time=now()
-                WHERE (user1=%s AND user2=%s) OR (user1=%s AND user2=%s)
-            '''
-            params = [data["message"], sender, data["recipient_user"], 
-                      data["recipient_user"], sender]
+        # else:
+        #     statement = '''
+        #         UPDATE Recent SET message=%s, date_and_time=now()
+        #         WHERE (user1=%s AND user2=%s) OR (user1=%s AND user2=%s)
+        #     '''
+        #     params = [data["message"], sender, data["recipient_user"], 
+        #               data["recipient_user"], sender]
             
-            cursor.execute(statement, params)
-            db.commit()
+        #     cursor.execute(statement, params)
+        #     db.commit()
             
         try:
             statement = '''
@@ -1751,25 +1612,23 @@ async def post_message():
                     for record in cursor
                 ]
                 
-                return jsonify(messages), 200
+                return messages
             
             except db.DatabaseError:
-                return jsonify({"message": "Failed to retrieve new messages."}), 500
+                return {"message": "Failed to retrieve new messages."}, 500
         
         except db.DatabaseError:
-            return jsonify({"message": "Failed to update notification counter."}), 500
+            return {"message": "Failed to update notification counter."}, 500
         
     except db.DatabaseError as e:
-        return jsonify({"message": "Message failed to send."}), 500
+        return {"message": "Message failed to send."}, 500
     
     finally:
         terminate_connection(db)
-    
-
-@server.route("/retrieve_message_profile_pics", methods=["POST"])
-@async_check_token
-async def retrieve_message_profile_pics():
-    data: dict = request.get_json()
+        
+@protected_route.post("/retrieve_message_profile_pics")
+async def retrieve_message_profile_pics(request: Request):
+    data: dict = await request.json()
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
@@ -1785,19 +1644,17 @@ async def retrieve_message_profile_pics():
             for record in cursor
         ][0]
         
-        return jsonify(receiver_profile_pic), 200
+        return receiver_profile_pic
     
     except db.DatabaseError:
-        return jsonify({"message": "Message failed to send."}), 500
+        return {"message": "Message failed to send."}, 500
     
     finally:
         terminate_connection(db)
         
-
-@server.route("/retrieve_notification_count", methods=["POST"])
-@async_check_token
-async def retrieve_notification_count():
-    username = request.args.get("username")
+@protected_route.post("/retrieve_notification_count")
+def retrieve_notification_count(request: Request):
+    username = request.query_params.get("username")
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
@@ -1809,22 +1666,20 @@ async def retrieve_notification_count():
             
             notification_count = [{"notification_counter": record[0]} for record in cursor][0]
             
-            return jsonify(notification_count), 200
+            return notification_count
 
         except db.DatabaseError:
-            return jsonify({"message": "Failed to retrieve notification count for user!"}), 500
+            return {"message": "Failed to retrieve notification count for user!"}, 500
         
         finally:
             terminate_connection(db)
     
     else:
-        return jsonify({"message": "Missing username for query parameter."}), 400
-        
-        
-@server.route("/clear_notification_count", methods=["PUT"])
-@async_check_token
-async def clear_notification_count():
-    username = request.args.get("username")
+        return {"message": "Missing username for query parameter."}, 400
+    
+@protected_route.put("/clear_notification_count")
+def clear_notification_count(request: Request):
+    username = request.query_params.get("username")
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
@@ -1841,24 +1696,22 @@ async def clear_notification_count():
             
             notification_count = [{"notification_counter": record[0]} for record in cursor]
             
-            return jsonify(notification_count), 200
+            return notification_count
         
         except db.DatabaseError:
-            return jsonify({"message": "Failed to retrieve notification counter."}), 500
+            return {"message": "Failed to retrieve notification counter."}, 500
         
     except db.DatabaseError:
-        return jsonify({"message": "Failed to clear notification counter."}), 500
+        return {"message": "Failed to clear notification counter."}, 500
     
     finally:
         terminate_connection(db)
         
-        
-@server.route("/update_password", methods=["PUT"])
-@async_check_token
-async def update_password():
-    data: dict = request.get_json()
+@protected_route.put("/update_password")
+async def update_password(request: Request):
+    data: dict = await request.json()
     username = request.cookies.get("username")
-    new_password = bcrypt.generate_password_hash(data["new_password"], 12).decode('utf-8')
+    new_password = context.hash(data["new_password"])
     
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
@@ -1870,7 +1723,7 @@ async def update_password():
         
         selected_password = [{"password": record[0]} for record in cursor][0]
         
-        password_verified = bcrypt.check_password_hash(selected_password["password"], data["old_password"])
+        password_verified = context.verify(data["old_password"], selected_password["password"])
         
         if password_verified:
             try:
@@ -1879,28 +1732,26 @@ async def update_password():
                 cursor.execute(statement, params)
                 db.commit()
                 
-                return jsonify({"message": "Password successfully updated!"}), 200
+                return {"message": "Password successfully updated!"}
             
             except db.DatabaseError:
-                return jsonify({"message": "Password failed to update!"}), 500
+                return {"message": "Password failed to update!"}, 500
         else:
-            return jsonify({"message": "You typed in your old password incorrectly."}), 403
+            return {"message": "You typed in your old password incorrectly."}, 403
     
     except db.DatabaseError:
-        return jsonify({"message": "Failed to execute query!"}), 500
+        return {"message": "Failed to execute query!"}, 500
     
     finally:
-        terminate_connection(db)
-        
-
-@server.route("/delete_account", methods=["POST"])
-@async_check_token
-async def delete_account():
+        terminate_connection(db) 
+    
+@protected_route.post("/delete_account")
+async def delete_account(request: Request, response: Response):
     # Retrieve username from cookie.
     username: str = request.cookies.get("username")
 
     # Stores inputted password from client.
-    data: dict = request.get_json()
+    data: dict = await request.json()
     
     # Initialize the database connection and cursor.
     db: p.extensions.connection = create_connection()
@@ -1914,7 +1765,7 @@ async def delete_account():
         
         retrieved_password = [db_pwd[0] for db_pwd in cursor.fetchall()][0]
         
-        password_verified: bool = bcrypt.check_password_hash(retrieved_password, data["password"])
+        password_verified: bool = context.verify(data["password"], retrieved_password)
         
         if password_verified:
             statement: str = "DELETE FROM Users WHERE username=%s"
@@ -1922,27 +1773,23 @@ async def delete_account():
             cursor.execute(statement, params)
             db.commit()
             
-            session_cookie = make_response({"message": "Session terminated."})
-            
-            session_cookie.set_cookie('user_session', value="", max_age=0, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
-            session_cookie.set_cookie('username', value="", max_age=0, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
+            response.set_cookie('user_session', value="", max_age=0, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
+            response.set_cookie('username', value="", max_age=0, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
         
-            return session_cookie
+            return {"message": "Session terminated."}
 
         else:
-            return jsonify({"message": "Incorrect password!"}), 401
+            return {"message": "Incorrect password!"}, 401
     
     except db.DatabaseError:
-        return jsonify({"message": "Failed to delete account!"}), 500
+        return {"message": "Failed to delete account!"}, 500
     
     finally:
         terminate_connection(db)
-    
-    
-@server.route("/block", methods=["POST"])
-@async_check_token
-async def block():
-    data: dict = request.get_json()
+        
+@protected_route.post("/block")
+async def block(request: Request):
+    data: dict = await request.json()
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
     username = request.cookies.get("username")
@@ -1979,22 +1826,20 @@ async def block():
                     cursor.execute(statement, params)
                     db.commit()
                     
-                    cache.clear()
-                    
-                    return jsonify({"message": "Blocked user."}), 200
+                    return {"message": "Blocked user."}
                     
                 except db.DatabaseError as e:
-                    return jsonify({"message": "Failed to block user."}), 500
+                    return {"message": "Failed to block user."}, 500
             
             
             # Redirects user to their profile page in the event where they attempt
             # to block another user, but the latter had already performed the operation
             # earlier.            
             else:
-                return redirect("http://localhost:5173/")
+                return RedirectResponse("http://localhost:5173/")
         
         except db.DatabaseError:
-            return jsonify({"message": "Failed to check edge case."}), 500
+            return {"message": "Failed to check edge case."}, 500
         
         finally:
             terminate_connection(db)
@@ -2009,20 +1854,17 @@ async def block():
             
             cursor.execute(statement, params)
             db.commit()
-            cache.clear()
             
-            return jsonify({"message": "You have unblocked %s." % data["profile_user"]}), 200
+            return {"message": "You have unblocked %s." % data["profile_user"]}
         
         except db.DatabaseError:
-            return jsonify({"message": "Failed to unblock user."}), 500
+            return {"message": "Failed to unblock user."}, 500
         
         finally:
             terminate_connection(db)
             
-
-@server.route("/retrieve_blocked_users", methods=["POST"])
-@async_check_token
-async def retrieve_blocked_users():
+@protected_route.post("/retrieve_blocked_users")
+async def retrieve_blocked_users(request: Request):
     username = request.cookies.get("username")
     
     db: p.extensions.connection = create_connection()
@@ -2048,19 +1890,17 @@ async def retrieve_blocked_users():
             for record in cursor
         ]
         
-        return jsonify(blocked_users), 200
+        return blocked_users
     
     except db.DatabaseError:
-        return jsonify({"message": "Failed to retrieve blocked users."}), 500
+        return {"message": "Failed to retrieve blocked users."}, 500
     
     finally:
         terminate_connection(db)
-    
-
-@server.route("/retrieve_block_status", methods=["POST"])
-@async_check_token
-async def retrieve_block_status():
-    data: dict = request.get_json()
+        
+@protected_route.post("/retrieve_block_status")
+async def retrieve_block_status(request: Request):
+    data: dict = await request.json()
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
@@ -2081,38 +1921,34 @@ async def retrieve_block_status():
             for record in cursor
         ]
         
-        return jsonify(user_block_status), 200
+        return user_block_status
     
     except db.DatabaseError:
-        return jsonify({"message": "Could not retrieve information!"}), 500
+        return {"message": "Could not retrieve information!"}, 500
     
     finally:
         terminate_connection(db)
-
-    
+        
 # WILL BE DONE AT A LATER DATE.
 # Feature will be postponed until further notice.
-@server.route("/get_location", methods=["POST"])
-@async_check_token
-async def get_location():
+@protected_route.post("/get_location")
+async def get_location(request: Request):
     try:
-        location_info = request.get_json()
+        location_info = await request.json()
         
         return {"status": "Works!"}
     
     except Exception as e:
         return {"message": e}
     
-    
-@server.route("/rating", methods=["POST"])
-@async_check_token
-async def rating():
+@protected_route.post("/rating")
+async def rating(request: Request):
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
-        rating_type = request.args.get('rt')
-        username = request.args.get('user')
+        rating_type = request.query_params.get('rt')
+        username = request.query_params.get('user')
         logged_in_user = request.cookies.get('username')
         
         # Retrieve the records of the rater and ratee to check if such record(s)
@@ -2236,27 +2072,25 @@ async def rating():
                     for record in cursor]
         
         # Return the updated data in JSON format.
-        return jsonify(records), 200
-        
+        return records
+    
     except Exception as e:
         print(e)
-        return jsonify({"status": e}), 500
+        return {"status": e}, 500
     
     finally:
         terminate_connection(db)
-
-
-@server.route("/match", methods=["POST"])
-@async_check_token
-async def match():
+        
+@protected_route.post("/match")
+async def match(request: Request):
     try:
         # Stores payload information sent from the client as an object variable.
-        request_info: dict = request.get_json()
+        request_info: dict = await request.json()
         
         # Run matching algorithm using the list of profiles (excluding the current user) to compare with the
         # profile of the logged in user.
         matches = run_matching_algorithm(request_info["users"], logged_in_user_profile=request_info["logged_in_user"], use_so_filter=request_info["use_so_filter"])
-        matches = include_visits(matches, request_info["visited_users"])
+        matches = await include_visits(matches, request_info["visited_users"])
         
         # If the limit of the number of searches retrieved is less than the
         # actual number of matched users, then let the
@@ -2273,13 +2107,10 @@ async def match():
             return [matches[0:request_info["initial_limit"]], False]
         
     except KeyError as k:
-        return jsonify({"message": "Failed to retrieve information from dictionary."}), 500
+        raise HTTPException(500, {"message": "Failed to retrieve information from dictionary."})
     
     except Exception as e:
-        print(e)
-        print(sys.exc_info()[-1].tb_lineno)
-        return jsonify({"message": "An unknown error has occurred."}), 500
-
-if __name__ == "__main__":
-    # serve(server, host='0.0.0.0', port=5000)
-    server.run(port=5000, debug=True)
+        raise HTTPException(500, {"message": "An unknown error has occurred."})
+    
+# Integrate the protected API endpoints into the FastAPI server.
+server.include_router(protected_route)
