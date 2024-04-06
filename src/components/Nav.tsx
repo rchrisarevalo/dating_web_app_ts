@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from 'react-router-dom';
-import { IoChatboxEllipsesOutline, IoSettingsOutline, IoSearchOutline, IoLogOutOutline } from "react-icons/io5"
+import { IoChatboxEllipsesOutline, IoSettingsOutline, IoSearchOutline, IoLogOutOutline, IoSendOutline } from "react-icons/io5"
 import { ProfilePicture } from "./ProfilePicture";
 import { socket_conn } from "../functions/SocketConn";
 import { NotificationCounter } from "./NotificationCounter";
@@ -60,7 +60,7 @@ export const Nav = (props: NavProps) => {
                         <Link to={`/profile`}><ProfilePicture />{`\t\t ${username}`}</Link>
                     </div>
                     <div id="profile-nav-col">
-                        <Link to={`/profile/options/`}><IoSettingsOutline size={20} style={{ marginBottom: 2 }} /></Link>
+                        <Link to={`/profile/options/`} rel="noreferrer"><IoSettingsOutline size={20} style={{ marginBottom: 2 }} /></Link>
                         <Link to={`/profile/recent_messages`}><NotificationCounter counter={notificationCounter} pending={pending} error={error} /><IoChatboxEllipsesOutline size={20} /></Link>
                         <Link to={`/profile/search`}><IoSearchOutline size={20} style={{ marginBottom: 2 }} /></Link>
                     </div>
@@ -126,7 +126,7 @@ export const UserNav = (props: UserNavProps) => {
                 <Link to={`/profile/`}><ProfilePicture />{`\t\t ${sessionStorage.getItem("username")}`}</Link>
             </div>
             <div id="profile-nav-col">
-                {!blocked && <Link to={`/message/${current_user_username}`}><IoChatboxEllipsesOutline size={20} style={{ marginBottom: 0.5 }} /></Link>}
+                {!blocked && <Link to={`/message/${current_user_username}`}><IoSendOutline size={20} style={{ marginBottom: 0.5 }} /></Link>}
                 <Link to={`/profile/search`}><IoSearchOutline size={20} style={{ marginBottom: 3 }} /></Link>
             </div>
             <div id="profile-nav-col">

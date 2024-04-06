@@ -290,15 +290,22 @@ export const Message = (props: MessageProps) => {
                             <div className="message-form">
                                 <form className="message-box" onSubmit={(e) => {e.preventDefault(); handleSubmitMessage()}}>
                                     <div id="message-input-box">
-                                        <input placeholder="Type in your message..." size={80} id="message-input" autoComplete='off' onChange={handleCharLimit} value={currentMsg} required />
-                                        <br></br>
                                         {!msgSent.sending ?
                                             !msgSent.sending_error ?
-                                                <button onSubmit={() => handleSubmitMessage} id="message-submit"><IoSendSharp /></button>
+                                                <>
+                                                    <input placeholder="Type in your message..." size={80} id="message-input" autoComplete='off' onChange={handleCharLimit} value={currentMsg} maxLength={200} required/>
+                                                    <button onSubmit={() => handleSubmitMessage} id="message-submit"><IoSendSharp /></button>
+                                                </>
                                                 :
-                                                <button onSubmit={() => handleSubmitMessage} id="message-submit"><IoSendSharp /></button>
+                                                <>
+                                                    <input placeholder="Type in your message..." size={80} id="message-input" autoComplete='off' onChange={handleCharLimit} value={currentMsg} maxLength={200} required/>
+                                                    <button onSubmit={() => handleSubmitMessage} id="message-submit"><IoSendSharp /></button>
+                                                </>
                                             :
-                                            <button disabled id="message-submit" style={{background: 'transparent'}}><Spinner /></button>
+                                            <>
+                                                <input placeholder="Type in your message..." size={80} id="message-input" autoComplete='off' onChange={handleCharLimit} value={currentMsg} maxLength={200} required disabled/>
+                                                <button disabled id="message-submit" style={{background: 'transparent'}}><Spinner /></button>
+                                            </>
                                         }
                                     </div>
                                     {displayCharLimit === true && <span id="char-msg-limit">{`${charLimit}/200`}</span>}
@@ -394,15 +401,23 @@ export const Message = (props: MessageProps) => {
                         <footer className="message-footer">
                             <div className="message-form">
                                 <form className="message-box" onSubmit={(e) => {e.preventDefault(); handleSubmitMessage()}}>
-                                    <div id="message-input-box">
-                                        <input placeholder="Type in your message..." size={25} id="message-input" autoComplete='off' onChange={handleCharLimit} value={currentMsg} maxLength={200} required />
+                                    <div id="message-input-box">  
                                         {!msgSent.sending ?
                                             !msgSent.sending_error ?
-                                                <button onSubmit={() => handleSubmitMessage} id="message-submit"><IoSendSharp /></button>
+                                                <>
+                                                    <input placeholder="Type in your message..." size={25} id="message-input" autoComplete='off' onChange={handleCharLimit} value={currentMsg} maxLength={200} required/>
+                                                    <button onSubmit={() => handleSubmitMessage} id="message-submit"><IoSendSharp /></button>
+                                                </>
                                                 :
-                                                <button onSubmit={() => handleSubmitMessage} id="message-submit"><IoSendSharp /></button>
+                                                <>
+                                                    <input placeholder="Type in your message..." size={25} id="message-input" autoComplete='off' onChange={handleCharLimit} value={currentMsg} maxLength={200} required/>
+                                                    <button onSubmit={() => handleSubmitMessage} id="message-submit"><IoSendSharp /></button>
+                                                </>
                                             :
-                                            <button disabled id="message-submit" style={{background: 'transparent'}}><Spinner /></button>
+                                            <>
+                                                <input placeholder="Type in your message..." size={25} id="message-input" autoComplete='off' onChange={handleCharLimit} value={currentMsg} maxLength={200} required disabled/>
+                                                <button disabled id="message-submit" style={{background: 'transparent'}}><Spinner /></button>
+                                            </>
                                         }
                                     </div>
                                     {displayCharLimit === true && <span id="char-msg-limit">{`${charLimit}/200`}</span>}

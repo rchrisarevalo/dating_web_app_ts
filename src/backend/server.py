@@ -87,28 +87,6 @@ async def check_token(request: Request):
 
 protected_route = APIRouter(dependencies=[Depends(check_token)])
     
-# Checks to see if either user1 or user2 has messaged the other
-# recently by retrieving their most recent chat in the Recent
-# table.        
-async def check_recent_message_records(cursor: p.extensions.cursor, user1: str, user2: str) -> bool:
-    # Retrieve recent message records between user1 and user2 from the Recent table.
-    statement = 'SELECT * FROM Recent WHERE (user1=%s AND user2=%s) OR (user1=%s AND user2=%s)'
-    params = [user1, user2, user2, user1]
-    cursor.execute(statement, params)
-    
-    # Stores message records retrieved from database between user1 and user2.
-    recent_message_records = [record for record in cursor]
-
-    # If the list is not empty, then return True to indicate that either user1
-    # or user2 have contacted each other recently.
-    if recent_message_records:
-        return True
-    
-    # Otherwise, return False to indicate that neither user1 or user2 have
-    # not contacted each other.
-    else:
-        return False
-    
 # Verifies user age when they register for an account, or if they change their
 # date of birth in their account settings.  
 async def verify_age(age: int, state_residence: str) -> bool:
@@ -542,12 +520,7 @@ def visit(request: Request):
         
 @protected_route.post("/profile")
 def profile(request: Request):
-    statement = '''
-        SELECT P.username, P.first_name, P.middle_name, P.last_name, P.interests, P.height, P.gender, 
-        P.sexual_orientation, P.relationship_status, U.birth_month, U.birth_date, 
-        U.birth_year, P2.uri FROM Profiles P, Users U, Photos P2 
-        WHERE P.username=%s AND P.username=U.username AND P.username=P2.username
-    '''
+    statement = "SELECT * FROM Profile(%s)"
     
     data: dict = asyncio.run(request.json())
     username: str = ""
@@ -603,14 +576,10 @@ def profile(request: Request):
         except:
             return profile_info
     
-    except db.DatabaseError as e:
+    except db.DatabaseError:
         return {"message": "Failed to retrieve profile information!"}, 500
     
-    except RuntimeError as r:
-        print(f"There was an error in line {sys.exc_info()[-1].tb_lineno}: {r}")
-        return {"message": "There was a run time error. Please try again."}, 500
-    
-    except Exception as e:
+    except Exception:
         return {"message": "A server error happened. Please try again."}, 500
     
     finally:
@@ -624,7 +593,7 @@ async def retrieve_pic(request: Request):
     
     return {"pic": pic}
 
-@protected_route.route("/update_profile_pic", methods=["POST", "GET"])
+@protected_route.route("/update_profile_pic", methods=["POST"])
 async def update_profile_pic(request: Request):
     db: p.extensions.connection = create_connection()
     cursor: p.extensions.cursor = db.cursor()
@@ -642,10 +611,10 @@ async def update_profile_pic(request: Request):
         cursor.execute(update_stmt, update_information)
         db.commit()
 
-        return RedirectResponse("http://localhost:5173/profile/options/update")
+        return RedirectResponse("http://localhost:5173/profile/options/update", status_code=302)
     
     except Exception as e:
-        return RedirectResponse(location="http://localhost:5173/profile/options/update")
+        return RedirectResponse(location="http://localhost:5173/profile/options/update", status_code=302)
     
     finally:
         terminate_connection(db)
@@ -1459,40 +1428,19 @@ def check_messaged_users(request: Request):
     cursor: p.extensions.cursor = db.cursor()
     
     try:
-        statement = '''
-            SELECT * FROM (
-                SELECT DISTINCT ON (M.message_from, M.message_to) M.message_from as user1, M.message_to as user2, M.message, 
-                to_char(M.date_and_time AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago', 'FMMonth DD, YYYY, HH12:MI AM') 
-                AS sent_time, P.first_name, P2.uri, UR.rating_type 
-                FROM Messages M 
-                INNER JOIN Profiles P ON M.message_to=P.username
-                INNER JOIN Photos P2 ON P.username=P2.username
-                LEFT JOIN User_Rating_Labels UR ON UR.rater=M.message_from AND UR.ratee=M.message_to
-                WHERE M.message_from=%s
-                AND P.username NOT IN (
-                    SELECT COALESCE(B.blockee, B.blocker) FROM Blocked B
-                    WHERE (B.blockee=P.username OR B.blocker=P.username)
-                    AND (B.blockee=%s OR B.blocker=%s)
-                )
-                AND P.username NOT IN (
-                    SELECT B2.username FROM Banned B2 WHERE B2.username=P.username
-                )
-                ORDER BY M.message_from, M.message_to, M.date_and_time DESC
-            ) ORDER BY sent_time DESC;
-        '''
-        params = [request.cookies.get("username") for u in range(0, 3)]
+        statement = "SELECT * FROM Recent_Messages(%s)"
+        params = [request.cookies.get("username")]
         
         cursor.execute(statement, params)
         
         messages = [
             {
-                "user1": record[0],
-                "user2": record[1],
-                "message": record[2],
-                "sent_time": record[3],
-                "first_name": record[4],
-                "uri": bytes(record[5]).decode('utf-8'),
-                "rating_type": record[6]
+                "user2": record[0],
+                "message": record[1],
+                "sent_time": record[2],
+                "first_name": record[3],
+                "uri": bytes(record[4]).decode('utf-8'),
+                "rating_type": record[5]
             }
             for record in cursor
         ]
@@ -1500,7 +1448,7 @@ def check_messaged_users(request: Request):
         return messages
 
     except db.DatabaseError:
-        return {"message": "Failed to retrieve messaged users."}, 500
+        raise HTTPException(500, {"message": "Failed to retrieve messaged users."})
     
     finally:
         terminate_connection(db)
@@ -1532,7 +1480,7 @@ async def retrieve_messages(request: Request):
         return messages
         
     except db.DatabaseError as e:
-        return {"message": "Failed to retrieve messages."}, 500
+        raise HTTPException(500, {"message": "Failed to retrieve messages."})
     
     finally:
         terminate_connection(db)
@@ -1553,38 +1501,6 @@ async def post_message(request: Request):
         
         cursor.execute(statement, params)
         db.commit()
-        
-        # Variable that checks whether either the sender or recipient has messaged
-        # one or the other.
-        messaged = await check_recent_message_records(cursor, sender, data["recipient_user"])
-        
-        # if not messaged:
-        #     statement = '''
-        #         INSERT INTO Recent (user1, user2, message, date_and_time) VALUES (%s, %s, %s, now())
-        #     '''
-        #     params = [sender, data["recipient_user"], data["message"]]
-            
-        #     cursor.execute(statement, params)
-        #     db.commit()
-            
-        #     statement = '''
-        #         INSERT INTO Recent (user1, user2, message, date_and_time) VALUES (%s, %s, %s, now())
-        #     '''
-        #     params = [data["recipient_user"], sender, data["message"]]
-            
-        #     cursor.execute(statement, params)
-        #     db.commit()
-        
-        # else:
-        #     statement = '''
-        #         UPDATE Recent SET message=%s, date_and_time=now()
-        #         WHERE (user1=%s AND user2=%s) OR (user1=%s AND user2=%s)
-        #     '''
-        #     params = [data["message"], sender, data["recipient_user"], 
-        #               data["recipient_user"], sender]
-            
-        #     cursor.execute(statement, params)
-        #     db.commit()
             
         try:
             statement = '''
@@ -2042,34 +1958,26 @@ async def rating(request: Request):
         
         # Retrieve message records containing the updated rating type and send them back to the client
         # to update the logged in user's recent messages feed.
-        statement = '''
-            SELECT R.user1, R.user2, R.message, R.date_and_time AS sent_time, P.first_name, P2.uri, UR.rating_type FROM Recent R 
-            INNER JOIN Profiles P ON R.user1=%s AND R.user2=P.username
-            AND (P.username NOT IN (SELECT B.blockee FROM Blocked B WHERE (B.blockee=P.username AND B.blocker=%s))
-            AND P.username NOT IN (SELECT B.blocker FROM Blocked B WHERE (B.blocker=P.username AND B.blockee=%s))
-            AND P.username NOT IN (SELECT B.username FROM Banned B WHERE B.username=P.username))
-            INNER JOIN Photos P2 ON P.username=P2.username
-            LEFT JOIN User_Rating_Labels UR ON UR.rater=R.user1 AND UR.ratee=R.user2
-            ORDER BY sent_time DESC
-        '''
+        statement = "SELECT * FROM Recent_Messages(%s)"
         
         # Print the logged in user's name three times to fill in the necessary parameters in the statement above.
-        rating_list_parameters = [logged_in_user for u in range(0, 3)]
+        rating_list_parameters = [logged_in_user]
         
         # Execute the statement using the parameters in the rating_list_parameters list.
         cursor.execute(statement, rating_list_parameters)
         
         # Include data in dictionary format to display on the website once it is sent to and retrieved by the client (the front end).
-        records = [{
-                    "user1": record[0], 
-                    "user2": record[1], 
-                    "message": record[2], 
-                    "sent_time": record[3], 
-                    "first_name": record[4], 
-                    "uri": bytes(record[5]).decode('utf-8'), 
-                    "rating_type": record[6]
-                    } 
-                    for record in cursor]
+        records = [
+            {
+                "user2": record[0], 
+                "message": record[1], 
+                "sent_time": record[2], 
+                "first_name": record[3], 
+                "uri": bytes(record[4]).decode('utf-8'), 
+                "rating_type": record[5]
+            } 
+            for record in cursor
+        ]
         
         # Return the updated data in JSON format.
         return records

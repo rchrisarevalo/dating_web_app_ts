@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { IoHeartOutline, IoHeart, IoHeartDislikeOutline,
-         IoHeartDislike,
-         IoHeartHalfOutline } from "react-icons/io5"
+import {
+    IoHeartOutline, IoHeart, IoHeartDislikeOutline,
+    IoHeartDislike,
+    IoHeartHalfOutline
+} from "react-icons/io5"
 import { Loading } from '../components/Loading'
 
 import { RatingSubmission } from '../types/types.config'
+import MediaQuery from 'react-responsive'
+import { Spinner } from 'react-bootstrap'
 
 export const RecentMessages = () => {
 
@@ -21,6 +25,11 @@ export const RecentMessages = () => {
 
     const [error, setError] = useState(false)
     const [pending, setPending] = useState(true)
+
+    const [ratingChangeStatus, setRatingChangeStatus] = useState({
+        error: false,
+        submitted: false
+    })
 
     useEffect(() => {
         fetch('http://localhost:5000/check_messaged_users', {
@@ -48,6 +57,8 @@ export const RecentMessages = () => {
     }, [])
 
     const handleRatingSubmission = (user_rating_details: RatingSubmission) => {
+        setRatingChangeStatus({ ...ratingChangeStatus, submitted: true })
+
         fetch(`http://localhost:5000/rating?rt=${user_rating_details.rating_type}&user=${user_rating_details.username}`, {
             method: 'POST',
             credentials: 'include',
@@ -61,9 +72,15 @@ export const RecentMessages = () => {
                 throw res.status
             }
         }).then((data) => {
+            setRatingChangeStatus({ ...ratingChangeStatus, error: false })
             setRecentMessagedUsers(data)
         }).catch((error) => {
+            setRatingChangeStatus({ ...ratingChangeStatus, error: true })
             console.log(error)
+        }).finally(() => {
+            setTimeout(() => {
+                setRatingChangeStatus({ ...ratingChangeStatus, submitted: false, error: false })
+            }, 1000)
         })
     }
 
@@ -71,134 +88,185 @@ export const RecentMessages = () => {
         <div className="recent-messages-container">
             <h1>Recent Messages</h1>
             <br></br>
-            { !pending ?
+            {!pending ?
                 <>
-                    { !error ? 
-                        recentMessagedUsers.length !== 0 ? 
+                    {!error ?
+                        recentMessagedUsers.length !== 0 ?
                             recentMessagedUsers.map(recent =>
                                 <div className="recent-messaged-users">
-                                    <Link to={`/message/${recent.user2}`}>
-                                        <div className="recent-user-row">
-                                            <img alt="profile_pic" src={`data:image/png;base64,${recent.uri}`}></img>
-                                            <h4>{`${recent.first_name}`}</h4>
-                                            <p>{`${recent.sent_time}`}</p>
-                                        </div>
-                                        <div className="recent-user-row">
-                                            <p>{`${recent.message}`}</p>
-                                            <div className="user-feedback-row">
-                                                {recent.rating_type === null &&
-                                                    <>
-                                                        <div className="user-feedback-column">
-                                                            <Link to="/profile/recent_messages" onClick={() => handleRatingSubmission({rating_type: "positive", username: recent.user2, logged_in_user: retrieveUsername})} id="positive">
-                                                                <div className="user-feedback-column">
-                                                                    <IoHeartOutline size={30}/>
-                                                                </div>
-                                                            </Link>
+                                    <MediaQuery minWidth={1025}>
+                                        <div className="recent-user-col">
+                                            <div className="recent-user-sect">
+                                                <Link to={`/message/${recent.user2}`}>
+                                                    <div className="recent-user-row">
+                                                        <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' }}>
+                                                            <img alt="profile_pic" src={`data:image/png;base64,${recent.uri}`} />
+                                                            <h4 style={{ marginLeft: '20px', marginRight: '20px' }}>{recent.first_name}</h4>
                                                         </div>
-                                                        <div className="user-feedback-column">
-                                                            <Link to="/profile/recent_messages" onClick={() => handleRatingSubmission({rating_type: "neutral", username: recent.user2, logged_in_user: retrieveUsername})} id="neutral">
+                                                    </div>
+                                                    <div className="recent-user-row">
+                                                        <p>{recent.message}</p>
+                                                    </div>
+                                                </Link>
+                                            </div>
+                                            <div className="recent-user-sect">
+                                                <div className="user-feedback-row">
+                                                    {!ratingChangeStatus.submitted ?
+                                                        !ratingChangeStatus.error ?
+                                                            <>
                                                                 <div className="user-feedback-column">
-                                                                    <IoHeartHalfOutline size={30}/>
+                                                                    <>
+                                                                        {recent.rating_type === "positive" ?
+                                                                            <button onClick={() => handleRatingSubmission({ rating_type: "positive", username: recent.user2, logged_in_user: retrieveUsername })} id="positive">
+                                                                                <div className="user-feedback-column">
+                                                                                    <IoHeart size={30} color='red' />
+                                                                                </div>
+                                                                            </button>
+                                                                            :
+                                                                            <button onClick={() => handleRatingSubmission({ rating_type: "positive", username: recent.user2, logged_in_user: retrieveUsername })} id="positive">
+                                                                                <div className="user-feedback-column">
+                                                                                    <IoHeartOutline size={30} />
+                                                                                </div>
+                                                                            </button>
+                                                                        }
+                                                                    </>
                                                                 </div>
-                                                            </Link>
-                                                        </div>
-                                                        <div className="user-feedback-column">
-                                                            <Link to="/profile/recent_messages" onClick={() => handleRatingSubmission({rating_type: "negative", username: recent.user2, logged_in_user: retrieveUsername})} id="negative">
                                                                 <div className="user-feedback-column">
-                                                                    <IoHeartDislikeOutline size={30}/>
+                                                                    {recent.rating_type === "neutral" ?
+                                                                        <button onClick={() => handleRatingSubmission({ rating_type: "neutral", username: recent.user2, logged_in_user: retrieveUsername })} id="neutral">
+                                                                            <div className="user-feedback-column">
+                                                                                <IoHeartHalfOutline size={30} color='yellow' />
+                                                                            </div>
+                                                                        </button>
+                                                                        :
+                                                                        <button onClick={() => handleRatingSubmission({ rating_type: "neutral", username: recent.user2, logged_in_user: retrieveUsername })} id="neutral">
+                                                                            <div className="user-feedback-column">
+                                                                                <IoHeartHalfOutline size={30} />
+                                                                            </div>
+                                                                        </button>
+                                                                    }
                                                                 </div>
-                                                            </Link>
-                                                        </div>
-                                                    </>
-                                                }
-                                                {recent.rating_type === "positive" &&
-                                                    <>
-                                                        <div className="user-feedback-column">
-                                                            <Link to="/profile/recent_messages" onClick={() => handleRatingSubmission({rating_type: "positive", username: recent.user2, logged_in_user: retrieveUsername})} id="positive">
                                                                 <div className="user-feedback-column">
-                                                                    <IoHeart size={30} color='red'/>
+                                                                    {recent.rating_type === "negative" ?
+                                                                        <div className="user-feedback-column">
+                                                                            <button onClick={() => handleRatingSubmission({ rating_type: "negative", username: recent.user2, logged_in_user: retrieveUsername })} id="negative">
+                                                                                <div className="user-feedback-column">
+                                                                                    <IoHeartDislike size={30} color='blue' />
+                                                                                </div>
+                                                                            </button>
+                                                                        </div>
+                                                                        :
+                                                                        <div className="user-feedback-column">
+                                                                            <button onClick={() => handleRatingSubmission({ rating_type: "negative", username: recent.user2, logged_in_user: retrieveUsername })} id="negative">
+                                                                                <div className="user-feedback-column">
+                                                                                    <IoHeartDislikeOutline size={30} />
+                                                                                </div>
+                                                                            </button>
+                                                                        </div>
+                                                                    }
                                                                 </div>
-                                                            </Link>
-                                                        </div>
-                                                        <div className="user-feedback-column">
-                                                            <Link to="/profile/recent_messages" onClick={() => handleRatingSubmission({rating_type: "neutral", username: recent.user2, logged_in_user: retrieveUsername})} id="neutral">
-                                                                <div className="user-feedback-column">
-                                                                    <IoHeartHalfOutline size={30}/>
-                                                                </div>
-                                                            </Link>
-                                                        </div>
-                                                        <div className="user-feedback-column">
-                                                            <Link to="/profile/recent_messages" onClick={() => handleRatingSubmission({rating_type: "negative", username: recent.user2, logged_in_user: retrieveUsername})} id="negative">
-                                                                <div className="user-feedback-column">
-                                                                    <IoHeartDislikeOutline size={30}/>
-                                                                </div>
-                                                            </Link>
-                                                        </div>
-                                                    </>
-                                                }
-                                                {recent.rating_type === "neutral" &&
-                                                    <>
-                                                        <div className="user-feedback-column">
-                                                            <Link to="/profile/recent_messages" onClick={() => handleRatingSubmission({rating_type: "positive", username: recent.user2, logged_in_user: retrieveUsername})} id="positive">
-                                                                <div className="user-feedback-column">
-                                                                    <IoHeartOutline size={30}/>
-                                                                </div>
-                                                            </Link>
-                                                        </div>
-                                                        <div className="user-feedback-column">
-                                                            <Link to="/profile/recent_messages" onClick={() => handleRatingSubmission({rating_type: "neutral", username: recent.user2, logged_in_user: retrieveUsername})} id="neutral">
-                                                                <div className="user-feedback-column">
-                                                                    <IoHeartHalfOutline size={30} color='yellow'/>
-                                                                </div>
-                                                            </Link>
-                                                        </div>
-                                                        <div className="user-feedback-column">
-                                                            <Link to="/profile/recent_messages" onClick={() => handleRatingSubmission({rating_type: "negative", username: recent.user2, logged_in_user: retrieveUsername})} id="negative">
-                                                                <div className="user-feedback-column">
-                                                                    <IoHeartDislikeOutline size={30}/>
-                                                                </div>
-                                                            </Link>
-                                                        </div>
-                                                    </>
-                                                }
-                                                {recent.rating_type === "negative" &&
-                                                    <>
-                                                        <div className="user-feedback-column">
-                                                            <Link to="/profile/recent_messages" onClick={() => handleRatingSubmission({rating_type: "positive", username: recent.user2, logged_in_user: retrieveUsername})} id="positive">
-                                                                <div className="user-feedback-column">
-                                                                    <IoHeartOutline size={30}/>
-                                                                </div>
-                                                            </Link>
-                                                        </div>
-                                                        <div className="user-feedback-column">
-                                                            <Link to="/profile/recent_messages" onClick={() => handleRatingSubmission({rating_type: "neutral", username: recent.user2, logged_in_user: retrieveUsername})} id="neutral">
-                                                                <div className="user-feedback-column">
-                                                                    <IoHeartHalfOutline size={30}/>
-                                                                </div>
-                                                            </Link>
-                                                        </div>
-                                                        <div className="user-feedback-column">
-                                                            <Link to="/profile/recent_messages" onClick={() => handleRatingSubmission({rating_type: "negative", username: recent.user2, logged_in_user: retrieveUsername})} id="negative">
-                                                                <div className="user-feedback-column">
-                                                                    <IoHeartDislike size={30} color='blue'/>
-                                                                </div>
-                                                            </Link>
-                                                        </div>
-                                                    </>
-                                                }
+                                                            </>
+                                                            :
+                                                            <h3>Error submitting rating.</h3>
+                                                        :
+                                                        <Spinner />
+                                                    }
+                                                </div>
                                             </div>
                                         </div>
-                                    </Link>
+                                    </MediaQuery>
+                                    <MediaQuery maxWidth={1025}>
+                                        <div className="recent-user-row">
+                                            <div className="recent-user-sect">
+                                                <Link to={`/message/${recent.user2}`}>
+                                                    <div className="recent-user-row">
+                                                        <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' }}>
+                                                            <img alt="profile_pic" src={`data:image/png;base64,${recent.uri}`} />
+                                                            <h4 style={{ marginLeft: '20px', marginRight: '20px' }}>{recent.first_name}</h4>
+                                                        </div>
+                                                    </div>
+                                                    <div className="recent-user-row">
+                                                        <p>{recent.message}</p>
+                                                    </div>
+                                                </Link>
+                                            </div>
+                                            <div className="recent-user-sect">
+                                                <div className="user-feedback-row">
+                                                    {!ratingChangeStatus.submitted ?
+                                                        !ratingChangeStatus.error ?
+                                                            <>
+                                                                <div className="user-feedback-column">
+                                                                    <>
+                                                                        {recent.rating_type === "positive" ?
+                                                                            <button onClick={() => handleRatingSubmission({ rating_type: "positive", username: recent.user2, logged_in_user: retrieveUsername })} id="positive">
+                                                                                <div className="user-feedback-column">
+                                                                                    <IoHeart size={30} color='red' />
+                                                                                </div>
+                                                                            </button>
+                                                                            :
+                                                                            <button onClick={() => handleRatingSubmission({ rating_type: "positive", username: recent.user2, logged_in_user: retrieveUsername })} id="positive">
+                                                                                <div className="user-feedback-column">
+                                                                                    <IoHeartOutline size={30} />
+                                                                                </div>
+                                                                            </button>
+                                                                        }
+                                                                    </>
+                                                                </div>
+                                                                <div className="user-feedback-column">
+                                                                    {recent.rating_type === "neutral" ?
+                                                                        <button onClick={() => handleRatingSubmission({ rating_type: "neutral", username: recent.user2, logged_in_user: retrieveUsername })} id="neutral">
+                                                                            <div className="user-feedback-column">
+                                                                                <IoHeartHalfOutline size={30} color='yellow' />
+                                                                            </div>
+                                                                        </button>
+                                                                        :
+                                                                        <button onClick={() => handleRatingSubmission({ rating_type: "neutral", username: recent.user2, logged_in_user: retrieveUsername })} id="neutral">
+                                                                            <div className="user-feedback-column">
+                                                                                <IoHeartHalfOutline size={30} />
+                                                                            </div>
+                                                                        </button>
+                                                                    }
+                                                                </div>
+                                                                <div className="user-feedback-column">
+                                                                    {recent.rating_type === "negative" ?
+                                                                        <div className="user-feedback-column">
+                                                                            <button onClick={() => handleRatingSubmission({ rating_type: "negative", username: recent.user2, logged_in_user: retrieveUsername })} id="negative">
+                                                                                <div className="user-feedback-column">
+                                                                                    <IoHeartDislike size={30} color='blue' />
+                                                                                </div>
+                                                                            </button>
+                                                                        </div>
+                                                                        :
+                                                                        <div className="user-feedback-column">
+                                                                            <button onClick={() => handleRatingSubmission({ rating_type: "negative", username: recent.user2, logged_in_user: retrieveUsername })} id="negative">
+                                                                                <div className="user-feedback-column">
+                                                                                    <IoHeartDislikeOutline size={30} />
+                                                                                </div>
+                                                                            </button>
+                                                                        </div>
+                                                                    }
+                                                                </div>
+                                                            </>
+                                                            :
+                                                            <h3>Error submitting rating.</h3>
+                                                        :
+                                                        <Spinner />
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <br></br>
+                                    </MediaQuery>
                                 </div>
                             )
-                            : 
+                            :
                             <b id="recent-messages-empty">You haven't messaged anyone recently!</b>
                         :
                         <Loading error={true} />
                     }
                 </>
                 :
-                <h5 style={{display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'row', height: '70vh', color: 'white'}}>Loading messages...</h5>
+                <h5 style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'row', height: '70vh', color: 'white' }}>Loading messages...</h5>
             }
         </div>
     )
