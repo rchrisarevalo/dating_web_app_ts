@@ -1285,58 +1285,54 @@ hr {
   font-size: 20px;
 }
 
-.recent-messaged-users {
-  transition: .5s;
-}
-
-.recent-messaged-users:hover {
-  background: rgb(94, 94, 94);
-  transition: .5s;
-}
-
-.recent-messaged-users p,
-.recent-messaged-users b {
-  padding-top: 10px;
-  padding-bottom: 10px;
-}
-
-.recent-messaged-users a {
-  text-decoration: none;
-  color: white;
-  font-size: 20px;
+.recent-user-col {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .recent-user-row {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   justify-content: space-evenly;
-  align-items: center;
+  text-align: left;
 }
 
 .recent-user-row p {
-  overflow: hidden;
+  color: white;
   white-space: nowrap;
+  overflow: hidden;
   text-overflow: ellipsis;
-  text-align: center;
-  width: 30%;
 }
 
 .recent-user-row h4 {
-  text-align: center;
+  color: white;
 }
 
 .recent-user-row img {
   width: 50px;
   height: 50px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  border-radius: 30px;
   object-fit: cover;
-  border-radius: 40px;
-  pointer-events: none;
+}
+
+.recent-user-sect {
+  width: 50%;
+  margin-left: 10%;
+  margin-right: 10%;
+}
+
+.recent-user-sect a {
+  text-decoration: none;
 }
 
 .user-feedback-row {
   display: flex;
   flex-direction: row;
-  justify-content: space-evenly;
+  justify-content: center;
   align-items: center;
 }
 
@@ -1350,6 +1346,13 @@ hr {
   transform: translateY(-10px);
   padding-left: 5px;
   padding-right: 5px;
+}
+
+.user-feedback-column button {
+  z-index: 5;
+  background: transparent;
+  color: white;
+  border: none;
 }
 
 .user-feedback-column #positive,
@@ -2071,6 +2074,16 @@ hr {
   .recent-messages-container h1 {
     margin-left: 5%;
     margin-right: 5%;
+  }
+
+  .recent-user-sect {
+    margin-left: 5%;
+    margin-right: 5%;
+    width: 90%;
+  }
+
+  .user-feedback-row {
+    justify-content: flex-start;
   }
 
   .update-profile-options {

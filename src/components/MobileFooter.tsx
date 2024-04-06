@@ -1,8 +1,8 @@
 import { Link, useLocation } from 'react-router-dom'
 import {
-    IoChatboxEllipsesOutline,
     IoSearchOutline,
-    IoBanOutline
+    IoBanOutline,
+    IoSendOutline
 } from "react-icons/io5"
 import { ProfilePicture } from './ProfilePicture'
 
@@ -52,8 +52,8 @@ export const MobileFooter = (props: MobileFooterProps) => {
     return (
         <>
             <footer className="mobile-footer-menu">
-                <li><Link to={`/message/${retrieve_username_from_path}`}><IoChatboxEllipsesOutline size={30} />Message</Link></li>
                 <li><Link to={`/profile/search`}><IoSearchOutline size={30} />Search</Link></li>
+                <li><Link to={`/message/${retrieve_username_from_path}`}><IoSendOutline size={30} />Message</Link></li>
                 <li><Link onClick={handleBlockUserMobile} to={''}><IoBanOutline size={30} />Block User</Link></li>
                 <li><Link to={`/profile/`}><ProfilePicture /></Link></li>
             </footer>

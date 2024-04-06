@@ -9,9 +9,9 @@ env:
 
 on:
   push:
-    branches: [ "main", "fastapi-migrate" ]
+    branches: [ "main", "new-recent-messages-ui" ]
   pull_request:
-    branches: [ "main", "fastapi-migrate" ]
+    branches: [ "main", "new-recent-messages-ui" ]
 
 permissions:
   contents: read
