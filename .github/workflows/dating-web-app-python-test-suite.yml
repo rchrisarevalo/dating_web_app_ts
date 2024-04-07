@@ -9,9 +9,9 @@ env:
 
 on:
   push:
-    branches: [ "main", "new-recent-messages-ui" ]
+    branches: [ "main", "refactor-search-page" ]
   pull_request:
-    branches: [ "main", "new-recent-messages-ui" ]
+    branches: [ "main", "refactor-search-page" ]
 
 permissions:
   contents: read
