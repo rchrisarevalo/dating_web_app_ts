@@ -66,38 +66,41 @@ export const Update = (props: UpdateProps) => {
     const [pending, setPending] = useState(true)
 
     useEffect(() => {
-        fetch("http://localhost:5000/profile", {
-            method: 'POST',
-            credentials: 'include',
-            body: JSON.stringify({}),
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        }).then((res) => {
-            if (res.ok) {
-                return res.json()
-            } else {
-                throw res.status
-            }
-        }).then((data) => {
-            setProfile({
-                profile_pic: data.uri,
-                name: `${data.first_name} ${data.middle_name} ${data.last_name}`,
-                bio: data.interests,
-                height: data.height,
-                gender: data.gender,
-                sexual_orientation: data.sexual_orientation,
-                relationship_status: data.relationship_status,
-                birth_month: data.birth_month,
-                birth_date: data.birth_date,
-                birth_year: data.birth_year
+        const retrieveProfile = async () => {
+            await fetch("http://localhost:5000/profile", {
+                method: 'POST',
+                credentials: 'include',
+                body: JSON.stringify({}),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then((res) => {
+                if (res.ok) {
+                    return res.json()
+                } else {
+                    throw res.status
+                }
+            }).then((data) => {
+                setProfile({
+                    profile_pic: data.uri,
+                    name: `${data.first_name} ${data.middle_name} ${data.last_name}`,
+                    bio: data.interests,
+                    height: data.height,
+                    gender: data.gender,
+                    sexual_orientation: data.sexual_orientation,
+                    relationship_status: data.relationship_status,
+                    birth_month: data.birth_month,
+                    birth_date: data.birth_date,
+                    birth_year: data.birth_year
+                })
+                setPending(false)
+            }).catch((error) => {
+                console.log(error)
+                setPending(false)
+                setError(true)
             })
-            setPending(false)
-        }).catch((error) => {
-            console.log(error)
-            setPending(false)
-            setError(true)
-        })
+        }
+        retrieveProfile()
     }, [username])
 
     useEffect(() => {

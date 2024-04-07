@@ -2,20 +2,40 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { IoFunnelOutline, IoHelpOutline, IoSearchOutline, IoTrashBinOutline } from 'react-icons/io5'
 
-import { useFetchAlgoConfig, useFetchSearchHistory, useFetchProfiles, useFetchMatches } from "../hooks/useFetchSearch"
+import { useFetchAlgoConfig, useFetchSearchHistory, useFetchMatches } from "../hooks/useFetchSearch"
 import { FilteredSearchResults } from '../components/FilteredSearchResults'
 
 import { clearSearchTerm, insertSearchTerm } from '../functions/searchHistoryFunctions'
 
 import Spinner from 'react-bootstrap/Spinner'
 
-export const SearchPage = () => {
+import { MatchProfiles } from '../types/types.config'
+
+interface SearchPageProps {
+    user_profiles: {
+        profiles: MatchProfiles[],
+        pending: boolean,
+        error: boolean
+    },
+    visited_profiles: {
+        profiles: MatchProfiles[],
+        pending: boolean,
+        error: boolean
+    },
+    current_profile: {
+        profiles: MatchProfiles[],
+        pending: boolean,
+        error: boolean
+    }
+}
+
+export const SearchPage = (props: SearchPageProps) => {
+
+    const { user_profiles, visited_profiles, current_profile } = props
+
     const { algo_config, use_so_filter } = useFetchAlgoConfig("http://localhost:5000/privacy/check_recommendation_settings")
     const { search_history, pending, error } = useFetchSearchHistory("http://localhost:5000/retrieve_search_history")
 
-    const user_profiles = useFetchProfiles("http://localhost:5000/get_user_profiles?t=user_profiles")
-    const visited_profiles = useFetchProfiles("http://localhost:5000/get_user_profiles?t=visits")
-    const current_profile = useFetchProfiles("http://localhost:5000/get_logged_in_user_profile")
     const matched_profiles = useFetchMatches(user_profiles.profiles,
         visited_profiles.profiles,
         current_profile.profiles,

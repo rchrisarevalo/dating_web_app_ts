@@ -38,6 +38,8 @@ interface RoutesProps {
 export const RoutingSystem = () => {
     const { auth, pending, error, username, profile_pic, status_code } = useFetchLogin()
     const profile_data = useFetchProfiles("http://localhost:5000/get_user_profiles?t=user_profiles")
+    const visited_profile_data = useFetchProfiles("http://localhost:5000/get_user_profiles?t=visits")
+    const current_profile_data = useFetchProfiles("http://localhost:5000/get_logged_in_user_profile")
     const path = useLocation().pathname
     const domain_path = path.split("/")[1]
 
@@ -140,7 +142,11 @@ export const RoutingSystem = () => {
                             <Route path="/profile/options/privacy/view_blocked_users" element={<BlockedUsers />} />
                             <Route path="/profile/options/privacy/download_information" element={<DownloadInfo />} />
                             <Route path="/profile/recent_messages" element={<RecentMessages />} />
-                            <Route path="/profile/search" element={<SearchPage />} />
+                            <Route path="/profile/search" element={<SearchPage
+                                user_profiles={profile_data}
+                                visited_profiles={visited_profile_data}
+                                current_profile={current_profile_data}
+                            />} />
                             {profile_data.profiles.map(user => 
                                 <>
                                     <Route path={`/user/${user.username}`} element={<User username={user.username} />} />

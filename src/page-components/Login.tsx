@@ -9,6 +9,7 @@ import { IoEyeOutline, IoEyeOffOutline } from 'react-icons/io5'
 
 export const Login = () => {
     const [authenticated, setAuthenticated] = useState(false)
+    const [submitted, setSubmitted] = useState(false)
     const [errorMessage, setErrorMessage] = useState("")
 
     const [showPassword, setShowPassword] = useState(false)
@@ -31,6 +32,8 @@ export const Login = () => {
 
     const handleLogin = () => {
         if (credentials.username && credentials.password) {
+            setSubmitted(true)
+            setDisplayModal(true)
             const formData = new FormData()
             formData.append('username', credentials.username)
             formData.append('password', credentials.password)
@@ -49,7 +52,6 @@ export const Login = () => {
             }).then((data) => {
                 if (data.verified) {
                     setAuthenticated(true)
-                    setDisplayModal(true)
                     sessionStorage.setItem("profile_pic", data["profile_pic"])
                     setTimeout(() => {
                         window.location.href = "http://localhost:5173/profile"
@@ -59,8 +61,9 @@ export const Login = () => {
                 console.log(error)
                 setDisplayModal(true)
                 setErrorMessage("Incorrect username and/or password!")
-
+            }).finally(() => {
                 setTimeout(() => {
+                    setSubmitted(false)
                     setDisplayModal(false)
                 }, 3000)
             })
@@ -121,19 +124,27 @@ export const Login = () => {
             </div>
             <Footer />
             <Modal show={displayModal} onHide={handleClose} keyboard={false} backdrop="static" centered>
-                {authenticated ?
-                    <>
-                        <Modal.Header>
-                            <Modal.Title>Login Successful</Modal.Title>
-                        </Modal.Header>
-                        <Modal.Body>Logging in...</Modal.Body>
-                    </>
+                {!submitted ?
+                    authenticated ?
+                        <>
+                            <Modal.Header>
+                                <Modal.Title>Login Successful</Modal.Title>
+                            </Modal.Header>
+                            <Modal.Body>Logging in...</Modal.Body>
+                        </>
+                        :
+                        <>
+                            <Modal.Header>
+                                <Modal.Title>Login Failed</Modal.Title>
+                            </Modal.Header>
+                            <Modal.Body>{`${errorMessage}`}</Modal.Body>
+                        </>
                     :
                     <>
                         <Modal.Header>
-                            <Modal.Title>Login Failed</Modal.Title>
+                            <Modal.Title>Processing...</Modal.Title>
                         </Modal.Header>
-                        <Modal.Body>{`${errorMessage}`}</Modal.Body>
+                        <Modal.Body>Logging in...</Modal.Body>
                     </>
                 }
             </Modal>
