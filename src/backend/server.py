@@ -143,6 +143,7 @@ async def login(request: Request, response: Response):
         raise HTTPException(498, {"error": "The token that was generated was invalid"})
     
     except Exception as e:
+        print(e)
         raise HTTPException(500, {"error": e})
     
     finally:
@@ -385,8 +386,6 @@ async def update_DOB(request: Request):
         # Check if the user was lying about their DOB when they originally registered for an account.
         they_told_the_truth = await determine_account_registration_age(cursor, request.cookies.get("username"), data["birth_month"], data["birth_date"], data["birth_year"])
         
-        print(they_told_the_truth)
-        
         # If they did tell the truth about their DOB when originally registering for their account, 
         # they can go ahead and change it.
         if they_told_the_truth:
@@ -563,7 +562,7 @@ def check_recommendation_settings(request: Request):
 async def change_recommendation_settings(request: Request):
     data: dict = await request.json()
     username: str = request.cookies.get("username")
-    query: str = request.query_params.get("t")
+    query: str = request.query_params.get("rs")
     
     db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()

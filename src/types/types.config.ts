@@ -8,6 +8,17 @@ export type MatchProfiles = {
     username: string
 }
 
+export type CurrentProfile = {
+    username: string,
+    name: string,
+    age: number,
+    height: string,
+    interests: string,
+    sexual_orientation: string,
+    relationship_status: string,
+    profile_pic: string
+}
+
 export type ConfirmPwd = {
     password: string,
     confirm_password: string

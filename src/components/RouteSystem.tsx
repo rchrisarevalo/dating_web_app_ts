@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useFetchLogin } from "../hooks/useFetchLogin";
 import { useNotificationUpdate } from "../hooks/useNotificationUpdate";
 import { useFetchProfiles } from "../hooks/useFetchSearch";
+import { useFetchProfile } from "../hooks/useFetchProfile";
 
 // Import necessary React Router DOM libraries to configure routes.
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
@@ -37,6 +38,7 @@ interface RoutesProps {
 
 export const RoutingSystem = () => {
     const { auth, pending, error, username, profile_pic, status_code } = useFetchLogin()
+    const { profile_page, profile_page_pending, profile_page_error } = useFetchProfile(auth)
     const profile_data = useFetchProfiles("http://localhost:5000/get_user_profiles?t=user_profiles")
     const visited_profile_data = useFetchProfiles("http://localhost:5000/get_user_profiles?t=visits")
     const current_profile_data = useFetchProfiles("http://localhost:5000/get_logged_in_user_profile")
@@ -134,7 +136,11 @@ export const RoutingSystem = () => {
                         </PublicRoutes>
                         :
                         <ProtectedRoutes>
-                            <Route index path="/profile" element={<Profile />} />
+                            <Route index path="/profile" element={<Profile 
+                                profile={profile_page}
+                                pending={profile_page_pending}
+                                error={profile_page_error}
+                            />} />
                             <Route path="/profile/options" element={<Options />} />
                             <Route path="/profile/options/update" element={<Update username={username} />} />
                             <Route path="/profile/options/settings" element={<AccountSettings username={username} /> } />
