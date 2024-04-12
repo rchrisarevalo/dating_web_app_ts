@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import Modal from 'react-bootstrap/Modal'
 
-import { IoArrowBackCircleSharp } from 'react-icons/io5'
 import { useFetchAlgoConfig } from '../hooks/useFetchSearch'
+
+import { IoArrowBackCircleSharp } from 'react-icons/io5'
 
 interface PrivacySettingsProps {
     username: string
@@ -11,8 +12,7 @@ interface PrivacySettingsProps {
 
 export const PrivacySettings = (props: PrivacySettingsProps) => {
     const { username } = props
-
-    const { algo_config, use_so_filter } = useFetchAlgoConfig("http://localhost:5000/privacy/check_recommendation_settings")
+    const { algo_config, use_so_filter, algo_pending, algo_error } = useFetchAlgoConfig("http://localhost:5000/privacy/check_recommendation_settings")
 
     const [displayModal, setDisplayModal] = useState(false)
     const [displaySOFilterModal, setDisplaySOFilterModal] = useState(false)

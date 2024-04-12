@@ -2,6 +2,7 @@ import psycopg2 as p
 import datetime as dt
 from passlib.context import CryptContext
 from fastapi import HTTPException
+import asyncio
 
 context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 
@@ -240,6 +241,33 @@ async def include_visits(matches: list[dict[str, any]], visited_profiles: list[d
     
     return final_matches_output
 
+async def retrieve_age(p: dict, month: str, date: int, year: int) -> int:
+    month_index: dict = {
+        "January": 1,
+        "February": 2,
+        "March": 3,
+        "April": 4,
+        "May": 5,
+        "June": 6,
+        "July": 7,
+        "August": 8,
+        "September": 9,
+        "October": 10,
+        "November": 11,
+        "December": 12
+    }
+
+    birth_date = dt.datetime(year, month_index[month], date)
+    next_birth_date = dt.datetime(dt.datetime.now().year, month_index[month], date)
+    today_date = dt.datetime.now()
+
+    age = today_date.year - birth_date.year
+
+    if today_date < next_birth_date:
+        age = age - 1
+
+    return age
+
 async def retrieve_banned_user(db: p.extensions.connection, username: str) -> dict[any, any]:
     cursor: p.extensions.cursor = db.cursor()
         
@@ -289,6 +317,42 @@ async def retrieve_profile(db: p.extensions.connection, username: str) -> list[d
     
     except Exception:
         raise HTTPException(500, {"message": "Failed to retrieve profile data!"})
+    
+async def get_logged_in_user_profile(db: p.extensions.connection, username: str):
+    cursor: p.extensions.cursor = db.cursor()
+    
+    statement = "SELECT * FROM get_logged_in_user(%s)"
+    params = [username]
+
+    cursor.execute(statement, params)
+    
+    profile = [
+        {
+            "username": record[0],
+            "interests": record[1],
+            "height": record[2],
+            "gender": record[3],
+            "sexual_orientation": record[4],
+            "interested_in": record[5],
+            "state_residence": record[6],
+            "city_residence": record[7],
+            "relationship_status": record[8],
+            "first_name": record[9],
+            "middle_name": record[10],
+            "last_name": record[11],
+            "uri": bytes(record[12]).decode('utf-8'),
+            "birth_month": record[13],
+            "birth_date": record[14],
+            "birth_year": record[15],
+            "rating": record[16]
+        }
+        for record in cursor
+    ]
+
+    for pr in profile:
+        pr["age"] = await retrieve_age(pr, pr["birth_month"], int(pr["birth_date"]), int(pr["birth_year"]))
+    
+    return profile
 
 async def retrieve_user_profiles(db: p.extensions.connection, username: str) -> list[dict[str, any]]:
     cursor = db.cursor()
@@ -320,6 +384,9 @@ async def retrieve_user_profiles(db: p.extensions.connection, username: str) -> 
         }
         for record in cursor
     ]
+
+    for p in profiles:
+        p["age"] = await retrieve_age(p, p["birth_month"], int(p["birth_date"]), int(p["birth_year"]))
     
     return profiles
 
@@ -344,6 +411,9 @@ async def retrieve_visited_profiles(db: p.extensions.connection, username: str) 
         }
         for record in cursor
     ]
+
+    for v in visits:
+        v["age"] = await retrieve_age(v, v["birth_month"], int(v["birth_date"]), int(v["birth_year"]))
     
     return visits
 

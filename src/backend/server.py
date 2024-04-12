@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request, Response, HTTPException, Depends, APIRouter
 from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from passlib.context import CryptContext
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -14,6 +15,7 @@ from rating_sys import (calculate_rating,
                         insert_rating)
 from key_pref.key_prefixes import visit_key_func
 from helpers.helper import *
+from similarity_calculations import filter_matches
 
 import jwt
 import datetime as dt
@@ -26,7 +28,19 @@ import asyncio
 
 PATH = 'secret.env'
 
-server = FastAPI(debug=True)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        print("This is a lifespan")
+        yield
+    except asyncio.CancelledError:
+        print("There was an exception!")
+        pass
+
+    except KeyboardInterrupt:
+        print("Interrupted! Exiting...")
+
+server = FastAPI(debug=True, lifespan=lifespan)
 
 # Load the .env file from the path specified above.
 load_dotenv(PATH)
@@ -581,15 +595,15 @@ async def change_recommendation_settings(request: Request):
             db.commit()
             
         else:
-            return {"message": "Invalid query or request."}, 400
+            raise HTTPException(400, {"message": "Invalid query or request"})
         
         return {"message": data["check_value"]}
     
     except db.DatabaseError:
-        return {"message": "Failed to update recommendation settings."}, 500
+        raise HTTPException(500, {"message": "Failed to update recommendation settings."})
     
     except Exception:
-        return {"message": "A server error has occurred. Please try again later."}, 500
+        raise HTTPException(500, {"message": "A server error has occurred. Please try again later."})
     
     finally:
         await terminate_connection(db)
@@ -854,8 +868,8 @@ async def search(request: Request):
         await terminate_connection(db)
         
 @protected_route.post("/retrieve_search_history")
-def retrieve_search_history(request: Request):
-    db: p.extensions.connection = asyncio.run(create_connection())
+async def retrieve_search_history(request: Request):
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -871,10 +885,10 @@ def retrieve_search_history(request: Request):
         return search_terms
     
     except db.DatabaseError as e:
-        return {"message": e}, 500
+        raise HTTPException(500, {"message": e})
     
     finally:
-        asyncio.run(terminate_connection(db))
+        await terminate_connection(db)
         
 @protected_route.post("/insert_search_history")
 def insert_search_history(request: Request):
@@ -1008,57 +1022,6 @@ def get_user_profiles(request: Request):
     
     except Exception as e:
         return {"message": "There was a server error. Please try again!"}, 500
-    
-    finally:
-        asyncio.run(terminate_connection(db))
-        
-@protected_route.post("/get_logged_in_user_profile")
-def get_logged_in_user_profile(request: Request):
-    db: p.extensions.connection = asyncio.run(create_connection())
-    cursor: p.extensions.cursor = db.cursor()
-    
-    try:
-        statement = '''
-            SELECT P.username, P.interests, P.height, P.gender, P.sexual_orientation, 
-            P.interested_in, P.state_residence, P.city_residence, P.relationship_status, 
-            P.first_name, P.middle_name, P.last_name, P2.uri,
-            U.birth_month, U.birth_date, U.birth_year, R.rating FROM Profiles P, 
-            Photos P2, Users U, Ratings R WHERE P.username=%s AND P.interests!='N/A' 
-            AND P.username=P2.username AND P.username=U.username
-            AND R.username=P.username
-            ORDER BY last_name, first_name
-        '''
-        params = [request.cookies.get("username") for u in range(0, 1)]
-
-        cursor.execute(statement, params)
-        
-        profiles = [
-            {
-                "username": record[0],
-                "interests": record[1],
-                "height": record[2],
-                "gender": record[3],
-                "sexual_orientation": record[4],
-                "interested_in": record[5],
-                "state_residence": record[6],
-                "city_residence": record[7],
-                "relationship_status": record[8],
-                "first_name": record[9],
-                "middle_name": record[10],
-                "last_name": record[11],
-                "uri": bytes(record[12]).decode('utf-8'),
-                "birth_month": record[13],
-                "birth_date": record[14],
-                "birth_year": record[15],
-                "rating": record[16]
-            }
-            for record in cursor
-        ]
-        
-        return profiles
-    
-    except db.DatabaseError as e:
-        return {"message": "Failed to get basic profile details!"}, 500
     
     finally:
         asyncio.run(terminate_connection(db))
@@ -1629,25 +1592,36 @@ async def match(request: Request):
     try:
         # Stores payload information sent from the client as an object variable.
         request_info: dict = await request.json()
+
+        db = await create_connection()
+
+        profiles = await retrieve_user_profiles(db, request.cookies.get("username"))
+        logged_in_user = await get_logged_in_user_profile(db, request.cookies.get("username"))
+        visited_profiles = await retrieve_visited_profiles(db, request.cookies.get("username"))
         
-        # Run matching algorithm using the list of profiles (excluding the current user) to compare with the
-        # profile of the logged in user.
-        matches = run_matching_algorithm(request_info["users"], logged_in_user_profile=request_info["logged_in_user"], use_so_filter=request_info["use_so_filter"])
-        matches = await include_visits(matches, request_info["visited_users"])
-        
-        # If the limit of the number of searches retrieved is less than the
-        # actual number of matched users, then let the
-        # client continue requesting for more searches by including True
-        # in the return result below.
-        if request_info["initial_limit"] <= len(matches):
-            return [matches[0:request_info["initial_limit"]], True]
-        
-        # Otherwise, if the limit of the number of searches is equal to the
-        # length of the number of matched users, then let the client know
-        # that no more searches will be requested as there are no more
-        # matching profiles to request.
+        if request_info["algo_config"]:
+            # Run matching algorithm using the list of profiles (excluding the current user) to compare with the
+            # profile of the logged in user.
+            matches = run_matching_algorithm(profiles, logged_in_user, use_so_filter=request_info["use_so_filter"])
+            matches = await include_visits(matches, visited_profiles)
+            
+            # If the limit of the number of searches retrieved is less than the
+            # actual number of matched users, then let the
+            # client continue requesting for more searches by including True
+            # in the return result below.
+            if request_info["initial_limit"] <= len(matches):
+                return [matches[0:request_info["initial_limit"]], True]
+            
+            # Otherwise, if the limit of the number of searches is equal to the
+            # length of the number of matched users, then let the client know
+            # that no more searches will be requested as there are no more
+            # matching profiles to request.
+            else:
+                return [matches[0:request_info["initial_limit"]], False]
         else:
-            return [matches[0:request_info["initial_limit"]], False]
+            users = await include_visits(profiles, visited_profiles)
+
+            return [users[0:request_info["initial_limit"]], True]
         
     except KeyError as k:
         raise HTTPException(500, {"message": "Failed to retrieve information from dictionary."})
