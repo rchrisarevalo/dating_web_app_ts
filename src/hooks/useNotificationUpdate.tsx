@@ -13,27 +13,31 @@ export const useNotificationUpdate = (currentUser: string, connection: typeof so
     // Load current user's notification count in initial load.
     useEffect(() => {
         if (currentUser) {
-            fetch(`http://localhost:5000/retrieve_notification_count?username=${currentUser}`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            }).then((res) => {
-                if (res.ok) {
-                    return res.json()
-                } else {
-                    throw res.status
-                }
-            }).then((data) => {
-                setPending(false)
-                setError(false)
-                setNotificationCounter(data.notification_counter)
-            }).catch((error) => {
-                setPending(false)
-                setError(true)
-                console.log(error)
-            })
+            const retrieveNotificationCount = async () => {
+                await fetch(`http://localhost:5000/retrieve_notification_count?username=${currentUser}`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }).then((res) => {
+                    if (res.ok) {
+                        return res.json()
+                    } else {
+                        throw res.status
+                    }
+                }).then((data) => {
+                    setPending(false)
+                    setError(false)
+                    setNotificationCounter(data.notification_counter)
+                }).catch((error) => {
+                    setPending(false)
+                    setError(true)
+                    console.log(error)
+                })
+            }
+
+            retrieveNotificationCount()
         }
     }, [currentUser, path])
 
@@ -54,21 +58,26 @@ export const useNotificationUpdate = (currentUser: string, connection: typeof so
                 // If the user is not in their recent messages page,
                 // then update their notification counter.
                 if (path.pathname !== "/profile/recent_messages") {
-                    fetch(`http://localhost:5000/retrieve_notification_count?username=${retrieve_username_from_path}`, {
-                        method: 'POST',
-                        credentials: 'include',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    }).then((res) => {
-                        if (res.ok) {
-                            return res.json()
-                        }
-                    }).then((data) => {
-                        setNotificationCounter(data.notification_counter)
-                    }).catch((error) => {
-                        console.log(error)
-                    })
+                    const retrieveNotificationCount = async () => {
+                        await fetch(`http://localhost:5000/retrieve_notification_count?username=${retrieve_username_from_path}`, {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        }).then((res) => {
+                            if (res.ok) {
+                                return res.json()
+                            }
+                        }).then((data) => {
+                            setNotificationCounter(data.notification_counter)
+                        }).catch((error) => {
+                            console.log(error)
+                        })
+                    }
+                    retrieveNotificationCount()
+
+                    console.log("Here!")
                 }
     
                 // If the user happens to be in their recent messages page,

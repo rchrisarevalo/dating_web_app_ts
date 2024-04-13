@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request, Response, HTTPException, Depends, APIRouter
 from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from passlib.context import CryptContext
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -13,6 +14,8 @@ from rating_sys import (calculate_rating,
                         delete_rating, 
                         insert_rating)
 from key_pref.key_prefixes import visit_key_func
+from helpers.helper import *
+from similarity_calculations import filter_matches
 
 import jwt
 import datetime as dt
@@ -25,7 +28,19 @@ import asyncio
 
 PATH = 'secret.env'
 
-server = FastAPI(debug=True)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        print("This is a lifespan")
+        yield
+    except asyncio.CancelledError:
+        print("There was an exception!")
+        pass
+
+    except KeyboardInterrupt:
+        print("Interrupted! Exiting...")
+
+server = FastAPI(debug=True, lifespan=lifespan)
 
 # Load the .env file from the path specified above.
 load_dotenv(PATH)
@@ -54,7 +69,7 @@ limit = Limiter(
 server.state.limiter = limit
 server.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-def create_connection() -> p.extensions.connection:
+async def create_connection() -> p.extensions.connection:
     try:
         db: p.extensions.connection = p.connect(DB_KEY)
         
@@ -63,262 +78,28 @@ def create_connection() -> p.extensions.connection:
     except p.DatabaseError as e:
         return "error"
 
-def terminate_connection(db: p.extensions.connection):
+async def terminate_connection(db: p.extensions.connection):
     db.close()
     
 async def check_token(request: Request):
     if request.cookies.get("user_session") != None:
-            try:
-                decode_token = jwt.decode(request.cookies.get("user_session"), str(SK_KEY), ["HS256"], verify=True)
-                return True
-            
-            except jwt.InvalidTokenError:
-                raise HTTPException(498, {"message": "Invalid token!"})
-            
-            except RuntimeError as r:
-                print(f"There was an error in line {sys.exc_info()[-1].tb_lineno}: {r}")
-                raise HTTPException(500, {"message": "There was a run time error. Please try again."})
-            
-            except jwt.InvalidKeyError:
-                raise HTTPException(403, {"message": "Invalid key used."})
+        try:
+            decode_token = jwt.decode(request.cookies.get("user_session"), str(SK_KEY), ["HS256"], verify=True)
+            return True
+        
+        except jwt.InvalidTokenError:
+            raise HTTPException(498, {"message": "Invalid token!"})
+        
+        except RuntimeError:
+            raise HTTPException(500, {"message": "There was a run time error. Please try again."})
+        
+        except jwt.InvalidKeyError:
+            raise HTTPException(403, {"message": "Invalid key used."})
             
     else:
         raise HTTPException(status_code=401, detail={"message": "Can't access API endpoint."})
 
 protected_route = APIRouter(dependencies=[Depends(check_token)])
-    
-# Verifies user age when they register for an account, or if they change their
-# date of birth in their account settings.  
-async def verify_age(age: int, state_residence: str) -> bool:
-    # If the user's state residence is in Alabama or Nebraska, and they are 19 or above
-    # return True to verify that they are of age to register for an account.
-    if (state_residence == 'Alabama' or state_residence == 'Nebraska') and (age >= 19):
-        return True
-    
-    # If the user's state residence is in Nebraska, and they 21 or above,
-    # return True to verify that they are of age to register for an
-    # account.
-    elif (state_residence == 'Nebraska' and age >= 21):
-        return True
-    
-    # Otherwise...
-    else:
-        # If the user is in another state other than the ones mentioned above,
-        # and they are 18 years old or above, return True to verify that they
-        # are of age to register for an account.
-        if age >= 18:
-            return True
-        
-        # Otherwise, they are under age, so return False to indicate that they
-        # are not of age to register for an account.
-        else:
-            return False
-        
-# Determines the actual age of the user by using their account creation
-# timestamp and their date of birth to determine how old they really
-# were when they registered for an account.
-#
-# If they were under age when they registered for an account, then
-# they are banned from using the web application.
-#
-# Otherwise, they can proceed to use the web application.
-async def determine_account_registration_age(cursor: p.extensions.cursor, 
-                                             username: str, 
-                                             new_birth_month: str, 
-                                             new_birth_date: str, 
-                                             new_birth_year: str) -> bool:
-              
-    statement = "SELECT account_creation_timestamp, birth_month, birth_date, birth_year, state FROM Users WHERE username=%s"
-    params = [username]
-    cursor.execute(statement, params)
-    
-    month_index = {
-        "January": 1,
-        "February": 2,
-        "March": 3,
-        "April": 4,
-        "May": 5,
-        "June": 6,
-        "July": 7,
-        "August": 8,
-        "September": 9,
-        "October": 10,
-        "November": 11,
-        "December": 12
-    }
-    
-    record = [record for record in cursor][0]
-    
-    # Timestamp containing account creation date and time.
-    account_creation_timestamp = record[0]
-    
-    # Timestamp containing the user's expected birthday using their account registration timestamp year.
-    expected_birthday_timestamp = dt.datetime(account_creation_timestamp.year, month_index[record[1]], int(record[2]))
-    
-    # User's date of birth.
-    dob = dt.datetime(int(new_birth_year), month_index[new_birth_month], int(new_birth_date))
-    
-    # Calculate the age of the user when they registered for an account
-    # using their new date of birth.
-    age = int((account_creation_timestamp - dob).days * (1 / 365))
-    
-    # Stores state residence of user when they registered for an account.
-    state_residence = record[4]
-    
-    # If the user created their account before their birthday,
-    # take away 1 from their account registration age.
-    if account_creation_timestamp < expected_birthday_timestamp:
-        age = age - 1
-    
-    # If the user was of age when they registered for an account,
-    # they can proceed to change their date of birth.
-    if await verify_age(age, state_residence):
-        return True
-    
-    # However, if they were underage, their account is banned.
-    else:
-        return False
-    
-# Function that verifies the user's credentials.
-async def user_verified(username: str, password: str, cursor: p.extensions.cursor) -> bool:
-    # Retrieve the username and password of the current user from the database
-    # to verify the credentials they entered in the login page.
-    statement = "SELECT U.username, U.password FROM Users U WHERE U.username=%s"
-    params = [username]
-    cursor.execute(statement, params)
-    
-    # Append the column names into the "keys" list.
-    keys = [attr.name for attr in cursor.description]
-    
-    # Append the record values into the "values" list.
-    values = [value for value in cursor.fetchall()]
-    
-    # If either of the two lists are empty, then return false
-    # to indicate that the record of the user does not exist.
-    if not keys or not values:
-        return False
-    
-    # Otherwise...
-    else:
-        # Update the "values" variable by accessing the record of the user
-        # from the same list stored in the "values" variable.
-        values = values[0]
-
-        # Store the user's information in a dictionary using dictionary comprehension
-        # to easily access their username and password when verifying their
-        # credentials.
-        user = {user_key: user_column for user_key, user_column in zip(keys, values)}
-        
-        # Verify credentials.
-        password_verified = context.verify(password, user["password"])
-        username_verified = True if user["username"] == username else False
-        
-        # If both the username and password are verified, return True.
-        if username_verified and password_verified:
-            return True
-        
-        # Otherwise, return False.
-        else:
-            return False
-        
-# Function that retrieves user's profile picture.
-async def retrieve_profile_pic(username: str, cursor: p.extensions.cursor) -> str:
-    statement = "SELECT uri FROM Photos WHERE username=%s"
-    params = [username]
-    cursor.execute(statement, params)
-    
-    photo = [record[0] for record in cursor.fetchall()]
-    
-    if not photo:
-        return ""
-    
-    photo = photo[0]
-    photo = bytes(photo).decode('utf-8')
-    
-    return photo
-
-# Function that checks whether a user decided to filter other users
-# from their search results based on their sexual orientation.
-async def using_so_filter(username: str, cursor: p.extensions.cursor) -> bool:
-    statement = "SELECT use_so_filter FROM Recommendation_Settings WHERE username=%s"
-    params = [username]
-    cursor.execute(statement, params)
-    
-    record = [f[0] for f in cursor.fetchall()][0]
-    
-    if record == "true":
-        return True
-    else:
-        return False
-    
-# Function that checks if a record already exists in the database
-# of the current user visiting the specific profile they are
-# searching.
-async def retrieve_visitor_record(username: str, visiting_user_username: str, cursor: p.extensions.cursor) -> bool:
-    # Retrieve the record containing the current user's username 
-    # and the username of the user the former is visiting.
-    statement = "SELECT visitor, visitee FROM Visits WHERE visitor=%s AND visitee=%s"
-    params = [username, visiting_user_username]
-    cursor.execute(statement, params)
-    
-    # Store the record in a list.
-    record = [record[0] for record in cursor.fetchall()]
-    
-    # If the visitor/visitee record is not empty, then log the visit
-    # with the existing record.
-    if record:
-        return True
-    
-    # Otherwise, create a new log.
-    else:
-        return False
-    
-# Function that updates the visit count of the current user to a specific profile,
-# regardless of whether they have visited it or not.
-async def log_visit(username: str, 
-                    visiting_user_username: str, 
-                    db: p.extensions.connection, 
-                    cursor: p.extensions.cursor) -> None:  
-    # If a record already exists, then update the count of the number of times
-    # the current user has visited that specific profile.
-    if await retrieve_visitor_record(username, visiting_user_username, cursor):
-        statement = "CALL update_profile_visit(%s, %s, %s)"
-        params = [username, visiting_user_username, "now()"]
-        cursor.execute(statement, params)
-        db.commit()
-        
-    # Otherwise, create a log so that the visit count can be updated
-    # in the future each time the current user visits the same
-    # profile.
-    else:
-        statement = "CALL create_visitor_log(%s, %s, %s)"
-        params = [username, visiting_user_username, "now()"]
-        cursor.execute(statement, params)
-        db.commit()
-        
-async def include_visits(matches: list[dict[str, any]], visited_profiles: list[dict[str, any]]) -> list[dict[str, any]]:
-    # Remove any keys from the visited_profiles list that don't match those
-    # in the matches list.
-    for v in visited_profiles:
-        v.pop('birth_date', None)
-        v.pop('birth_month', None)
-        v.pop('birth_year', None)
-        
-    most_visited_profiles: list = [v for v in visited_profiles if v in matches]
-    remaining_matches: list = [m for m in matches if m not in visited_profiles]
-    
-    # If the number of visited profiles equals the number of matches
-    # then only return the profiles the user has visited the most.
-    if len(most_visited_profiles) == len(matches):
-        return most_visited_profiles
-    
-    # Otherwise, concatenate both the most_visited_profiles
-    # and remaining_matches lists in that order to first
-    # display the most visited users first before displaying
-    # the most similar matches.
-    final_matches_output: list[dict[str, any]] = most_visited_profiles + remaining_matches
-    
-    return final_matches_output
 
 @server.get("/")
 async def index():
@@ -343,7 +124,7 @@ async def login(request: Request, response: Response):
     # Handle exceptions in case a malicious actor attempts to make
     # unauthorized requests to any of the endpoints below.
     try:
-        db: p.extensions.connection = create_connection()
+        db: p.extensions.connection = await create_connection()
         cursor: p.extensions.cursor = db.cursor()
         verified_user = await user_verified(data["username"], data["password"], cursor)
         
@@ -353,7 +134,7 @@ async def login(request: Request, response: Response):
             # or accessing API endpoints.
             generate_token = jwt.encode(payload, key=SK_KEY, algorithm='HS256')
             
-            profile_pic = await retrieve_profile_pic(data["username"], cursor)
+            profile_pic = await retrieve_profile_pic(data["username"], db)
 
             # Configure the cookie's settings (such as securing it and making it an HttpOnly cookie to prevent users from using JavaScript to manipulate it through unauthorized means).
             response.set_cookie(key="user_session", value=generate_token, max_age=dt.timedelta(hours=2, minutes=0).seconds, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
@@ -376,10 +157,11 @@ async def login(request: Request, response: Response):
         raise HTTPException(498, {"error": "The token that was generated was invalid"})
     
     except Exception as e:
+        print(e)
         raise HTTPException(500, {"error": e})
     
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @server.post("/logout")
 async def logout(request: Request, response: Response):
@@ -399,7 +181,7 @@ async def logout(request: Request, response: Response):
 @server.post("/signup")
 async def signup(request: Request):
     data: dict = await request.json()
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     hash_password = context.hash(data["password"])
@@ -453,7 +235,7 @@ async def signup(request: Request):
             return {"message": "A server error has occurred. Please try again later."}, 500
         
         finally:
-            terminate_connection(db)
+            await terminate_connection(db)
             
         return {"message": "Successfully registered for an account!"}
     
@@ -466,23 +248,15 @@ async def check_login(request: Request):
     username_cookie = request.cookies.get("username")
     
     try:
-        db: p.extensions.connection = create_connection()
-        cursor: p.extensions.cursor = db.cursor()
+        db: p.extensions.connection = await create_connection()
         
-        statement = "SELECT username FROM Banned WHERE username=%s"
-        params = [username_cookie]
-        cursor.execute(statement, params)
-        
-        keys = [attr.name for attr in cursor.description]
-        values = [value for value in cursor.fetchall()]
-        
-        user = {key: value[0] for key, value in zip(keys, values) if keys and values}
+        user = await retrieve_banned_user(db, username_cookie)
         
         if "username" in user and user["username"] == username_cookie:
             raise HTTPException(403, {"verified": False})
 
         if session_tok != None and username_cookie != None:
-            profile_pic = await retrieve_profile_pic(username_cookie, cursor)
+            profile_pic = await retrieve_profile_pic(username_cookie, db)
             return {"verified": True, "username": username_cookie, "profile_pic": profile_pic}
         else:
             raise HTTPException(401, {"verified": False})
@@ -495,13 +269,13 @@ async def check_login(request: Request):
         raise HTTPException(500, {"message": "Server error. Please try again."})
     
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.post("/visit")
-@limit.limit("1/5 minutes", key_func=visit_key_func)
+@limit.limit(os.environ["VISIT_LIMIT"], key_func=visit_key_func)
 def visit(request: Request):
     data: dict = asyncio.run(request.json())
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = asyncio.run(create_connection())
     cursor: p.extensions.cursor = db.cursor()
     current_user: str = request.cookies.get("username")
     
@@ -516,11 +290,11 @@ def visit(request: Request):
         return {"message": "Server error. Please try again."}, 500
     
     finally:
-        terminate_connection(db)
+        asyncio.run(terminate_connection(db))
         
 @protected_route.post("/profile")
 def profile(request: Request):
-    statement = "SELECT * FROM Profile(%s)"
+    db: p.extensions.connection = asyncio.run(create_connection())
     
     data: dict = asyncio.run(request.json())
     username: str = ""
@@ -537,44 +311,10 @@ def profile(request: Request):
     # request into the username variable.
     else:
         username = data["username"]
-        
-    db: p.extensions.connection = create_connection()
-    cursor: p.extensions.cursor = db.cursor()
-    
-    params: list = [username]
     
     try:
-        cursor.execute(statement, params)
-        
-        profile_info: list[dict[str, any]] = [{}]
-        
-        try:
-            profile_info = [
-                {
-                    "username": record[0],
-                    "first_name": record[1],
-                    "middle_name": record[2],
-                    "last_name": record[3],
-                    "interests": record[4],
-                    "height": record[5],
-                    "gender": record[6],
-                    "sexual_orientation": record[7],
-                    "relationship_status": record[8],
-                    "birth_month": record[9],
-                    "birth_date": record[10],
-                    "birth_year": record[11],
-                    "uri": bytes(record[12]).decode('utf-8')
-                }
-                for record in cursor
-            ][0]
-            
-            if profile_info:
-                return profile_info
-            else:
-                return profile_info, 500
-        
-        except:
-            return profile_info
+        profile_info = asyncio.run(retrieve_profile(db, username))
+        return profile_info
     
     except db.DatabaseError:
         return {"message": "Failed to retrieve profile information!"}, 500
@@ -583,7 +323,7 @@ def profile(request: Request):
         return {"message": "A server error happened. Please try again."}, 500
     
     finally:
-        terminate_connection(db)
+        asyncio.run(terminate_connection(db))
         
 @server.post("/retrieve_pic")
 async def retrieve_pic(request: Request):
@@ -595,7 +335,7 @@ async def retrieve_pic(request: Request):
 
 @protected_route.route("/update_profile_pic", methods=["POST"])
 async def update_profile_pic(request: Request):
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -617,12 +357,12 @@ async def update_profile_pic(request: Request):
         return RedirectResponse(location="http://localhost:5173/profile/options/update", status_code=302)
     
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.put("/update_profile/name")
 async def update_name(request: Request):
     data: dict = await request.json()
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -648,19 +388,17 @@ async def update_name(request: Request):
         return {"message": "Failed to update name!"}, 500
     
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.put("/update_profile/DOB")
 async def update_DOB(request: Request):
     data: dict = await request.json()
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
         # Check if the user was lying about their DOB when they originally registered for an account.
         they_told_the_truth = await determine_account_registration_age(cursor, request.cookies.get("username"), data["birth_month"], data["birth_date"], data["birth_year"])
-        
-        print(they_told_the_truth)
         
         # If they did tell the truth about their DOB when originally registering for their account, 
         # they can go ahead and change it.
@@ -686,12 +424,12 @@ async def update_DOB(request: Request):
         raise HTTPException(500, {"message": "Error updating date of birth!"})
     
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.put("/update_profile/username")
 async def update_username(request: Request, response: Response):
     data: dict = await request.json()
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -709,12 +447,12 @@ async def update_username(request: Request, response: Response):
         return {"message": "Error updating username!"}
     
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.put("/update_profile/height")
 async def update_height(request: Request):
     data: dict = await request.json()
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     new_height: str = data["new_height_feet"] + "'" + data["new_height_inches"] + "''"
@@ -731,12 +469,12 @@ async def update_height(request: Request):
         return {"message": "Error updating height."}, 500
         
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.put("/update_profile/gender")
 async def update_gender(request: Request):
     data: dict = await request.json()
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -751,12 +489,12 @@ async def update_gender(request: Request):
         return {"message": "Error updating gender."}, 500
         
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.put("/update_profile/sexual_orientation")
 async def update_sexual_orientation(request: Request):
     data: dict = await request.json()
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -771,12 +509,12 @@ async def update_sexual_orientation(request: Request):
         return {"message": "Error updating sexual orientation."}, 500
         
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.put("/update_profile/relationship_status")
 async def update_relationship_status(request: Request):
     data: dict = await request.json()
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -791,12 +529,12 @@ async def update_relationship_status(request: Request):
         return {"message": "Error updating relationship status."}, 500
     
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.put("/update_profile/bio")
 async def update_bio(request: Request):
     data: dict = await request.json()
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -811,12 +549,12 @@ async def update_bio(request: Request):
         return {"message": "Error updating bio."}, 500
     
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.post('/privacy/check_recommendation_settings')
 def check_recommendation_settings(request: Request):
     username = request.cookies.get("username")
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = asyncio.run(create_connection())
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -832,15 +570,15 @@ def check_recommendation_settings(request: Request):
         return {"message": "Failed to retrieve recommendation settings for user."}, 500
     
     finally:
-        terminate_connection(db)
+        asyncio.run(terminate_connection(db))
         
 @protected_route.put("/privacy/change_recommendation_settings")
 async def change_recommendation_settings(request: Request):
     data: dict = await request.json()
     username: str = request.cookies.get("username")
-    query: str = request.query_params.get("t")
+    query: str = request.query_params.get("rs")
     
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -857,18 +595,18 @@ async def change_recommendation_settings(request: Request):
             db.commit()
             
         else:
-            return {"message": "Invalid query or request."}, 400
+            raise HTTPException(400, {"message": "Invalid query or request"})
         
         return {"message": data["check_value"]}
     
     except db.DatabaseError:
-        return {"message": "Failed to update recommendation settings."}, 500
+        raise HTTPException(500, {"message": "Failed to update recommendation settings."})
     
     except Exception:
-        return {"message": "A server error has occurred. Please try again later."}, 500
+        raise HTTPException(500, {"message": "A server error has occurred. Please try again later."})
     
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.route("/privacy/download_data", methods=["POST", "GET"])
 async def download_data(request: Request):
@@ -887,7 +625,7 @@ async def download_data(request: Request):
 
         try:
             # Create database connection and cursor.
-            db: p.extensions.connection = create_connection()
+            db: p.extensions.connection = await create_connection()
             cursor: p.extensions.cursor = db.cursor()
 
             # Compare the confirmed password entered by the user after they have clicked the button
@@ -998,7 +736,7 @@ async def download_data(request: Request):
             return {"message": "Exception was thrown"}, 500
         
         finally:
-            terminate_connection(db)
+            await terminate_connection(db)
     
     elif request.method == "GET":
         if os.path.isfile("user_info.json"):
@@ -1007,7 +745,7 @@ async def download_data(request: Request):
         
 # @protected_route.post("/report_user")
 # async def report_user(request: Request):
-#     db: p.extensions.connection = create_connection()
+#     db: p.extensions.connection = await create_connection()
 #     cursor: p.extensions.cursor = db.cursor()
 #     try:
 #         data = await request.form()
@@ -1077,7 +815,7 @@ async def download_data(request: Request):
 #         return {"message": e}
     
 #     finally:
-#         terminate_connection(db)
+#         await terminate_connection(db)
 #         # Configure memory size back to 1 MB.
 #         server.config["MAX_CONTENT_LENGTH"] = 1 * 1000 * 1000
 
@@ -1092,7 +830,7 @@ async def search(request: Request):
         ORDER BY P.last_name, P.first_name
     '''
     
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     data: dict = await request.json()
     
@@ -1127,11 +865,11 @@ async def search(request: Request):
         return {"message": "Failed to retrieve search terms! %s" % e}, 500
     
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.post("/retrieve_search_history")
-def retrieve_search_history(request: Request):
-    db: p.extensions.connection = create_connection()
+async def retrieve_search_history(request: Request):
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -1147,14 +885,14 @@ def retrieve_search_history(request: Request):
         return search_terms
     
     except db.DatabaseError as e:
-        return {"message": e}, 500
+        raise HTTPException(500, {"message": e})
     
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.post("/insert_search_history")
 def insert_search_history(request: Request):
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = asyncio.run(create_connection())
     cursor: p.extensions.cursor = db.cursor()
     data: dict = asyncio.run(request.json())
     
@@ -1209,11 +947,11 @@ def insert_search_history(request: Request):
         return {"message": "Failed to insert or update search term."}, 500
     
     finally:
-        terminate_connection(db)
+        asyncio.run(terminate_connection(db))
         
 @protected_route.post("/clear_search_history")
 async def clear_search_history(request: Request):
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -1229,7 +967,7 @@ async def clear_search_history(request: Request):
         return {"message": e}, 500
     
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.post("/clear_search_history_term")
 async def clear_search_history_term(request: Request):
@@ -1237,7 +975,7 @@ async def clear_search_history_term(request: Request):
     username = request.cookies.get("username")
     params = [username, search_term]
     
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -1263,103 +1001,20 @@ async def clear_search_history_term(request: Request):
         return {"message": "Invalid username or search term!"}, 500
     
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.post("/get_user_profiles")
-def get_user_profiles(request: Request):
-    db: p.extensions.connection = create_connection()
-    cursor: p.extensions.cursor = db.cursor()
+async def get_user_profiles(request: Request):
+    db: p.extensions.connection = await create_connection()
     
     try:
+        profiles = await retrieve_user_profiles(db, request.cookies.get("username"))
+        visits = await retrieve_visited_profiles(db, request.cookies.get("username"))
+        
         if request.query_params.get("t") == "user_profiles":
-            statement = '''
-                SELECT P.username, P.interests, P.height, P.gender, P.sexual_orientation, 
-                P.interested_in, P.state_residence, P.city_residence, P.relationship_status, 
-                P.first_name, P.middle_name, P.last_name, P2.uri,
-                U.birth_month, U.birth_date, U.birth_year, R.rating FROM Profiles P
-                INNER JOIN Photos P2 ON P2.username=P.username
-                INNER JOIN Users U ON U.username=P.username
-                INNER JOIN Ratings R ON R.username=P.username
-                WHERE P.username!=%s
-                AND P.username NOT IN (
-                    SELECT COALESCE(B.blockee, B.blocker) FROM Blocked B
-                    WHERE (B.blockee=P.username OR B.blocker=P.username)
-                    AND (B.blockee=%s OR B.blocker=%s)
-                )
-                AND P.username NOT IN (
-                    SELECT B2.username FROM Banned B2 WHERE B2.username=P.username
-                )
-                ORDER BY P.last_name, P.first_name
-            '''
-            params = [request.cookies.get("username") for u in range(0, 3)]
-            
-            cursor.execute(statement, params)
-            
-            profiles = [
-                {
-                    "username": record[0],
-                    "interests": record[1],
-                    "height": record[2],
-                    "gender": record[3],
-                    "sexual_orientation": record[4],
-                    "interested_in": record[5],
-                    "state_residence": record[6],
-                    "city_residence": record[7],
-                    "relationship_status": record[8],
-                    "first_name": record[9],
-                    "middle_name": record[10],
-                    "last_name": record[11],
-                    "uri": bytes(record[12]).decode('utf-8'),
-                    "birth_month": record[13],
-                    "birth_date": record[14],
-                    "birth_year": record[15],
-                    "rating": record[16]
-                }
-                for record in cursor
-            ]
-            
             return profiles
 
         elif request.query_params.get("t") == "visits":        
-            statement = '''
-                SELECT P.username, P.interests, P.first_name, P.city_residence, P.state_residence, P2.uri,
-		        U.birth_month, U.birth_date, U.birth_year FROM Profiles P
-                INNER JOIN Photos P2 ON P2.username=P.username
-                INNER JOIN Users U ON U.username=P.username
-                INNER JOIN Ratings R ON R.username=P.username
-                INNER JOIN Visits V ON V.visitor=%s AND V.visitee=P.username
-                WHERE P.username!=%s
-                AND P.username NOT IN (
-                    SELECT COALESCE(B.blockee, B.blocker) FROM Blocked B
-                    WHERE (B.blockee=P.username OR B.blocker=P.username)
-                    AND (B.blockee=%s OR B.blocker=%s)
-                )
-                AND P.username NOT IN (
-                    SELECT B2.username FROM Banned B2 WHERE B2.username!=P.username
-                )
-                AND P.username NOT IN (
-                    SELECT B2.username FROM Banned B2 WHERE B2.username=P.username
-                )
-                ORDER BY P.last_name, P.first_name
-            '''
-            params = [request.cookies.get("username") for u in range(0, 4)]
-            cursor.execute(statement, params)
-            
-            visits = [
-                {
-                    "username": record[0],
-                    "interests": record[1],
-                    "first_name": record[2],
-                    "city_residence": record[3],
-                    "state_residence": record[4],
-                    "uri": bytes(record[5]).decode('utf-8'),
-                    "birth_month": record[6],
-                    "birth_date": record[7],
-                    "birth_year": record[8]
-                }
-                for record in cursor
-            ]
-            
             return visits
     
     except db.DatabaseError as e:
@@ -1369,62 +1024,11 @@ def get_user_profiles(request: Request):
         return {"message": "There was a server error. Please try again!"}, 500
     
     finally:
-        terminate_connection(db)
-        
-@protected_route.post("/get_logged_in_user_profile")
-def get_logged_in_user_profile(request: Request):
-    db: p.extensions.connection = create_connection()
-    cursor: p.extensions.cursor = db.cursor()
-    
-    try:
-        statement = '''
-            SELECT P.username, P.interests, P.height, P.gender, P.sexual_orientation, 
-            P.interested_in, P.state_residence, P.city_residence, P.relationship_status, 
-            P.first_name, P.middle_name, P.last_name, P2.uri,
-            U.birth_month, U.birth_date, U.birth_year, R.rating FROM Profiles P, 
-            Photos P2, Users U, Ratings R WHERE P.username=%s AND P.interests!='N/A' 
-            AND P.username=P2.username AND P.username=U.username
-            AND R.username=P.username
-            ORDER BY last_name, first_name
-        '''
-        params = [request.cookies.get("username") for u in range(0, 1)]
-
-        cursor.execute(statement, params)
-        
-        profiles = [
-            {
-                "username": record[0],
-                "interests": record[1],
-                "height": record[2],
-                "gender": record[3],
-                "sexual_orientation": record[4],
-                "interested_in": record[5],
-                "state_residence": record[6],
-                "city_residence": record[7],
-                "relationship_status": record[8],
-                "first_name": record[9],
-                "middle_name": record[10],
-                "last_name": record[11],
-                "uri": bytes(record[12]).decode('utf-8'),
-                "birth_month": record[13],
-                "birth_date": record[14],
-                "birth_year": record[15],
-                "rating": record[16]
-            }
-            for record in cursor
-        ]
-        
-        return profiles
-    
-    except db.DatabaseError as e:
-        return {"message": "Failed to get basic profile details!"}, 500
-    
-    finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.post("/check_messaged_users")
 def check_messaged_users(request: Request):
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = asyncio.run(create_connection())
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -1451,11 +1055,11 @@ def check_messaged_users(request: Request):
         raise HTTPException(500, {"message": "Failed to retrieve messaged users."})
     
     finally:
-        terminate_connection(db)
+        asyncio.run(terminate_connection(db))
         
 @protected_route.post("/retrieve_messages")
 async def retrieve_messages(request: Request):
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     data: dict = await request.json()
     sender: str = request.cookies.get("username")
@@ -1483,11 +1087,11 @@ async def retrieve_messages(request: Request):
         raise HTTPException(500, {"message": "Failed to retrieve messages."})
     
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.post("/post_message")
 async def post_message(request: Request):
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     data: dict = await request.json()
     sender: str = request.cookies.get("username")
@@ -1540,12 +1144,12 @@ async def post_message(request: Request):
         return {"message": "Message failed to send."}, 500
     
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.post("/retrieve_message_profile_pics")
 async def retrieve_message_profile_pics(request: Request):
     data: dict = await request.json()
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -1566,29 +1170,23 @@ async def retrieve_message_profile_pics(request: Request):
         return {"message": "Message failed to send."}, 500
     
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.post("/retrieve_notification_count")
-def retrieve_notification_count(request: Request):
+async def retrieve_notification_count(request: Request):
     username = request.query_params.get("username")
-    db: p.extensions.connection = create_connection()
-    cursor: p.extensions.cursor = db.cursor()
+    db: p.extensions.connection = await create_connection()
     
     if username:
         try:
-            statement = "SELECT notification_counter FROM Notifications WHERE username=%s"
-            params = [username]
-            cursor.execute(statement, params)
-            
-            notification_count = [{"notification_counter": record[0]} for record in cursor][0]
-            
+            notification_count: dict[str, any] = await retrieve_notifications(db, username)
             return notification_count
 
         except db.DatabaseError:
             return {"message": "Failed to retrieve notification count for user!"}, 500
         
         finally:
-            terminate_connection(db)
+            await terminate_connection(db)
     
     else:
         return {"message": "Missing username for query parameter."}, 400
@@ -1596,7 +1194,7 @@ def retrieve_notification_count(request: Request):
 @protected_route.put("/clear_notification_count")
 def clear_notification_count(request: Request):
     username = request.query_params.get("username")
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = asyncio.run(create_connection())
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -1621,7 +1219,7 @@ def clear_notification_count(request: Request):
         return {"message": "Failed to clear notification counter."}, 500
     
     finally:
-        terminate_connection(db)
+        asyncio.run(terminate_connection(db))
         
 @protected_route.put("/update_password")
 async def update_password(request: Request):
@@ -1629,7 +1227,7 @@ async def update_password(request: Request):
     username = request.cookies.get("username")
     new_password = context.hash(data["new_password"])
     
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -1659,7 +1257,7 @@ async def update_password(request: Request):
         return {"message": "Failed to execute query!"}, 500
     
     finally:
-        terminate_connection(db) 
+        await terminate_connection(db) 
     
 @protected_route.post("/delete_account")
 async def delete_account(request: Request, response: Response):
@@ -1670,7 +1268,7 @@ async def delete_account(request: Request, response: Response):
     data: dict = await request.json()
     
     # Initialize the database connection and cursor.
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -1701,12 +1299,12 @@ async def delete_account(request: Request, response: Response):
         return {"message": "Failed to delete account!"}, 500
     
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.post("/block")
 async def block(request: Request):
     data: dict = await request.json()
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     username = request.cookies.get("username")
     
@@ -1758,7 +1356,7 @@ async def block(request: Request):
             return {"message": "Failed to check edge case."}, 500
         
         finally:
-            terminate_connection(db)
+            await terminate_connection(db)
     
     # Otherwise, remove the block.
     else:
@@ -1777,13 +1375,13 @@ async def block(request: Request):
             return {"message": "Failed to unblock user."}, 500
         
         finally:
-            terminate_connection(db)
+            await terminate_connection(db)
             
 @protected_route.post("/retrieve_blocked_users")
 async def retrieve_blocked_users(request: Request):
     username = request.cookies.get("username")
     
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -1812,12 +1410,12 @@ async def retrieve_blocked_users(request: Request):
         return {"message": "Failed to retrieve blocked users."}, 500
     
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.post("/retrieve_block_status")
 async def retrieve_block_status(request: Request):
     data: dict = await request.json()
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -1843,7 +1441,7 @@ async def retrieve_block_status(request: Request):
         return {"message": "Could not retrieve information!"}, 500
     
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 # WILL BE DONE AT A LATER DATE.
 # Feature will be postponed until further notice.
@@ -1859,7 +1457,7 @@ async def get_location(request: Request):
     
 @protected_route.post("/rating")
 async def rating(request: Request):
-    db: p.extensions.connection = create_connection()
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -1987,32 +1585,44 @@ async def rating(request: Request):
         return {"status": e}, 500
     
     finally:
-        terminate_connection(db)
+        await terminate_connection(db)
         
 @protected_route.post("/match")
 async def match(request: Request):
     try:
         # Stores payload information sent from the client as an object variable.
-        request_info: dict = await request.json()
+        ri_task = asyncio.create_task(request.json())
+        db_task = asyncio.create_task(create_connection())
+        request_info, db = await asyncio.gather(ri_task, db_task)
+
+        t1 = asyncio.create_task(retrieve_user_profiles(db, request.cookies.get("username")))
+        t2 = asyncio.create_task(get_logged_in_user_profile(db, request.cookies.get("username")))
+        t3 = asyncio.create_task(retrieve_visited_profiles(db, request.cookies.get("username")))
+
+        profiles, logged_in_user, visited_profiles = await asyncio.gather(t1, t2, t3)
         
-        # Run matching algorithm using the list of profiles (excluding the current user) to compare with the
-        # profile of the logged in user.
-        matches = run_matching_algorithm(request_info["users"], logged_in_user_profile=request_info["logged_in_user"], use_so_filter=request_info["use_so_filter"])
-        matches = await include_visits(matches, request_info["visited_users"])
-        
-        # If the limit of the number of searches retrieved is less than the
-        # actual number of matched users, then let the
-        # client continue requesting for more searches by including True
-        # in the return result below.
-        if request_info["initial_limit"] <= len(matches):
-            return [matches[0:request_info["initial_limit"]], True]
-        
-        # Otherwise, if the limit of the number of searches is equal to the
-        # length of the number of matched users, then let the client know
-        # that no more searches will be requested as there are no more
-        # matching profiles to request.
+        if request_info["algo_config"]:
+            # Run matching algorithm using the list of profiles (excluding the current user) to compare with the
+            # profile of the logged in user.
+            matches = run_matching_algorithm(profiles, logged_in_user, use_so_filter=request_info["use_so_filter"])
+            matches = await include_visits(matches, visited_profiles)
+            
+            # If the limit of the number of searches retrieved is less than the
+            # actual number of matched users, then let the
+            # client continue requesting for more searches by including True
+            # in the return result below.
+            if request_info["initial_limit"] <= len(matches):
+                return [matches[0:request_info["initial_limit"]], True]
+            
+            # Otherwise, if the limit of the number of searches is equal to the
+            # length of the number of matched users, then let the client know
+            # that no more searches will be requested as there are no more
+            # matching profiles to request.
+            else:
+                return [matches[0:request_info["initial_limit"]], False]
         else:
-            return [matches[0:request_info["initial_limit"]], False]
+            users = await include_visits(profiles, visited_profiles)
+            return [users[0:request_info["initial_limit"]], True]
         
     except KeyError as k:
         raise HTTPException(500, {"message": "Failed to retrieve information from dictionary."})

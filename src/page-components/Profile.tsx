@@ -1,63 +1,16 @@
-import { useState, useEffect } from 'react'
-import { CalculateBirthday } from '../functions/CalculateBirthday'
 import { Loading } from '../components/Loading'
+import { CurrentProfile } from '../types/types.config'
 
-export const Profile = () => {
-    const [profile, setProfile] = useState({
-        username: "",
-        name: "",
-        age: 0,
-        height: "",
-        interests: "",
-        sexual_orientation: "",
-        relationship_status: "",
-        profile_pic: ""
-    })
+interface ProfileProps
+{
+    profile: CurrentProfile,
+    pending: boolean,
+    error: boolean
+}
 
-    // State variable that is used if error is detected.
-    const [error, setError] = useState(false)
+export const Profile = (props: ProfileProps) => {
 
-    // State variable that handles pending status.
-    const [pending, setPending] = useState(true)
-
-    // useEffect hook will use the user's username to retrieve basic
-    // profile information, such as their name, bio, age, etc.
-    useEffect(() => {
-        const retrieveProfile = async () => {
-            await fetch("http://localhost:5000/profile", {
-                method: 'POST',
-                credentials: 'include',
-                body: JSON.stringify({}),
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            }).then((res) => {
-                if (res.ok) {
-                    return res.json()
-                } else {
-                    throw res.status
-                }
-            }).then((data) => {
-                setProfile({
-                    username: data.username,
-                    name: `${data.first_name} ${data.middle_name} ${data.last_name}`,
-                    age: CalculateBirthday(data.birth_month, parseInt(data.birth_date), parseInt(data.birth_year)),
-                    height: data.height,
-                    interests: data.interests,
-                    sexual_orientation: data.sexual_orientation,
-                    relationship_status: data.relationship_status,
-                    profile_pic: data.uri
-                })
-                sessionStorage.setItem("profile_pic", data.uri)
-                setPending(false)
-            }).catch((error) => {
-                console.log(error)
-                setPending(false)
-                setError(true)
-            })
-        }
-        retrieveProfile()
-    }, [])
+    const { profile, pending, error } = props;
 
     return (
         <div className="profile-container">

@@ -6,12 +6,13 @@ name: Python Test Suite For Dating Web App
 env:
   DB_KEY: ${{vars.DB_KEY}}
   SK_KEY: ${{vars.SK_KEY}}
+  VISIT_LIMIT: ${{vars.VISIT_LIMIT}}
 
 on:
   push:
-    branches: [ "main", "new-recent-messages-ui" ]
+    branches: [ "main", "refactor-search-page" ]
   pull_request:
-    branches: [ "main", "new-recent-messages-ui" ]
+    branches: [ "main", "refactor-search-page" ]
 
 permissions:
   contents: read

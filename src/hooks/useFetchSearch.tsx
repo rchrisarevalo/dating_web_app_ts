@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import { CalculateBirthday } from "../functions/CalculateBirthday";
-import { MatchProfiles, UserBirthday } from "../types/types.config";
+import { MatchProfiles } from "../types/types.config";
 
-export const useFetchAlgoConfig = (endpoint: string) => {
+export const useFetchAlgoConfig = (endpoint: string, auth: boolean) => {
     const [algoConfig, setAlgoConfig] = useState(false)
     const [soFilterUsed, setSOFilterUsed] = useState(false)
+    const [pending, setPending] = useState(true)
+    const [error, setError] = useState(false)
 
     useEffect(() => {
-        const fetchAlgoConfig = async () => {
+        if (auth) {
             fetch(endpoint, {
                 method: 'POST',
                 credentials: 'include'
@@ -23,20 +24,24 @@ export const useFetchAlgoConfig = (endpoint: string) => {
                 } else {
                     setAlgoConfig(false)
                 }
-
+    
                 if (data.use_so_filter === "true") {
                     setSOFilterUsed(true)
                 } else {
                     setSOFilterUsed(false)
                 }
+    
+                setPending(false)
+                setError(false)
             }).catch((error) => {
+                setPending(false)
+                setError(true)
                 console.log(error)
             })
         }
-        fetchAlgoConfig()
-    }, [endpoint])
+    }, [endpoint, auth])
 
-    return { algo_config: algoConfig, use_so_filter: soFilterUsed }
+    return { algo_config: algoConfig, use_so_filter: soFilterUsed, algo_pending: pending, algo_error: error }
 }
 
 export const useFetchSearchHistory = (endpoint: string) => {
@@ -73,7 +78,7 @@ export const useFetchSearchHistory = (endpoint: string) => {
     return { search_history: searchHistory, pending: pending, error: error }
 }
 
-export const useFetchProfiles = (endpoint: string) => {
+export const useFetchProfiles = (endpoint: string, auth: boolean) => {
     const [profiles, setProfiles] = useState<MatchProfiles[]>([{
         age: 0,
         city_residence: "",
@@ -88,7 +93,8 @@ export const useFetchProfiles = (endpoint: string) => {
     const [error, setError] = useState(false)
 
     useEffect(() => {
-        const fetchProfiles = async () => {
+        if (auth)
+        {
             fetch(endpoint, {
                 method: 'POST',
                 credentials: 'include'
@@ -100,11 +106,6 @@ export const useFetchProfiles = (endpoint: string) => {
                 }
             }).then((data) => {
                 // Include the age of the user to their profile object using their DOB.
-                data.map((profile: UserBirthday) => 
-                    profile.age = CalculateBirthday(profile.birth_month, 
-                                                    parseInt(profile.birth_date), 
-                                                    parseInt(profile.birth_year))
-                )
                 setPending(false)
                 setProfiles(data)
             }).catch((error) => {
@@ -113,23 +114,14 @@ export const useFetchProfiles = (endpoint: string) => {
                 setError(true)
             })
         }
-        fetchProfiles()
-    }, [endpoint])
+    }, [endpoint, auth])
 
     return { profiles, pending, error }
 }
 
-export const useFetchMatches = (userProfiles: MatchProfiles[],
-                                visitedProfiles: MatchProfiles[], 
-                                currentUserProfile: MatchProfiles[],
-                                usersPending: boolean, 
-                                visitedProfilesPending: boolean,
-                                profilePending: boolean, 
-                                usersError: boolean,
-                                visitedProfilesError: boolean, 
-                                profileError: boolean, 
+export const useFetchMatches = (match_endpoint: string, 
                                 use_so_filter: boolean, 
-                                match_endpoint: string) => {
+                                algo_config: boolean) => {
     
     // State variable to store the matched profiles.
     const [matchedProfiles, setMatchedProfiles] = useState<MatchProfiles[]>([{
@@ -148,59 +140,35 @@ export const useFetchMatches = (userProfiles: MatchProfiles[],
     const [error, setError] = useState(false)
 
     useEffect(() => {
-        const fetchMatches = async () => {
-            // If the user profiles and the current user's profile are done loading...
-            if (!usersPending && !profilePending && !visitedProfilesPending) {
-                // And if there are no errors loading two sets of profiles...
-                if (!usersError && !profileError && !visitedProfilesError) {
-
-                    // Object storing user's profiles, the profile of the logged in user,
-                    // and the number of searches that will be retrieved.
-                    const user_data = {
-                        users: userProfiles,
-                        visited_users: visitedProfiles,
-                        logged_in_user: currentUserProfile,
-                        use_so_filter: use_so_filter,
-                        initial_limit: 100
-                    }
-
-                    // Then submit a request to the REST API to match the user profiles with the current user's profile.
-                    fetch(match_endpoint, {
-                        method: 'POST',
-                        credentials: 'include',
-                        body: JSON.stringify(user_data),
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    }).then((res) => {
-                        if (res.ok) {
-                            return res.json()
-                        } else {
-                            throw res.status
-                        }
-                    }).then((data) => {
-                        setPending(false)
-                        setMatchedProfiles(data[0])
-                    }).catch((error) => {
-                        console.log(error)
-                        setPending(false)
-                        setError(true)
-                    })
-                }
-            }
+        const user_data = {
+            use_so_filter: use_so_filter,
+            algo_config: algo_config,
+            initial_limit: 100
         }
-        fetchMatches()
-    }, [match_endpoint, 
-        userProfiles,
-        visitedProfiles, 
-        currentUserProfile, 
-        profilePending,
-        visitedProfilesPending, 
-        usersPending, 
-        usersError, 
-        visitedProfilesError,
-        profileError, 
-        use_so_filter])
+
+        // Then submit a request to the REST API to match the user profiles with the current user's profile.
+        fetch('http://localhost:5000/match', {
+            method: 'POST',
+            credentials: 'include',
+            body: JSON.stringify(user_data),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json()
+            } else {
+                throw res.status
+            }
+        }).then((data) => {
+            setPending(false)
+            setMatchedProfiles(data[0])
+        }).catch((error) => {
+            console.log(error)
+            setPending(false)
+            setError(true)
+        })
+    }, [match_endpoint, use_so_filter])
 
     // Return the matched profiles in an array full of objects, as well as the request status.
     return { matchedProfiles, pending, error }

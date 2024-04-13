@@ -1,8 +1,10 @@
 // Import hooks from 'react' library and custom hooks.
 import { useEffect, useState } from "react";
 import { useFetchLogin } from "../hooks/useFetchLogin";
-import { useNotificationUpdate } from "../hooks/useNotificationUpdate";
+import { useFetchProfile } from "../hooks/useFetchProfile";
 import { useFetchProfiles } from "../hooks/useFetchSearch";
+import { useFetchAlgoConfig } from "../hooks/useFetchSearch";
+import { useNotificationUpdate } from "../hooks/useNotificationUpdate";
 
 // Import necessary React Router DOM libraries to configure routes.
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
@@ -37,7 +39,9 @@ interface RoutesProps {
 
 export const RoutingSystem = () => {
     const { auth, pending, error, username, profile_pic, status_code } = useFetchLogin()
-    const profile_data = useFetchProfiles("http://localhost:5000/get_user_profiles?t=user_profiles")
+    const { profile_page, profile_page_pending, profile_page_error } = useFetchProfile(auth)
+    const { algo_config, use_so_filter, algo_pending, algo_error } = useFetchAlgoConfig("http://localhost:5000/privacy/check_recommendation_settings", auth)
+    const profile_data = useFetchProfiles("http://localhost:5000/get_user_profiles?t=user_profiles", auth)
     const path = useLocation().pathname
     const domain_path = path.split("/")[1]
 
@@ -132,16 +136,28 @@ export const RoutingSystem = () => {
                         </PublicRoutes>
                         :
                         <ProtectedRoutes>
-                            <Route index path="/profile" element={<Profile />} />
+                            <Route index path="/profile" element={<Profile 
+                                profile={profile_page}
+                                pending={profile_page_pending}
+                                error={profile_page_error}
+                            />} />
                             <Route path="/profile/options" element={<Options />} />
                             <Route path="/profile/options/update" element={<Update username={username} />} />
                             <Route path="/profile/options/settings" element={<AccountSettings username={username} /> } />
-                            <Route path="/profile/options/privacy" element={<PrivacySettings username={username} />} />
+                            <Route path="/profile/options/privacy" element={<PrivacySettings 
+                                username={username}
+                                auth={auth}
+                            />} />
                             <Route path="/profile/options/privacy/view_blocked_users" element={<BlockedUsers />} />
                             <Route path="/profile/options/privacy/download_information" element={<DownloadInfo />} />
                             <Route path="/profile/recent_messages" element={<RecentMessages />} />
-                            <Route path="/profile/search" element={<SearchPage />} />
-                            {profile_data.profiles.map(user => 
+                            <Route path="/profile/search" element={<SearchPage 
+                                algo_config={algo_config}
+                                use_so_filter={use_so_filter}
+                                algo_pending={algo_pending}
+                                algo_error={algo_error}
+                            />} />
+                            {profile_data.profiles.map((user: { username: string; }) => 
                                 <>
                                     <Route path={`/user/${user.username}`} element={<User username={user.username} />} />
                                     <Route path={`/message/${user.username}`} element={<Message username={username} />} />

@@ -2,17 +2,19 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import Modal from 'react-bootstrap/Modal'
 
-import { IoArrowBackCircleSharp } from 'react-icons/io5'
 import { useFetchAlgoConfig } from '../hooks/useFetchSearch'
+
+import { IoArrowBackCircleSharp } from 'react-icons/io5'
+import { Spinner } from 'react-bootstrap'
 
 interface PrivacySettingsProps {
     username: string
+    auth: boolean
 }
 
 export const PrivacySettings = (props: PrivacySettingsProps) => {
-    const { username } = props
-
-    const { algo_config, use_so_filter } = useFetchAlgoConfig("http://localhost:5000/privacy/check_recommendation_settings")
+    const { username, auth } = props
+    const { algo_config, use_so_filter, algo_pending, algo_error } = useFetchAlgoConfig("http://localhost:5000/privacy/check_recommendation_settings", auth)
 
     const [displayModal, setDisplayModal] = useState(false)
     const [displaySOFilterModal, setDisplaySOFilterModal] = useState(false)
@@ -79,6 +81,7 @@ export const PrivacySettings = (props: PrivacySettingsProps) => {
             } else {
                 setCheck(false)
             }
+            window.location.reload()
         }).catch((error) => {
             console.log(error)
         })
@@ -118,6 +121,9 @@ export const PrivacySettings = (props: PrivacySettingsProps) => {
             } else {
                 setSOCheck(false)
             }
+            window.location.reload()
+        }).catch((error) => {
+            console.log(error)
         })
 
         setDisplaySOFilterModal(false)
@@ -163,27 +169,65 @@ export const PrivacySettings = (props: PrivacySettingsProps) => {
                 <Modal.Header closeButton>
                     <Modal.Title>Change recommendation settings</Modal.Title>
                 </Modal.Header>
-                <Modal.Body>
-                    {check ? <input type="checkbox" checked onClick={handleCheck} id="recommend-check"></input> : <input type="checkbox" onClick={handleCheck} id="recommend-check"></input>}
-                    <label style={{marginRight: '10px', marginLeft: '10px'}}><b>Use matching algorithm</b></label>
-                </Modal.Body>
-                <Modal.Footer>
-                    <button onClick={submitRecommendationSetting} style={{border: 'none', background: 'black', color: 'white', padding: '7px 15px', borderRadius: '20px'}}>Confirm</button>
-                    <button onClick={handleCloseRecommendModal} style={{border: 'none', background: 'black', color: 'white', padding: '7px 15px', borderRadius: '20px'}}>Cancel</button>
-                </Modal.Footer>
+                <>
+                    {!algo_pending ?
+                        !algo_error ?
+                            <>
+                                <Modal.Body>
+                                    {check ? <input type="checkbox" checked onClick={handleCheck} id="recommend-check"></input> : <input type="checkbox" onClick={handleCheck} id="recommend-check"></input>}
+                                    <label style={{marginRight: '10px', marginLeft: '10px'}}><b>Use matching algorithm</b></label>
+                                </Modal.Body>
+                                <Modal.Footer>
+                                    <button onClick={submitRecommendationSetting} style={{border: 'none', background: 'black', color: 'white', padding: '7px 15px', borderRadius: '20px'}}>Confirm</button>
+                                    <button onClick={handleCloseRecommendModal} style={{border: 'none', background: 'black', color: 'white', padding: '7px 15px', borderRadius: '20px'}}>Cancel</button>
+                                </Modal.Footer>
+                            </>
+                            :
+                            <>
+                                <Modal.Body>
+                                    <p>Error loading settings!</p>
+                                </Modal.Body>
+                                <Modal.Footer>
+                                    <button onClick={() => window.location.reload} style={{border: 'none', background: 'black', color: 'white', padding: '7px 15px', borderRadius: '20px'}}>Reload</button>
+                                </Modal.Footer>
+                            </>
+                        :
+                        <Modal.Body>
+                            <Spinner />
+                        </Modal.Body>
+                    }
+                </>
             </Modal>
             <Modal show={displaySOFilterModal} onHide={handleClose_SO_Filter_Modal} keyboard={false} centered>
                 <Modal.Header closeButton>
                     <Modal.Title>Change sexual orientation filter settings</Modal.Title>
                 </Modal.Header>
-                <Modal.Body>
-                    {SOCheck ? <input type="checkbox" checked onClick={handle_SO_Filter_Check} id="so-filter-check"></input> : <input type="checkbox" onClick={handle_SO_Filter_Check} id="so-filter-check"></input>}
-                    <label style={{marginRight: '10px', marginLeft: '10px'}}><b>Use sexual orientation filter</b></label>
-                </Modal.Body>
-                <Modal.Footer>
-                    <button onClick={submitSOFilterSetting} style={{border: 'none', background: 'black', color: 'white', padding: '7px 15px', borderRadius: '20px'}}>Confirm</button>
-                    <button onClick={handleClose_SO_Filter_Modal} style={{border: 'none', background: 'black', color: 'white', padding: '7px 15px', borderRadius: '20px'}}>Cancel</button>
-                </Modal.Footer>
+                {!algo_pending ?
+                    !algo_error ?
+                        <>
+                            <Modal.Body>
+                                {SOCheck ? <input type="checkbox" checked onClick={handle_SO_Filter_Check} id="so-filter-check"></input> : <input type="checkbox" onClick={handle_SO_Filter_Check} id="so-filter-check"></input>}
+                                <label style={{marginRight: '10px', marginLeft: '10px'}}><b>Use sexual orientation filter</b></label>
+                            </Modal.Body>
+                            <Modal.Footer>
+                                <button onClick={submitSOFilterSetting} style={{border: 'none', background: 'black', color: 'white', padding: '7px 15px', borderRadius: '20px'}}>Confirm</button>
+                                <button onClick={handleClose_SO_Filter_Modal} style={{border: 'none', background: 'black', color: 'white', padding: '7px 15px', borderRadius: '20px'}}>Cancel</button>
+                            </Modal.Footer>
+                        </>
+                        :
+                        <>
+                            <Modal.Body>
+                                <p>Error loading settings!</p>
+                            </Modal.Body>
+                            <Modal.Footer>
+                                <button onClick={() => window.location.reload} style={{border: 'none', background: 'black', color: 'white', padding: '7px 15px', borderRadius: '20px'}}>Reload</button>
+                            </Modal.Footer>
+                        </>
+                    :
+                    <Modal.Body>
+                        <Spinner />
+                    </Modal.Body>
+                }
             </Modal>
         </div>
     )

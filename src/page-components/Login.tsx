@@ -9,6 +9,8 @@ import { IoEyeOutline, IoEyeOffOutline } from 'react-icons/io5'
 
 export const Login = () => {
     const [authenticated, setAuthenticated] = useState(false)
+    const [loginPending, setLoginPending] = useState(true)
+    const [loginError, setLoginError] = useState(false)
     const [errorMessage, setErrorMessage] = useState("")
 
     const [showPassword, setShowPassword] = useState(false)
@@ -31,6 +33,7 @@ export const Login = () => {
 
     const handleLogin = () => {
         if (credentials.username && credentials.password) {
+            setDisplayModal(true)
             const formData = new FormData()
             formData.append('username', credentials.username)
             formData.append('password', credentials.password)
@@ -43,24 +46,33 @@ export const Login = () => {
                 if (res.ok) {
                     return res.json()
                 } else {
-                    console.log(res.statusText)
                     throw res.status
                 }
             }).then((data) => {
                 if (data.verified) {
+                    setLoginPending(false)
+                    setLoginError(false)
                     setAuthenticated(true)
-                    setDisplayModal(true)
                     sessionStorage.setItem("profile_pic", data["profile_pic"])
                     setTimeout(() => {
                         window.location.href = "http://localhost:5173/profile"
                     }, 1000)
                 }
-            }).catch((error) => {
-                console.log(error)
-                setDisplayModal(true)
-                setErrorMessage("Incorrect username and/or password!")
+            }).catch((error: number) => {
+                setLoginPending(false)
+                setLoginError(true)
+                setAuthenticated(false)
+                
+                if (error != 429) {
+                    setErrorMessage("Incorrect username and/or password!")
+                } else {
+                    setErrorMessage("You exceeded your login attempts. Please try again later.")
+                }
 
+            }).finally(() => {
                 setTimeout(() => {
+                    setLoginPending(true)
+                    setLoginError(false)
                     setDisplayModal(false)
                 }, 3000)
             })
@@ -121,19 +133,28 @@ export const Login = () => {
             </div>
             <Footer />
             <Modal show={displayModal} onHide={handleClose} keyboard={false} backdrop="static" centered>
-                {authenticated ?
-                    <>
-                        <Modal.Header>
-                            <Modal.Title>Login Successful</Modal.Title>
-                        </Modal.Header>
-                        <Modal.Body>Logging in...</Modal.Body>
-                    </>
+                {!loginPending ?
+                    !loginError ?
+                        authenticated && !loginError &&
+                            <>
+                                <Modal.Header>
+                                    <Modal.Title>Login Successful</Modal.Title>
+                                </Modal.Header>
+                                <Modal.Body>Logging in...</Modal.Body>
+                            </>
+                        :
+                        <>
+                            <Modal.Header>
+                                <Modal.Title>Login Failed</Modal.Title>
+                            </Modal.Header>
+                            <Modal.Body>{`${errorMessage}`}</Modal.Body>
+                        </>
                     :
                     <>
                         <Modal.Header>
-                            <Modal.Title>Login Failed</Modal.Title>
+                            <Modal.Title>Processing...</Modal.Title>
                         </Modal.Header>
-                        <Modal.Body>{`${errorMessage}`}</Modal.Body>
+                        <Modal.Body>Processing log in...</Modal.Body>
                     </>
                 }
             </Modal>
