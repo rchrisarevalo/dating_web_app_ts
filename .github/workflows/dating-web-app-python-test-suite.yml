@@ -6,6 +6,7 @@ name: Python Test Suite For Dating Web App
 env:
   DB_KEY: ${{vars.DB_KEY}}
   SK_KEY: ${{vars.SK_KEY}}
+  VISIT_LIMIT: ${{vars.VISIT_LIMIT}}
 
 on:
   push:
