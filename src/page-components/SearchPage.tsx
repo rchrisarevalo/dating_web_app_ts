@@ -2,14 +2,21 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { IoFunnelOutline, IoHelpOutline, IoSearchOutline, IoTrashBinOutline } from 'react-icons/io5'
 
-import { useFetchSearchHistory, useFetchMatches, useFetchAlgoConfig } from "../hooks/useFetchSearch"
+import { useFetchSearchHistory, useFetchMatches } from "../hooks/useFetchSearch"
 
 import { clearSearchTerm, insertSearchTerm } from '../functions/searchHistoryFunctions'
 
 import Spinner from 'react-bootstrap/Spinner'
 
-export const SearchPage = () => {
-    const { algo_config, use_so_filter, algo_pending, algo_error } = useFetchAlgoConfig("http://localhost:5000/privacy/check_recommendation_settings")
+interface SearchPageProps {
+    algo_config: boolean,
+    use_so_filter: boolean,
+    algo_pending: boolean,
+    algo_error: boolean
+}
+
+export const SearchPage = (props: SearchPageProps) => {
+    const { algo_config, use_so_filter, algo_pending, algo_error } = props
     const { search_history, pending, error } = useFetchSearchHistory("http://localhost:5000/retrieve_search_history")
 
     const matched_profiles = useFetchMatches("http://localhost:5000/match", use_so_filter, algo_config)
@@ -35,15 +42,19 @@ export const SearchPage = () => {
     }, [search_history, pending, error])
 
     useEffect(() => {
-        if (!matched_profiles.pending && !matched_profiles.error) {
+        if (!matched_profiles.pending && !matched_profiles.error && !algo_pending && !algo_error) {
             setResults(matched_profiles.matchedProfiles)
         }
     }, [matched_profiles.error, matched_profiles.pending, matched_profiles.matchedProfiles,
-        algo_config])
+        algo_config, algo_error])
 
     useEffect(() => {
-        setResults(matched_profiles.matchedProfiles.filter(result => (currentSearchTerm.toLowerCase().substring(0, currentSearchTerm.length)) === (result.first_name.toLowerCase().substring(0, currentSearchTerm.length))))
-    }, [matched_profiles.matchedProfiles, algo_config, currentSearchTerm])
+        if (currentSearchTerm !== "") {
+            setResults(matched_profiles.matchedProfiles.filter(result => (currentSearchTerm.toLowerCase().substring(0, currentSearchTerm.length)) === (result.first_name.toLowerCase().substring(0, currentSearchTerm.length))))
+        } else {
+            setResults(matched_profiles.matchedProfiles)
+        }
+    }, [matched_profiles.matchedProfiles, currentSearchTerm])
 
     return (
         <div className="search-page-container">
@@ -115,7 +126,9 @@ export const SearchPage = () => {
                             </>
                             :
                             <div className="loading-match-page">
-                                <p>Error!</p>
+                                <p>Failed to load or perform request. Please try again.</p>
+                                <br></br>
+                                <button style={{background: 'white', border: 'none', padding: '7px 30px', borderRadius: '20px', textTransform: 'uppercase', fontWeight: '900'}} onClick={() => window.location.reload()}>Reload Page</button>
                             </div>
                         }
                     </>

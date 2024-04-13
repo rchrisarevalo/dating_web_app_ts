@@ -272,7 +272,7 @@ async def check_login(request: Request):
         await terminate_connection(db)
         
 @protected_route.post("/visit")
-@limit.limit("1/5 minutes", key_func=visit_key_func)
+@limit.limit(os.environ["VISIT_LIMIT"], key_func=visit_key_func)
 def visit(request: Request):
     data: dict = asyncio.run(request.json())
     db: p.extensions.connection = asyncio.run(create_connection())
@@ -1004,12 +1004,12 @@ async def clear_search_history_term(request: Request):
         await terminate_connection(db)
         
 @protected_route.post("/get_user_profiles")
-def get_user_profiles(request: Request):
-    db: p.extensions.connection = asyncio.run(create_connection())
+async def get_user_profiles(request: Request):
+    db: p.extensions.connection = await create_connection()
     
     try:
-        profiles = asyncio.run(retrieve_user_profiles(db, request.cookies.get("username")))
-        visits = asyncio.run(retrieve_visited_profiles(db, request.cookies.get("username")))
+        profiles = await retrieve_user_profiles(db, request.cookies.get("username"))
+        visits = await retrieve_visited_profiles(db, request.cookies.get("username"))
         
         if request.query_params.get("t") == "user_profiles":
             return profiles
@@ -1024,7 +1024,7 @@ def get_user_profiles(request: Request):
         return {"message": "There was a server error. Please try again!"}, 500
     
     finally:
-        asyncio.run(terminate_connection(db))
+        await terminate_connection(db)
         
 @protected_route.post("/check_messaged_users")
 def check_messaged_users(request: Request):
@@ -1591,13 +1591,15 @@ async def rating(request: Request):
 async def match(request: Request):
     try:
         # Stores payload information sent from the client as an object variable.
-        request_info: dict = await request.json()
+        ri_task = asyncio.create_task(request.json())
+        db_task = asyncio.create_task(create_connection())
+        request_info, db = await asyncio.gather(ri_task, db_task)
 
-        db = await create_connection()
+        t1 = asyncio.create_task(retrieve_user_profiles(db, request.cookies.get("username")))
+        t2 = asyncio.create_task(get_logged_in_user_profile(db, request.cookies.get("username")))
+        t3 = asyncio.create_task(retrieve_visited_profiles(db, request.cookies.get("username")))
 
-        profiles = await retrieve_user_profiles(db, request.cookies.get("username"))
-        logged_in_user = await get_logged_in_user_profile(db, request.cookies.get("username"))
-        visited_profiles = await retrieve_visited_profiles(db, request.cookies.get("username"))
+        profiles, logged_in_user, visited_profiles = await asyncio.gather(t1, t2, t3)
         
         if request_info["algo_config"]:
             # Run matching algorithm using the list of profiles (excluding the current user) to compare with the
@@ -1620,7 +1622,6 @@ async def match(request: Request):
                 return [matches[0:request_info["initial_limit"]], False]
         else:
             users = await include_visits(profiles, visited_profiles)
-
             return [users[0:request_info["initial_limit"]], True]
         
     except KeyError as k:

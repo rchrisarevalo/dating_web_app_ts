@@ -9,38 +9,36 @@ export const useFetchLogin = () => {
     const [returnStatus, setReturnStatus] = useState(200)
 
     useEffect(() => {
-        const fetchLogin = async () => {
-            const res = await fetch("http://localhost:5000/check_login", {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            })
-
-            const data = await res.json()
-
-            if (data["verified"]) {
-                setAuth(true)
+        fetch("http://localhost:5000/check_login", {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json()
+            } else {
+                setReturnStatus(res.status)
+                throw res.status
+            }
+        }).then((data) => {
+            setAuth(true)
+            setPending(false)
+            setError(false)
+            setUsername(data.username)
+            setProfilePic(data.profile_pic)
+        }).catch((error) => {
+            if (error == 401) {
+                setAuth(false)
                 setPending(false)
                 setError(false)
-                setUsername(data["username"])
-                setProfilePic(data["profile_pic"])
             } else {
-                if (res.status === 401) {
-                    setAuth(false)
-                    setPending(false)
-                    setError(false)
-                } else {
-                    setAuth(false)
-                    setPending(false)
-                    setError(true)
-                }
-                setReturnStatus(res.status)
+                setAuth(false)
+                setPending(false)
+                setError(true)
             }
-        }
-
-        fetchLogin()
+        })
     }, [])
 
     return { auth: auth, pending: pending, error: error, username: username, profile_pic: profilePic, status_code: returnStatus }

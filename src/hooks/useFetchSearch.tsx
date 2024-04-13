@@ -1,43 +1,45 @@
 import { useEffect, useState } from "react";
 import { MatchProfiles } from "../types/types.config";
 
-export const useFetchAlgoConfig = (endpoint: string) => {
+export const useFetchAlgoConfig = (endpoint: string, auth: boolean) => {
     const [algoConfig, setAlgoConfig] = useState(false)
     const [soFilterUsed, setSOFilterUsed] = useState(false)
-    const [pending, setPending] = useState(true);
-    const [error, setError] = useState(false);
+    const [pending, setPending] = useState(true)
+    const [error, setError] = useState(false)
 
     useEffect(() => {
-        fetch(endpoint, {
-            method: 'POST',
-            credentials: 'include'
-        }).then((res) => {
-            if (res.ok) {
-                return res.json()
-            } else {
-                throw res.status
-            }
-        }).then((data) => {
-            if (data.used === "true") {
-                setAlgoConfig(true)
-            } else {
-                setAlgoConfig(false)
-            }
-
-            if (data.use_so_filter === "true") {
-                setSOFilterUsed(true)
-            } else {
-                setSOFilterUsed(false)
-            }
-
-            setPending(false)
-            setError(false)
-        }).catch((error) => {
-            setPending(false)
-            setError(true)
-            console.log(error)
-        })
-    }, [endpoint])
+        if (auth) {
+            fetch(endpoint, {
+                method: 'POST',
+                credentials: 'include'
+            }).then((res) => {
+                if (res.ok) {
+                    return res.json()
+                } else {
+                    throw res.status
+                }
+            }).then((data) => {
+                if (data.used === "true") {
+                    setAlgoConfig(true)
+                } else {
+                    setAlgoConfig(false)
+                }
+    
+                if (data.use_so_filter === "true") {
+                    setSOFilterUsed(true)
+                } else {
+                    setSOFilterUsed(false)
+                }
+    
+                setPending(false)
+                setError(false)
+            }).catch((error) => {
+                setPending(false)
+                setError(true)
+                console.log(error)
+            })
+        }
+    }, [endpoint, auth])
 
     return { algo_config: algoConfig, use_so_filter: soFilterUsed, algo_pending: pending, algo_error: error }
 }
@@ -117,7 +119,9 @@ export const useFetchProfiles = (endpoint: string, auth: boolean) => {
     return { profiles, pending, error }
 }
 
-export const useFetchMatches = (match_endpoint: string, use_so_filter: boolean, algo_config: boolean) => {
+export const useFetchMatches = (match_endpoint: string, 
+                                use_so_filter: boolean, 
+                                algo_config: boolean) => {
     
     // State variable to store the matched profiles.
     const [matchedProfiles, setMatchedProfiles] = useState<MatchProfiles[]>([{
@@ -157,7 +161,6 @@ export const useFetchMatches = (match_endpoint: string, use_so_filter: boolean, 
                 throw res.status
             }
         }).then((data) => {
-            console.log(data)
             setPending(false)
             setMatchedProfiles(data[0])
         }).catch((error) => {

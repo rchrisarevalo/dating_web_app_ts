@@ -2,7 +2,6 @@ import psycopg2 as p
 import datetime as dt
 from passlib.context import CryptContext
 from fastapi import HTTPException
-import asyncio
 
 context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 
