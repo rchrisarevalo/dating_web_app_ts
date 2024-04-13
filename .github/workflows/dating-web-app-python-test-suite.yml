@@ -10,9 +10,9 @@ env:
 
 on:
   push:
-    branches: [ "main", "refactor-search-page" ]
+    branches: [ "main", "DAT-150-Re-implement-database-session-table" ]
   pull_request:
-    branches: [ "main", "refactor-search-page" ]
+    branches: [ "main", "DAT-150-Re-implement-database-session-table" ]
 
 permissions:
   contents: read
