@@ -10,9 +10,9 @@ env:
 
 on:
   push:
-    branches: [ "main", "DAT-150-Re-implement-database-session-table" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "main", "DAT-150-Re-implement-database-session-table" ]
+    branches: [ "main" ]
 
 permissions:
   contents: read
