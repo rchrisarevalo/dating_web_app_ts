@@ -102,7 +102,7 @@ export const SearchPage = (props: SearchPageProps) => {
                                                                 <img src={`data:image/png;base64,${result.uri}`} alt="search-profile-pic"></img>
                                                             </div>
                                                             <br></br>
-                                                            <div id="user-profile-figure-container">
+                                                            <div id="user-profile-figure-container" key={`user-profile-figure-${i}`}>
                                                                 <h3>{`${result.first_name}, ${result.age}`}</h3>
                                                                 <p id="user-profile-details">{`${result.city_residence}, ${result.state_residence}`}</p>
                                                                 {result.interests.split("\n").map((paragraph) =>

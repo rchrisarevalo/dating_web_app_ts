@@ -100,7 +100,7 @@ export const RecentMessages = () => {
                                                 <Link to={`/message/${recent.user2}`}>
                                                     <div className="recent-user-row">
                                                         <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' }}>
-                                                            <img alt="profile_pic" src={`data:image/png;base64,${recent.uri}`} />
+                                                            <img alt="profile_pic" src={`data:image/png;base64,${recent.uri}`} style={{pointerEvents: 'none'}}/>
                                                             <h4 style={{ marginLeft: '20px', marginRight: '20px' }}>{recent.first_name}</h4>
                                                         </div>
                                                     </div>

@@ -1,7 +1,8 @@
+from passlib.context import CryptContext
+from fastapi import HTTPException, Request
 import psycopg2 as p
 import datetime as dt
-from passlib.context import CryptContext
-from fastapi import HTTPException
+import jwt
 
 context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 
@@ -139,6 +140,70 @@ async def user_verified(username: str, password: str, cursor: p.extensions.curso
         else:
             return False
         
+async def session_count(username: str, cursor: p.extensions.cursor) -> int:
+    statement = "SELECT * FROM view_session_count(%s)"
+    params = [username]
+    cursor.execute(statement, params)
+
+    session_count: int = cursor.fetchall()[0][0]
+
+    return session_count
+
+async def insert_session(username: str, token: str, db: p.extensions.connection, cursor: p.extensions.cursor) -> bool:
+    statement = "CALL insert_session(%s, %s)"
+    params = [username, token]
+    cursor.execute(statement, params)
+
+    s_count: int = await session_count(username, cursor)
+
+    if s_count < 3:
+        db.commit()
+        return True
+ 
+    return False
+    
+async def delete_session(username: str, token: str, db: p.extensions.connection, cursor: p.extensions.cursor) -> None:
+    statement = "CALL delete_session(%s, %s)"
+    params = [username, token]
+    cursor.execute(statement, params)
+    db.commit()
+
+async def verify_session(username: str, token: str, db_key: str, sk_key: str, request: Request) -> bool:
+    # Connect to the database.
+    db = p.connect(db_key)
+    cursor = db.cursor()
+
+    # Retrieved the stored token from the database.
+    statement = "SELECT * FROM retrieve_session(%s, %s)"
+    params = [username, token]
+    cursor.execute(statement, params)
+
+    # Store the retrieved token in the list.
+    retrieved_token: list = [token for token in cursor]
+
+    # Edge case to ensure that the list is not empty and to prevent
+    # an IndexError exception from being raised.
+    if retrieved_token:
+        # Retrieve the token from the tuple in the list
+        # in its string form.
+        db_token: str = retrieved_token[0][0]
+
+        decode_db_token: dict = jwt.decode(db_token, sk_key, algorithms=['HS256'], verify=True)
+
+        # Decode the token. If successful, return True to indicate that the
+        # session has been verified.
+        if decode_db_token and decode_db_token["iss"] == request.headers.get('referer'):
+            return True
+        
+        # Otherwise, return False.
+        else:
+            return False
+    
+    # If there is nothing in the list, then return False,
+    # thus invalidating the session.
+    else:
+        return False
+        
 # Function that retrieves user's profile picture.
 async def retrieve_profile_pic(username: str, db: p.extensions.connection) -> str:
     cursor = db.cursor()
@@ -240,6 +305,7 @@ async def include_visits(matches: list[dict[str, any]], visited_profiles: list[d
     
     return final_matches_output
 
+# Function that calculates the age of the user.
 async def retrieve_age(p: dict, month: str, date: int, year: int) -> int:
     month_index: dict = {
         "January": 1,
@@ -267,6 +333,7 @@ async def retrieve_age(p: dict, month: str, date: int, year: int) -> int:
 
     return age
 
+# Function that checks whether a user is banned or not.
 async def retrieve_banned_user(db: p.extensions.connection, username: str) -> dict[any, any]:
     cursor: p.extensions.cursor = db.cursor()
         
@@ -281,6 +348,7 @@ async def retrieve_banned_user(db: p.extensions.connection, username: str) -> di
     
     return user
 
+# Function that retrieves a user's profile.
 async def retrieve_profile(db: p.extensions.connection, username: str) -> list[dict[str, any]]:
     cursor: p.extensions.cursor = db.cursor()
     

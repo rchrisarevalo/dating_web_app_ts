@@ -46,7 +46,7 @@ export const Login = () => {
                 if (res.ok) {
                     return res.json()
                 } else {
-                    throw res.status
+                    throw res
                 }
             }).then((data) => {
                 if (data.verified) {
@@ -58,15 +58,16 @@ export const Login = () => {
                         window.location.href = "http://localhost:5173/profile"
                     }, 1000)
                 }
-            }).catch((error: number) => {
+            }).catch((error: Response) => {
+                console.log(error)
                 setLoginPending(false)
                 setLoginError(true)
                 setAuthenticated(false)
                 
-                if (error != 429) {
-                    setErrorMessage("Incorrect username and/or password!")
+                if (error.status != 429) {
+                    setErrorMessage(error.statusText)
                 } else {
-                    setErrorMessage("You exceeded your login attempts. Please try again later.")
+                    setErrorMessage(error.statusText)
                 }
 
             }).finally(() => {

@@ -5,7 +5,7 @@ import os
 import psycopg2
 import jwt
 
-load_dotenv('secret.env')
+load_dotenv('secret.env', verbose=True)
 db = psycopg2.connect(os.getenv('DB_KEY'))
 cursor = db.cursor()
 
@@ -191,6 +191,144 @@ def test_login_with_invalid_token():
     # and a final response message of "Invalid token!".
     assert final_response.status_code == 498
     assert final_response.json()["detail"]["message"] == "Invalid token!"
+
+# Given that I am a logged in user, I would want to view certain pages when logged in.
+# When I log in, I should receive a valid session token,
+# And if I click on a page such as the account settings, for example,
+# Then I should be able to view it with no problems.
+def test_protected_routes_with_valid_token():
+    try:
+        # Test a bunch of different routes with a valid JWT token.
+        # Dummy user information.
+        user_info = {
+            "first_name": "Kathy",
+            "middle_name": "Adriana",
+            "last_name": "Wood",
+            "username": "kathy.a.wood",
+            "password": "password123",
+            "birth_month": "January",
+            "birth_date": "20",
+            "birth_year": "1998",
+            "state": "California",
+            "city": "San Francisco",
+            "height_feet": "5",
+            "height_inches": "5",
+            "gender": "Female",
+            "sexual_orientation": "Heterosexual",
+            "interested_in": "Males",
+            "relationship_status": "Single",
+            "so_filter_choice": "true",
+            "interests": "Reading, Writing, Coding, Hiking, Biking, Swimming, Running, Walking, Eating, Sleeping, Playing, Gaming, Watching, Listening, Talking, Thinking, Loving, Living, Breathing, Being, Existing, etc.",
+            "age": 23,
+            "pic": "test_user.jpg"
+        }
+
+        # Sign up the user.
+        signup_response = create_dummy_user(user_info)
+        assert signup_response.status_code == 200
+
+        # Log in the user.
+        login_response = client.post('/login', data={"username": user_info["username"], "password": user_info["password"]})
+        assert login_response.status_code == 200
+        assert login_response.json() != None
+        assert jwt.decode(login_response.json()["token"], os.getenv('SK_KEY'), algorithms=['HS256'], verify=True) != None
+
+        # Retrieve the token.
+        token = login_response.json()["token"]
+
+        # Test the profile route with the valid token.
+        profile_response = client
+        profile_response.cookies.set('username', user_info["username"])
+        profile_response.cookies.set('user_session', token)
+        p_response = profile_response.post('/profile', json={})
+        assert p_response.status_code == 200
+        
+        # Test the recommendation settings route with the valid token.
+        recommendation_settings_response = client
+        recommendation_settings_response.cookies.set('username', user_info["username"])
+        recommendation_settings_response.cookies.set('user_session', token)
+        rs_response = recommendation_settings_response.post('/privacy/check_recommendation_settings', json={})
+        assert rs_response.status_code == 200
+
+        # Test the retrieve search history route with the valid token.
+        ret_search_hist_response = client
+        ret_search_hist_response.cookies.set('username', user_info["username"])
+        ret_search_hist_response.cookies.set('user_session', token)
+        ret_search_hist_response = ret_search_hist_response.post('/retrieve_search_history', json={})
+        assert rs_response.status_code == 200
+    
+    finally:
+        delete_dummy_user(user_info, db, cursor)
+
+# Given that I am a logged in user, I should be able to view certain pages.
+# When I log in, I should receive a valid token.
+# When I try to modify or modify the token itself,
+# And I try to visit my account settings page, for example,
+# then I should receive an error saying that I need to reload the page.
+def test_protected_routes_with_invalid_token():
+    try:
+        # Test a bunch of different routes with a valid JWT token.
+        # Dummy user information.
+        user_info = {
+            "first_name": "Kathy",
+            "middle_name": "Adriana",
+            "last_name": "Wood",
+            "username": "kathy.a.wood",
+            "password": "password123",
+            "birth_month": "January",
+            "birth_date": "20",
+            "birth_year": "1998",
+            "state": "California",
+            "city": "San Francisco",
+            "height_feet": "5",
+            "height_inches": "5",
+            "gender": "Female",
+            "sexual_orientation": "Heterosexual",
+            "interested_in": "Males",
+            "relationship_status": "Single",
+            "so_filter_choice": "true",
+            "interests": "Reading, Writing, Coding, Hiking, Biking, Swimming, Running, Walking, Eating, Sleeping, Playing, Gaming, Watching, Listening, Talking, Thinking, Loving, Living, Breathing, Being, Existing, etc.",
+            "age": 23,
+            "pic": "test_user.jpg"
+        }
+
+        # Sign up the user.
+        signup_response = create_dummy_user(user_info)
+        assert signup_response.status_code == 200
+
+        # Log in the user.
+        login_response = client.post('/login', data={"username": user_info["username"], "password": user_info["password"]})
+        assert login_response.status_code == 200
+        assert login_response.json() != None
+        assert jwt.decode(login_response.json()["token"], os.getenv('SK_KEY'), algorithms=['HS256'], verify=True) != None
+
+        # Generate a "token" to test out on the protected routes.
+        invalid_token = os.urandom(40).hex()
+
+        # Unlike the previous test, we will be testing the following routes with an invalid token,
+        # even though the valid token is either stored in the cookie or in the database.
+        profile_response = client
+        profile_response.cookies.set('username', user_info["username"])
+        profile_response.cookies.set('user_session', invalid_token)
+        p_response = profile_response.post('/profile', json={})
+        assert p_response.status_code == 498
+        
+        # Test the recommendation settings route with the valid token.
+        recommendation_settings_response = client
+        recommendation_settings_response.cookies.set('username', user_info["username"])
+        recommendation_settings_response.cookies.set('user_session', invalid_token)
+        rs_response = recommendation_settings_response.post('/privacy/check_recommendation_settings', json={})
+        assert rs_response.status_code == 498
+
+        # Test the retrieve search history route with the valid token.
+        ret_search_hist_response = client
+        ret_search_hist_response.cookies.set('username', user_info["username"])
+        ret_search_hist_response.cookies.set('user_session', invalid_token)
+        ret_search_hist_response = ret_search_hist_response.post('/retrieve_search_history', json={})
+        assert rs_response.status_code == 498
+    
+    finally:
+        delete_dummy_user(user_info, db, cursor)
     
 def test_retrieve_profile_information():
     try:
