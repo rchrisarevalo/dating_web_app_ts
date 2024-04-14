@@ -1,7 +1,6 @@
 from fastapi import FastAPI, Request, Response, HTTPException, Depends, APIRouter
 from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
 from passlib.context import CryptContext
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -23,24 +22,11 @@ import psycopg2 as p
 import base64
 import json
 import os
-import sys
 import asyncio
 
 PATH = 'secret.env'
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    try:
-        print("This is a lifespan")
-        yield
-    except asyncio.CancelledError:
-        print("There was an exception!")
-        pass
-
-    except KeyboardInterrupt:
-        print("Interrupted! Exiting...")
-
-server = FastAPI(debug=True, lifespan=lifespan)
+server = FastAPI(debug=True)
 
 # Load the .env file from the path specified above.
 load_dotenv(PATH)
@@ -84,8 +70,17 @@ async def terminate_connection(db: p.extensions.connection):
 async def check_token(request: Request):
     if request.cookies.get("user_session") != None:
         try:
-            decode_token = jwt.decode(request.cookies.get("user_session"), str(SK_KEY), ["HS256"], verify=True)
-            return True
+            decode_token: dict = jwt.decode(request.cookies.get("user_session"), str(SK_KEY), ["HS256"], verify=True)
+            
+            if decode_token and decode_token["iss"] == request.headers.get('referer'):
+                session_verified = await verify_session(request.cookies.get("username"), request.cookies.get("user_session"), str(DB_KEY), str(SK_KEY), request)
+                
+                if session_verified:
+                    return True
+                else:
+                    raise jwt.InvalidTokenError
+            else:
+                raise jwt.InvalidTokenError
         
         except jwt.InvalidTokenError:
             raise HTTPException(498, {"message": "Invalid token!"})
@@ -139,9 +134,13 @@ async def login(request: Request, response: Response):
             # Configure the cookie's settings (such as securing it and making it an HttpOnly cookie to prevent users from using JavaScript to manipulate it through unauthorized means).
             response.set_cookie(key="user_session", value=generate_token, max_age=dt.timedelta(hours=2, minutes=0).seconds, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
             response.set_cookie(key="username", value=data["username"], max_age=dt.timedelta(hours=2, minutes=0).seconds, path="/", domain="localhost", httponly=True, secure=True, samesite='strict')
-            
-            # Return response.
-            return {"verified": True, "profile_pic": profile_pic, "token": generate_token}
+            session_inserted: int = await insert_session(data["username"], generate_token, db, cursor)
+
+            if session_inserted:
+                # Return response.
+                return {"verified": True, "profile_pic": profile_pic, "token": generate_token}
+            else:
+                raise HTTPException(429, {"error": "You logged in into many sessions. Please log out from one of them and try again later."})
         
         else:
             raise jwt.InvalidKeyError
@@ -156,10 +155,6 @@ async def login(request: Request, response: Response):
     except jwt.InvalidTokenError:
         raise HTTPException(498, {"error": "The token that was generated was invalid"})
     
-    except Exception as e:
-        print(e)
-        raise HTTPException(500, {"error": e})
-    
     finally:
         await terminate_connection(db)
         
@@ -167,10 +162,15 @@ async def login(request: Request, response: Response):
 async def logout(request: Request, response: Response):
     # Check to see if the cookie exists.
     if request.cookies.get("user_session") != None:
+        # Create database and cursor for deleting the session.
+        db = await create_connection()
+        cursor = db.cursor()
+
         # Destroy both the user_session and username cookies to render the tokens unusable by any malicious actors.
+        await delete_session(request.cookies.get("username"), request.cookies.get("user_session"), db, cursor)
         response.set_cookie(key="user_session", value=request.cookies.get("user_session"), max_age=0, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
         response.set_cookie(key="username", value="", max_age=0, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
-        
+
         # Return the response indicating that the cookies have been deleted.
         return {"message": "Cookie has been deleted!"}
     
@@ -227,6 +227,9 @@ async def signup(request: Request):
             
             cursor.execute(statement, params)
             db.commit()
+
+            # Return response.
+            return {"message": "Successfully registered for an account!"}
             
         except db.DatabaseError:
             return {"message": "An error occurred with the database. Please try again later."}, 500
@@ -236,8 +239,6 @@ async def signup(request: Request):
         
         finally:
             await terminate_connection(db)
-            
-        return {"message": "Successfully registered for an account!"}
     
     else:
         raise HTTPException(403, {"message": "Failed to verify account. You are underage."})
@@ -868,8 +869,8 @@ async def search(request: Request):
         await terminate_connection(db)
         
 @protected_route.post("/retrieve_search_history")
-async def retrieve_search_history(request: Request):
-    db: p.extensions.connection = await create_connection()
+def retrieve_search_history(request: Request):
+    db: p.extensions.connection = asyncio.run(create_connection())
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -888,7 +889,7 @@ async def retrieve_search_history(request: Request):
         raise HTTPException(500, {"message": e})
     
     finally:
-        await terminate_connection(db)
+        asyncio.run(terminate_connection(db))
         
 @protected_route.post("/insert_search_history")
 def insert_search_history(request: Request):
@@ -1173,20 +1174,20 @@ async def retrieve_message_profile_pics(request: Request):
         await terminate_connection(db)
         
 @protected_route.post("/retrieve_notification_count")
-async def retrieve_notification_count(request: Request):
+def retrieve_notification_count(request: Request):
     username = request.query_params.get("username")
-    db: p.extensions.connection = await create_connection()
+    db: p.extensions.connection = asyncio.run(create_connection())
     
     if username:
         try:
-            notification_count: dict[str, any] = await retrieve_notifications(db, username)
+            notification_count: dict[str, any] = asyncio.run(retrieve_notifications(db, username))
             return notification_count
 
         except db.DatabaseError:
             return {"message": "Failed to retrieve notification count for user!"}, 500
         
         finally:
-            await terminate_connection(db)
+            asyncio.run(terminate_connection(db))
     
     else:
         return {"message": "Missing username for query parameter."}, 400
