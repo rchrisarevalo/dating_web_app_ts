@@ -1004,19 +1004,14 @@ async def clear_search_history_term(request: Request):
     finally:
         await terminate_connection(db)
         
-@protected_route.post("/get_user_profiles")
+@protected_route.get("/get_user_profiles")
 async def get_user_profiles(request: Request):
     db: p.extensions.connection = await create_connection()
+    username: str = request.cookies.get("username")
     
     try:
-        profiles = await retrieve_user_profiles(db, request.cookies.get("username"))
-        visits = await retrieve_visited_profiles(db, request.cookies.get("username"))
-        
-        if request.query_params.get("t") == "user_profiles":
-            return profiles
-
-        elif request.query_params.get("t") == "visits":        
-            return visits
+        profile_routes = await retrieve_user_routes(db, username)
+        return profile_routes
     
     except db.DatabaseError as e:
         return {"message": "Failed to get basic profile details!"}, 500

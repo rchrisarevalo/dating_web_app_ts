@@ -385,6 +385,17 @@ async def retrieve_profile(db: p.extensions.connection, username: str) -> list[d
     except Exception:
         raise HTTPException(500, {"message": "Failed to retrieve profile data!"})
     
+async def retrieve_user_routes(db: p.extensions.connection, username: str) -> list[dict[str, any]]:
+    cursor: p.extensions.cursor = db.cursor()
+    statement: str = "SELECT * FROM retrieve_users(%s)"
+    params: list = [username]
+
+    cursor.execute(statement, params)
+
+    usernames: list = [{"username": user[0]} for user in cursor.fetchall()]
+
+    return usernames
+    
 async def get_logged_in_user_profile(db: p.extensions.connection, username: str):
     cursor: p.extensions.cursor = db.cursor()
     

@@ -389,7 +389,7 @@ export const SignUp = () => {
                         <br></br>
                         <label>Upload Profile Picture</label>
                         <br></br>
-                        {uploadedPic !== "" ? <img src={`data:image/png;base64,${uploadedPic}`} alt="uploaded-pic" id="uploaded-pic"></img> : <></>}
+                        {uploadedPic !== "" ? <img src={`data:image/png;base64,${uploadedPic}`} alt="uploaded-pic" id="uploaded-pic" style={{width: '200px', height: '200px', objectFit: 'cover'}}></img> : <></>}
                         <br></br>
                         <input type="file" required id="upload-pic-input" onChange={handleImage} accept="image/*" name="pic"/>
                         <div className="signup-page-button" id="signup-button">

@@ -79,13 +79,7 @@ export const useFetchSearchHistory = (endpoint: string) => {
 }
 
 export const useFetchProfiles = (endpoint: string, auth: boolean) => {
-    const [profiles, setProfiles] = useState<MatchProfiles[]>([{
-        age: 0,
-        city_residence: "",
-        first_name: "",
-        interests: "",
-        state_residence: "",
-        uri: "",
+    const [profiles, setProfiles] = useState([{
         username: ""
     }])
 
@@ -96,7 +90,7 @@ export const useFetchProfiles = (endpoint: string, auth: boolean) => {
         if (auth)
         {
             fetch(endpoint, {
-                method: 'POST',
+                method: 'GET',
                 credentials: 'include'
             }).then((res) => {
                 if (res.ok) {
