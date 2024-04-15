@@ -119,8 +119,8 @@ export const RoutingSystem = () => {
 
     return (
         <>
-            {!pending && !profile_data.pending ?
-                !error && !profile_data.error ?
+            {!pending ?
+                !error ?
                     !auth ?
                         <PublicRoutes>
                             <Route index path="/" element={<Login />} />
@@ -135,42 +135,49 @@ export const RoutingSystem = () => {
                             } />
                         </PublicRoutes>
                         :
-                        <ProtectedRoutes>
-                            <Route index path="/profile" element={<Profile 
-                                profile={profile_page}
-                                pending={profile_page_pending}
-                                error={profile_page_error}
-                            />} />
-                            <Route path="/profile/options" element={<Options />} />
-                            <Route path="/profile/options/update" element={<Update username={username} />} />
-                            <Route path="/profile/options/settings" element={<AccountSettings username={username} /> } />
-                            <Route path="/profile/options/privacy" element={<PrivacySettings 
-                                username={username}
-                                auth={auth}
-                            />} />
-                            <Route path="/profile/options/privacy/view_blocked_users" element={<BlockedUsers />} />
-                            <Route path="/profile/options/privacy/download_information" element={<DownloadInfo />} />
-                            <Route path="/profile/recent_messages" element={<RecentMessages />} />
-                            <Route path="/profile/search" element={<SearchPage 
-                                algo_config={algo_config}
-                                use_so_filter={use_so_filter}
-                                algo_pending={algo_pending}
-                                algo_error={algo_error}
-                            />} />
-                            {profile_data.profiles.map((user: { username: string; }) => 
-                                <>
-                                    <Route path={`/user/${user.username}`} element={<User username={user.username} />} />
-                                    <Route path={`/message/${user.username}`} element={<Message username={username} />} />
-                                </>
-                            )}
-                            <Route path="/tos" element={<TOS />} />
-                            <Route path="*" element={
-                                (path === "/" || path === "/signup" || path === `/profile/${username}`) ?
-                                    <Navigate to="/profile" />
-                                    :
-                                    <UserNotExist />
-                            } />
-                        </ProtectedRoutes>
+                        !profile_data.pending ?
+                            !profile_data.error ?
+                                <ProtectedRoutes>
+                                    <Route index path="/profile" element={<Profile 
+                                        profile={profile_page}
+                                        pending={profile_page_pending}
+                                        error={profile_page_error}
+                                    />} />
+                                    <Route path="/profile/options" element={<Options />} />
+                                    <Route path="/profile/options/update" element={<Update username={username} />} />
+                                    <Route path="/profile/options/settings" element={<AccountSettings username={username} /> } />
+                                    <Route path="/profile/options/privacy" element={<PrivacySettings 
+                                        username={username}
+                                        auth={auth}
+                                    />} />
+                                    <Route path="/profile/options/privacy/view_blocked_users" element={<BlockedUsers />} />
+                                    <Route path="/profile/options/privacy/download_information" element={<DownloadInfo />} />
+                                    <Route path="/profile/recent_messages" element={<RecentMessages />} />
+                                    <Route path="/profile/search" element={<SearchPage 
+                                        algo_config={algo_config}
+                                        use_so_filter={use_so_filter}
+                                        algo_pending={algo_pending}
+                                        algo_error={algo_error}
+                                    />} />
+                                    {profile_data.profiles.map((user: { username: string; }) => 
+                                        <>
+                                            <Route path={`/user/${user.username}`} element={<User username={user.username} />} />
+                                            <Route path={`/message/${user.username}`} element={<Message username={username} />} />
+                                        </>
+                                    )}
+                                    <Route path="/tos" element={<TOS />} />
+                                    <Route path="*" element={
+                                        (path === "/" || path === "/signup" || path === `/profile/${username}`) ?
+                                            <Navigate to="/profile" />
+                                            :
+                                            <UserNotExist />
+                                    } />
+                                </ProtectedRoutes>
+                                :
+                                <Loading error={true} />
+                            :
+                            <Loading error={false} />
+
                     :
                     <>
                         {status_code !== 403 ?
