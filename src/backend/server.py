@@ -1168,7 +1168,7 @@ async def retrieve_message_profile_pics(request: Request):
     finally:
         await terminate_connection(db)
         
-@protected_route.post("/retrieve_notification_count")
+@protected_route.get("/retrieve_notification_count")
 def retrieve_notification_count(request: Request):
     username = request.query_params.get("username")
     db: p.extensions.connection = asyncio.run(create_connection())
@@ -1179,13 +1179,13 @@ def retrieve_notification_count(request: Request):
             return notification_count
 
         except db.DatabaseError:
-            return {"message": "Failed to retrieve notification count for user!"}, 500
+            raise HTTPException(500, {"message": "Failed to retrieve notification count for user!"})
         
         finally:
             asyncio.run(terminate_connection(db))
     
     else:
-        return {"message": "Missing username for query parameter."}, 400
+        raise HTTPException(400, {"message": "Missing username for query parameter."})
     
 @protected_route.put("/clear_notification_count")
 def clear_notification_count(request: Request):
@@ -1373,7 +1373,7 @@ async def block(request: Request):
         finally:
             await terminate_connection(db)
             
-@protected_route.post("/retrieve_blocked_users")
+@protected_route.get("/retrieve_blocked_users")
 async def retrieve_blocked_users(request: Request):
     username = request.cookies.get("username")
     
@@ -1417,7 +1417,8 @@ async def retrieve_block_status(request: Request):
     try:
         statement = '''
             SELECT B.blockee, P.uri from Blocked B, Photos P 
-            WHERE (B.blocker=%s AND B.blockee=%s) OR (B.blocker=%s AND B.blockee=%s) 
+            WHERE (B.blocker=%s AND B.blockee=%s) 
+            OR (B.blocker=%s AND B.blockee=%s) 
             AND B.blockee=P.username
         '''
         params = [data["logged_in_user"], data["profile_user"], data["profile_user"], data["logged_in_user"]]

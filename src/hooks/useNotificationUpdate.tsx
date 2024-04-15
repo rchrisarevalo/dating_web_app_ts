@@ -15,7 +15,7 @@ export const useNotificationUpdate = (currentUser: string, connection: typeof so
         if (currentUser) {
             const retrieveNotificationCount = async () => {
                 await fetch(`http://localhost:5000/retrieve_notification_count?username=${currentUser}`, {
-                    method: 'POST',
+                    method: 'GET',
                     credentials: 'include',
                     headers: {
                         'Content-Type': 'application/json'
@@ -60,7 +60,7 @@ export const useNotificationUpdate = (currentUser: string, connection: typeof so
                 if (path.pathname !== "/profile/recent_messages") {
                     const retrieveNotificationCount = async () => {
                         await fetch(`http://localhost:5000/retrieve_notification_count?username=${retrieve_username_from_path}`, {
-                            method: 'POST',
+                            method: 'GET',
                             credentials: 'include',
                             headers: {
                                 'Content-Type': 'application/json'

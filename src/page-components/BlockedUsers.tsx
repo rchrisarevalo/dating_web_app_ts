@@ -24,7 +24,7 @@ export const BlockedUsers = () => {
 
     useEffect(() => {
         fetch("http://localhost:5000/retrieve_blocked_users", {
-            method: 'POST',
+            method: 'GET',
             credentials: 'include',
             headers: {
                 'Content-Type': 'application/json'
