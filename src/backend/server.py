@@ -1551,35 +1551,11 @@ async def rating(request: Request):
         rating_list_parameters = [rating, username]
         cursor.execute(statement, rating_list_parameters)
         
-        # Retrieve message records containing the updated rating type and send them back to the client
-        # to update the logged in user's recent messages feed.
-        statement = "SELECT * FROM Recent_Messages(%s)"
-        
-        # Print the logged in user's name three times to fill in the necessary parameters in the statement above.
-        rating_list_parameters = [logged_in_user]
-        
-        # Execute the statement using the parameters in the rating_list_parameters list.
-        cursor.execute(statement, rating_list_parameters)
-        
-        # Include data in dictionary format to display on the website once it is sent to and retrieved by the client (the front end).
-        records = [
-            {
-                "user2": record[0], 
-                "message": record[1], 
-                "sent_time": record[2], 
-                "first_name": record[3], 
-                "uri": bytes(record[4]).decode('utf-8'), 
-                "rating_type": record[5]
-            } 
-            for record in cursor
-        ]
-        
         # Return the updated data in JSON format.
-        return records
+        return {"message": "Rating successfully updated!"}
     
-    except Exception as e:
-        print(e)
-        return {"status": e}, 500
+    except Exception:
+        raise HTTPException(500, {"message": "Unknown error. Try again!"})
     
     finally:
         await terminate_connection(db)

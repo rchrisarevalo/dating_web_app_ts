@@ -32,7 +32,9 @@ export type UserBirthday = {
 }
 
 export type RatingSubmission = {
-    rating_type: string, 
+    rating_type: string,
+    original_rating_type: string, 
     username: string, 
-    logged_in_user: string
+    logged_in_user: string,
+    index: number
 }
