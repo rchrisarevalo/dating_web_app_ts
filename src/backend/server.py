@@ -275,10 +275,6 @@ async def check_login(request: Request):
         
     except db.DatabaseError:
         raise HTTPException(500, {"message": "There was an error retrieving information from the database. Please try again."})
-        
-    except Exception as e:
-        print(e)
-        raise HTTPException(500, {"message": "Server error. Please try again."})
     
     finally:
         await terminate_connection(db)
