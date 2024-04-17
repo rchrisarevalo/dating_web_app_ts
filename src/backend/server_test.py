@@ -247,14 +247,14 @@ def test_protected_routes_with_valid_token():
         recommendation_settings_response = client
         recommendation_settings_response.cookies.set('username', user_info["username"])
         recommendation_settings_response.cookies.set('user_session', token)
-        rs_response = recommendation_settings_response.post('/privacy/check_recommendation_settings', json={})
+        rs_response = recommendation_settings_response.get('/privacy/check_recommendation_settings')
         assert rs_response.status_code == 200
 
         # Test the retrieve search history route with the valid token.
         ret_search_hist_response = client
         ret_search_hist_response.cookies.set('username', user_info["username"])
         ret_search_hist_response.cookies.set('user_session', token)
-        ret_search_hist_response = ret_search_hist_response.post('/retrieve_search_history', json={})
+        ret_search_hist_response = ret_search_hist_response.get('/retrieve_search_history')
         assert rs_response.status_code == 200
     
     finally:
@@ -317,14 +317,14 @@ def test_protected_routes_with_invalid_token():
         recommendation_settings_response = client
         recommendation_settings_response.cookies.set('username', user_info["username"])
         recommendation_settings_response.cookies.set('user_session', invalid_token)
-        rs_response = recommendation_settings_response.post('/privacy/check_recommendation_settings', json={})
+        rs_response = recommendation_settings_response.get('/privacy/check_recommendation_settings')
         assert rs_response.status_code == 498
 
         # Test the retrieve search history route with the valid token.
         ret_search_hist_response = client
         ret_search_hist_response.cookies.set('username', user_info["username"])
         ret_search_hist_response.cookies.set('user_session', invalid_token)
-        ret_search_hist_response = ret_search_hist_response.post('/retrieve_search_history', json={})
+        ret_search_hist_response = ret_search_hist_response.get('/retrieve_search_history')
         assert rs_response.status_code == 498
     
     finally:
