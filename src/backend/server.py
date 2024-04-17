@@ -1,6 +1,9 @@
 from fastapi import FastAPI, Request, Response, HTTPException, Depends, APIRouter
 from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.inmemory import InMemoryBackend
+from fastapi_cache.decorator import cache
 from passlib.context import CryptContext
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -12,7 +15,11 @@ from rating_sys import (calculate_rating,
                         update_rating, 
                         delete_rating, 
                         insert_rating)
-from key_pref.key_prefixes import visit_key_func
+from key_pref.key_prefixes import (visit_key_func, 
+                                   search_hist_key, 
+                                   user_profiles_key,
+                                   messaged_users_key,
+                                   notif_key)
 from helpers.helper import *
 from similarity_calculations import filter_matches
 
@@ -27,6 +34,8 @@ import asyncio
 PATH = 'secret.env'
 
 server = FastAPI(debug=True)
+
+FastAPICache.init(InMemoryBackend(), prefix="fastapi-cache")
 
 # Load the .env file from the path specified above.
 load_dotenv(PATH)
@@ -171,6 +180,8 @@ async def logout(request: Request, response: Response):
         response.set_cookie(key="user_session", value=request.cookies.get("user_session"), max_age=0, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
         response.set_cookie(key="username", value="", max_age=0, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
 
+        await FastAPICache.clear()
+
         # Return the response indicating that the cookies have been deleted.
         return {"message": "Cookie has been deleted!"}
     
@@ -294,10 +305,10 @@ def visit(request: Request):
         asyncio.run(terminate_connection(db))
         
 @protected_route.post("/profile")
-def profile(request: Request):
-    db: p.extensions.connection = asyncio.run(create_connection())
+async def profile(r: Request):
+    db: p.extensions.connection = await create_connection()
     
-    data: dict = asyncio.run(request.json())
+    data: dict = await r.json()
     username: str = ""
     
     # If the provided username in the JSON body request
@@ -305,7 +316,7 @@ def profile(request: Request):
     # current user's username (if and only if the
     # request is associated with said current user).
     if "username" not in data:
-        username = request.cookies.get("username")
+        username = r.cookies.get("username")
         
     # However, if it does when retrieving the profile details of
     # another user, store their username from the JSON body
@@ -314,7 +325,7 @@ def profile(request: Request):
         username = data["username"]
     
     try:
-        profile_info = asyncio.run(retrieve_profile(db, username))
+        profile_info = await retrieve_profile(db, username)
         return profile_info
     
     except db.DatabaseError:
@@ -324,7 +335,7 @@ def profile(request: Request):
         return {"message": "A server error happened. Please try again."}, 500
     
     finally:
-        asyncio.run(terminate_connection(db))
+        await terminate_connection(db)
         
 @server.post("/retrieve_pic")
 async def retrieve_pic(request: Request):
@@ -552,10 +563,10 @@ async def update_bio(request: Request):
     finally:
         await terminate_connection(db)
         
-@protected_route.post('/privacy/check_recommendation_settings')
-def check_recommendation_settings(request: Request):
+@protected_route.get('/privacy/check_recommendation_settings')
+async def check_recommendation_settings(request: Request):
     username = request.cookies.get("username")
-    db: p.extensions.connection = asyncio.run(create_connection())
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -563,7 +574,7 @@ def check_recommendation_settings(request: Request):
         params = [username]
         cursor.execute(statement, params)
         
-        used = [{"used": records[0], "use_so_filter": records[1] if asyncio.run(using_so_filter(username, cursor)) else "false"} for records in cursor][0]
+        used = [{"used": records[0], "use_so_filter": records[1] if await using_so_filter(username, cursor) else "false"} for records in cursor][0]
         
         return used
     
@@ -571,7 +582,7 @@ def check_recommendation_settings(request: Request):
         return {"message": "Failed to retrieve recommendation settings for user."}, 500
     
     finally:
-        asyncio.run(terminate_connection(db))
+        await terminate_connection(db)
         
 @protected_route.put("/privacy/change_recommendation_settings")
 async def change_recommendation_settings(request: Request):
@@ -868,9 +879,10 @@ async def search(request: Request):
     finally:
         await terminate_connection(db)
         
-@protected_route.post("/retrieve_search_history")
-def retrieve_search_history(request: Request):
-    db: p.extensions.connection = asyncio.run(create_connection())
+@protected_route.get("/retrieve_search_history")
+@cache(expire=120, key_builder=search_hist_key)
+async def retrieve_search_history(request: Request):
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -889,7 +901,7 @@ def retrieve_search_history(request: Request):
         raise HTTPException(500, {"message": e})
     
     finally:
-        asyncio.run(terminate_connection(db))
+        await terminate_connection(db)
         
 @protected_route.post("/insert_search_history")
 def insert_search_history(request: Request):
@@ -1005,6 +1017,7 @@ async def clear_search_history_term(request: Request):
         await terminate_connection(db)
         
 @protected_route.get("/get_user_profiles")
+@cache(expire=300, key_builder=user_profiles_key)
 async def get_user_profiles(request: Request):
     db: p.extensions.connection = await create_connection()
     username: str = request.cookies.get("username")
@@ -1022,9 +1035,10 @@ async def get_user_profiles(request: Request):
     finally:
         await terminate_connection(db)
         
-@protected_route.post("/check_messaged_users")
-def check_messaged_users(request: Request):
-    db: p.extensions.connection = asyncio.run(create_connection())
+@protected_route.get("/check_messaged_users")
+@cache(expire=120, key_builder=messaged_users_key)
+async def check_messaged_users(request: Request):
+    db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     
     try:
@@ -1051,14 +1065,14 @@ def check_messaged_users(request: Request):
         raise HTTPException(500, {"message": "Failed to retrieve messaged users."})
     
     finally:
-        asyncio.run(terminate_connection(db))
+        await terminate_connection(db)
         
 @protected_route.post("/retrieve_messages")
-async def retrieve_messages(request: Request):
+async def retrieve_messages(r: Request):
     db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
-    data: dict = await request.json()
-    sender: str = request.cookies.get("username")
+    data: dict = await r.json()
+    sender: str = r.cookies.get("username")
     
     try:
         params = [sender, data["receiver"], data["receiver"], sender]
@@ -1169,20 +1183,21 @@ async def retrieve_message_profile_pics(request: Request):
         await terminate_connection(db)
         
 @protected_route.get("/retrieve_notification_count")
-def retrieve_notification_count(request: Request):
+@cache(expire=120, key_builder=notif_key)
+async def retrieve_notification_count(request: Request):
     username = request.query_params.get("username")
-    db: p.extensions.connection = asyncio.run(create_connection())
+    db: p.extensions.connection = await create_connection()
     
     if username:
         try:
-            notification_count: dict[str, any] = asyncio.run(retrieve_notifications(db, username))
+            notification_count: dict[str, any] = await retrieve_notifications(db, username)
             return notification_count
 
         except db.DatabaseError:
             raise HTTPException(500, {"message": "Failed to retrieve notification count for user!"})
         
         finally:
-            asyncio.run(terminate_connection(db))
+            await terminate_connection(db)
     
     else:
         raise HTTPException(400, {"message": "Missing username for query parameter."})

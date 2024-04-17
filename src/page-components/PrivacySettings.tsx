@@ -81,9 +81,10 @@ export const PrivacySettings = (props: PrivacySettingsProps) => {
             } else {
                 setCheck(false)
             }
-            window.location.reload()
         }).catch((error) => {
             console.log(error)
+        }).finally(() => {
+            window.location.reload()
         })
 
         setDisplayModal(false)

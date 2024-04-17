@@ -10,8 +10,8 @@ export const useFetchAlgoConfig = (endpoint: string, auth: boolean) => {
     useEffect(() => {
         if (auth) {
             fetch(endpoint, {
-                method: 'POST',
-                credentials: 'include'
+                method: 'GET',
+                credentials: 'include',
             }).then((res) => {
                 if (res.ok) {
                     return res.json()
@@ -55,7 +55,7 @@ export const useFetchSearchHistory = (endpoint: string) => {
     useEffect(() => {
         const fetchSearchHistory = async () => {
             fetch(endpoint, {
-                method: 'POST',
+                method: 'GET',
                 credentials: 'include'
             }).then((res) => {
                 if (res.ok) {
