@@ -829,48 +829,26 @@ async def download_data(request: Request):
 
 @protected_route.post("/search")
 async def search(request: Request):
-    statement = '''
-        SELECT P.*, U.birth_month, U.birth_date, U.birth_year, P2.uri FROM Profiles P, Users U, Photos P2 
-        WHERE P.username!=%s AND P.username=U.username AND P.username=P2.username
-        AND (P.username NOT IN (SELECT B.blockee FROM Blocked B WHERE (B.blockee=P.username AND B.blocker=%s))
-        AND P.username NOT IN (SELECT B.blocker FROM Blocked B WHERE (B.blocker=P.username AND B.blockee=%s))
-        AND P.username NOT IN (SELECT B.username FROM Banned B WHERE B.username=P.username))
-        ORDER BY P.last_name, P.first_name
-    '''
+    statement = "SELECT * FROM get_user_profiles(%s)"
     
     db: p.extensions.connection = await create_connection()
     cursor: p.extensions.cursor = db.cursor()
     data: dict = await request.json()
     
-    params = [data["username"] for u in range(0, 3)]
+    params = [data["username"]]
     
     try:
         cursor.execute(statement, params)
-        
-        search_results = [{
-                            "username": results[0],
-                            "first_name": results[1],
-                            "middle_name": results[2],
-                            "last_name": results[3],
-                            "interests": results[4],
-                            "height": results[5],
-                            "gender": results[6],
-                            "sexual_orientation": results[7],
-                            "interested_in": results[8],
-                            "state_residence": results[9],
-                            "city_residence": results[10],
-                            "relationship_status": results[11],
-                            "birth_month": results[12],
-                            "birth_date": results[13],
-                            "birth_year": results[14],
-                            "uri": bytes(results[15]).decode('utf-8')  
-                          }
-                          for results in cursor]
+
+        search_results: list[dict[str, any]] = [{col[0]: record for col, record in zip(cursor.description, records)} for records in cursor]
+
+        for record in search_results:
+            record.update({"uri": bytes(record["uri"]).decode('utf-8')})
         
         return search_results
     
     except db.DatabaseError as e:
-        return {"message": "Failed to retrieve search terms! %s" % e}, 500
+        raise HTTPException(500, {"message": "Failed to retrieve search terms! %s" % e})
     
     finally:
         await terminate_connection(db)
