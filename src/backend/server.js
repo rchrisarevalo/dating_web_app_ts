@@ -55,6 +55,10 @@ const createConnection = async () => {
     return client
 }
 
+const verifySession = async (username, token, sk_key) => {
+    
+}
+
 
 // ==================================================
 // Create socket server connection so that client
@@ -115,16 +119,76 @@ server.use(cookieParser())
 
 const protected_route = express.Router()
 
-protected_route.use((req, res, next) => {
+protected_route.use(async (req, res, next) => {
     verify(req.cookies.user_session, process.env.SK_KEY, (error) => {
         if (error) {
             res.status(401).send({"message": "Token not verified!"})
-        } else {
-            // Do nothing.
         }
-    })
+        // Connect to the database.
+        const db = new Client(
+        {
+            user: process.env.DB_USER,
+            password: process.env.DB_PWD,
+            host: process.env.DB_HOST,
+            port: process.env.DB_PORT,
+            database: process.env.DB_DATABASE,
+            ssl: {
+                rejectUnauthorized: true, 
+                ca: readFileSync("ca.pem").toString()
+            }
+        })
 
-    next()
+        db.connect()
+
+        // Retrieve stored token from the database.
+        const statement = "SELECT * FROM retrieve_session($1, $2)"
+        const params = [req.cookies.username, req.cookies.user_session]
+        const db_res = db.query(statement, params)
+        
+        db_res.then((r) => {
+            const retrieved_token = r.rows
+            // Edge case to ensure that the list is not empty and to
+            // prevent an error from occurring.
+            if (retrieved_token) {
+                // Retrieve the token from the list
+                // in its string form.
+                const db_token = retrieved_token[0]["session"]
+
+                // Decode the token.
+                //
+                // If successful, move to the next request to indicate that
+                // the session has been verified.
+                //
+                // Otherwise, throw an exception.
+                verify(db_token, process.env.SK_KEY, (error, payload) => {
+                    const payload_issuer = payload.iss
+                    const origin = typeof(req.headers.origin) !== "undefined" ? (req.headers.origin).concat("/") : "undefined"
+                    db.end()
+
+                    if (error) {
+                        res.status(498).send({"message": "Invalid token!"})
+                    } else {
+                        // Edge case to ensure that the issuer of the JWT token is the same
+                        // as the origin of the server request, the client, to further
+                        // protect backend endpoints from being accessed through unauthorized
+                        // means.
+                        if (payload_issuer == origin) {
+                            next()
+                        } else {
+                            res.status(403).send({"message": "You are not allowed to access this endpoint."})
+                        }
+                    }
+                })
+            }
+            // If there is nothing in the list, then throw an exception,
+            // thus invalidating the session.
+            else {
+                res.status(498).send({"message": "Invalid token!"})
+            }
+        }).catch((error) => {
+            console.log(error)
+        })
+    })
 })
 
 server.get('/', async (req, res) => {
