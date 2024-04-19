@@ -15,11 +15,7 @@ from rating_sys import (calculate_rating,
                         update_rating, 
                         delete_rating, 
                         insert_rating)
-from key_pref.key_prefixes import (visit_key_func, 
-                                   search_hist_key, 
-                                   user_profiles_key,
-                                   messaged_users_key,
-                                   notif_key)
+from key_pref.key_prefixes import visit_key_func
 from helpers.helper import *
 from similarity_calculations import filter_matches
 
@@ -300,39 +296,6 @@ def visit(request: Request):
     finally:
         asyncio.run(terminate_connection(db))
         
-@protected_route.post("/profile")
-async def profile(r: Request):
-    db: p.extensions.connection = await create_connection()
-    
-    data: dict = await r.json()
-    username: str = ""
-    
-    # If the provided username in the JSON body request
-    # from the client is not present, then use the
-    # current user's username (if and only if the
-    # request is associated with said current user).
-    if "username" not in data:
-        username = r.cookies.get("username")
-        
-    # However, if it does when retrieving the profile details of
-    # another user, store their username from the JSON body
-    # request into the username variable.
-    else:
-        username = data["username"]
-    
-    try:
-        profile_info = await retrieve_profile(db, username)
-        return profile_info
-    
-    except db.DatabaseError:
-        return {"message": "Failed to retrieve profile information!"}, 500
-    
-    except Exception:
-        return {"message": "A server error happened. Please try again."}, 500
-    
-    finally:
-        await terminate_connection(db)
-        
 @server.post("/retrieve_pic")
 async def retrieve_pic(request: Request):
     form_data = await request.form()
@@ -555,27 +518,6 @@ async def update_bio(request: Request):
     
     except db.DatabaseError:
         return {"message": "Error updating bio."}, 500
-    
-    finally:
-        await terminate_connection(db)
-        
-@protected_route.get('/privacy/check_recommendation_settings')
-async def check_recommendation_settings(request: Request):
-    username = request.cookies.get("username")
-    db: p.extensions.connection = await create_connection()
-    cursor: p.extensions.cursor = db.cursor()
-    
-    try:
-        statement = "SELECT used, use_so_filter FROM Recommendation_Settings WHERE username=%s"
-        params = [username]
-        cursor.execute(statement, params)
-        
-        used = [{"used": records[0], "use_so_filter": records[1] if await using_so_filter(username, cursor) else "false"} for records in cursor][0]
-        
-        return used
-    
-    except db.DatabaseError:
-        return {"message": "Failed to retrieve recommendation settings for user."}, 500
     
     finally:
         await terminate_connection(db)
@@ -856,30 +798,6 @@ async def search(request: Request):
     finally:
         await terminate_connection(db)
         
-@protected_route.get("/retrieve_search_history")
-@cache(expire=120, key_builder=search_hist_key)
-async def retrieve_search_history(request: Request):
-    db: p.extensions.connection = await create_connection()
-    cursor: p.extensions.cursor = db.cursor()
-    
-    try:
-        statement = '''
-            SELECT search_term FROM Search_History WHERE username=%s ORDER BY date_and_time DESC LIMIT 10
-        '''
-        username = request.cookies.get("username")
-        params = [username]
-        cursor.execute(statement, params)
-        
-        search_terms = [{"search_term": record[0]} for record in cursor]
-        
-        return search_terms
-    
-    except db.DatabaseError as e:
-        raise HTTPException(500, {"message": e})
-    
-    finally:
-        await terminate_connection(db)
-        
 @protected_route.post("/insert_search_history")
 def insert_search_history(request: Request):
     db: p.extensions.connection = asyncio.run(create_connection())
@@ -993,89 +911,6 @@ async def clear_search_history_term(request: Request):
     finally:
         await terminate_connection(db)
         
-@protected_route.get("/get_user_profiles")
-@cache(expire=300, key_builder=user_profiles_key)
-async def get_user_profiles(request: Request):
-    db: p.extensions.connection = await create_connection()
-    username: str = request.cookies.get("username")
-    
-    try:
-        profile_routes = await retrieve_user_routes(db, username)
-        return profile_routes
-    
-    except db.DatabaseError as e:
-        return {"message": "Failed to get basic profile details!"}, 500
-    
-    except Exception as e:
-        return {"message": "There was a server error. Please try again!"}, 500
-    
-    finally:
-        await terminate_connection(db)
-        
-@protected_route.get("/check_messaged_users")
-@cache(expire=120, key_builder=messaged_users_key)
-async def check_messaged_users(request: Request):
-    db: p.extensions.connection = await create_connection()
-    cursor: p.extensions.cursor = db.cursor()
-    
-    try:
-        statement = "SELECT * FROM Recent_Messages(%s)"
-        params = [request.cookies.get("username")]
-        
-        cursor.execute(statement, params)
-        
-        messages = [
-            {
-                "user2": record[0],
-                "message": record[1],
-                "sent_time": record[2],
-                "first_name": record[3],
-                "uri": bytes(record[4]).decode('utf-8'),
-                "rating_type": record[5]
-            }
-            for record in cursor
-        ]
-        
-        return messages
-
-    except db.DatabaseError:
-        raise HTTPException(500, {"message": "Failed to retrieve messaged users."})
-    
-    finally:
-        await terminate_connection(db)
-        
-@protected_route.post("/retrieve_messages")
-async def retrieve_messages(r: Request):
-    db: p.extensions.connection = await create_connection()
-    cursor: p.extensions.cursor = db.cursor()
-    data: dict = await r.json()
-    sender: str = r.cookies.get("username")
-    
-    try:
-        params = [sender, data["receiver"], data["receiver"], sender]
-        statement = '''
-            SELECT message, message_from FROM Messages WHERE (message_from=%s AND message_to=%s) 
-            OR (message_from=%s AND message_to=%s) ORDER BY date_and_time ASC
-        '''
-        
-        cursor.execute(statement, params)
-        
-        messages = [
-            {
-                "message": record[0],
-                "message_from": record[1]
-            }
-            for record in cursor
-        ]
-        
-        return messages
-        
-    except db.DatabaseError as e:
-        raise HTTPException(500, {"message": "Failed to retrieve messages."})
-    
-    finally:
-        await terminate_connection(db)
-        
 @protected_route.post("/post_message")
 async def post_message(request: Request):
     db: p.extensions.connection = await create_connection()
@@ -1132,52 +967,6 @@ async def post_message(request: Request):
     
     finally:
         await terminate_connection(db)
-        
-@protected_route.post("/retrieve_message_profile_pics")
-async def retrieve_message_profile_pics(request: Request):
-    data: dict = await request.json()
-    db: p.extensions.connection = await create_connection()
-    cursor: p.extensions.cursor = db.cursor()
-    
-    try:
-        statement = "SELECT uri FROM Photos WHERE username=%s"
-        params = [data["receiver"]]
-        cursor.execute(statement, params)
-        
-        receiver_profile_pic = [
-            {
-                "receiver_pic": bytes(record[0]).decode('utf-8')
-            }
-            for record in cursor
-        ][0]
-        
-        return receiver_profile_pic
-    
-    except db.DatabaseError:
-        return {"message": "Message failed to send."}, 500
-    
-    finally:
-        await terminate_connection(db)
-        
-@protected_route.get("/retrieve_notification_count")
-@cache(expire=120, key_builder=notif_key)
-async def retrieve_notification_count(request: Request):
-    username = request.query_params.get("username")
-    db: p.extensions.connection = await create_connection()
-    
-    if username:
-        try:
-            notification_count: dict[str, any] = await retrieve_notifications(db, username)
-            return notification_count
-
-        except db.DatabaseError:
-            raise HTTPException(500, {"message": "Failed to retrieve notification count for user!"})
-        
-        finally:
-            await terminate_connection(db)
-    
-    else:
-        raise HTTPException(400, {"message": "Missing username for query parameter."})
     
 @protected_route.put("/clear_notification_count")
 def clear_notification_count(request: Request):
@@ -1364,73 +1153,6 @@ async def block(request: Request):
         
         finally:
             await terminate_connection(db)
-            
-@protected_route.get("/retrieve_blocked_users")
-async def retrieve_blocked_users(request: Request):
-    username = request.cookies.get("username")
-    
-    db: p.extensions.connection = await create_connection()
-    cursor: p.extensions.cursor = db.cursor()
-    
-    try:
-        statement = '''
-            SELECT B.blockee, P.first_name, P2.uri 
-            FROM Blocked B, Profiles P, Photos P2 WHERE B.blocker=%s 
-            AND P.username=B.blockee AND B.blockee=P2.username 
-            ORDER BY P.last_name, P.first_name
-        '''
-        params = [username]
-        
-        cursor.execute(statement, params)
-        
-        blocked_users = [
-            {
-                "blockee": record[0],
-                "first_name": record[1],
-                "uri": bytes(record[2]).decode('utf-8')
-            }
-            for record in cursor
-        ]
-        
-        return blocked_users
-    
-    except db.DatabaseError:
-        return {"message": "Failed to retrieve blocked users."}, 500
-    
-    finally:
-        await terminate_connection(db)
-        
-@protected_route.post("/retrieve_block_status")
-async def retrieve_block_status(request: Request):
-    data: dict = await request.json()
-    db: p.extensions.connection = await create_connection()
-    cursor: p.extensions.cursor = db.cursor()
-    
-    try:
-        statement = '''
-            SELECT B.blockee, P.uri from Blocked B, Photos P 
-            WHERE (B.blocker=%s AND B.blockee=%s) 
-            OR (B.blocker=%s AND B.blockee=%s) 
-            AND B.blockee=P.username
-        '''
-        params = [data["logged_in_user"], data["profile_user"], data["profile_user"], data["logged_in_user"]]
-        cursor.execute(statement, params)
-        
-        user_block_status = [
-            {
-                "blockee": record[0],
-                "uri": bytes(record[1]).decode('utf-8')
-            }
-            for record in cursor
-        ]
-        
-        return user_block_status
-    
-    except db.DatabaseError:
-        return {"message": "Could not retrieve information!"}, 500
-    
-    finally:
-        await terminate_connection(db)
         
 # WILL BE DONE AT A LATER DATE.
 # Feature will be postponed until further notice.

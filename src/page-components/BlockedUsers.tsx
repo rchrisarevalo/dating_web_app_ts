@@ -23,7 +23,7 @@ export const BlockedUsers = () => {
     const handleCloseReportModal = () => setDisplayReportModal(false)
 
     useEffect(() => {
-        fetch("http://localhost:5000/retrieve_blocked_users", {
+        fetch("http://localhost:4000/retrieve_blocked_users", {
             method: 'GET',
             credentials: 'include',
             headers: {

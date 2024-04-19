@@ -67,7 +67,7 @@ export const Update = (props: UpdateProps) => {
 
     useEffect(() => {
         const retrieveProfile = async () => {
-            await fetch("http://localhost:5000/profile", {
+            await fetch("http://localhost:4000/profile", {
                 method: 'POST',
                 credentials: 'include',
                 body: JSON.stringify({}),

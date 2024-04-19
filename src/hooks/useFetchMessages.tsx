@@ -12,7 +12,7 @@ export const useFetchMessages = (receiver: string, submitted: boolean) => {
 
     useEffect(() => {
         const fetchMessages = async () => {
-            const res = await fetch("http://localhost:5000/retrieve_messages", {
+            const res = await fetch("http://localhost:4000/retrieve_messages", {
                 method: 'POST',
                 credentials: 'include',
                 body: JSON.stringify({receiver: receiver}),
@@ -31,7 +31,7 @@ export const useFetchMessages = (receiver: string, submitted: boolean) => {
             }
         }
         const fetchReceiverDetails = async () => {
-            const res = await fetch(`http://localhost:5000/profile`, {
+            const res = await fetch(`http://localhost:4000/profile`, {
                 method: 'POST',
                 credentials: 'include',
                 body: JSON.stringify({username: receiver}),
@@ -59,7 +59,7 @@ export const useFetchMessages = (receiver: string, submitted: boolean) => {
     useEffect(() => {
         if (submitted) {
             const fetchUpdatedMessages = async () => {
-                const res = await fetch("http://localhost:5000/retrieve_messages", {
+                const res = await fetch("http://localhost:4000/retrieve_messages", {
                     method: 'POST',
                     credentials: 'include',
                     body: JSON.stringify({receiver: receiver}),

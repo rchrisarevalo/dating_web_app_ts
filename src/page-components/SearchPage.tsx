@@ -17,7 +17,7 @@ interface SearchPageProps {
 
 export const SearchPage = (props: SearchPageProps) => {
     const { algo_config, use_so_filter, algo_pending, algo_error } = props
-    const { search_history, pending, error } = useFetchSearchHistory("http://localhost:5000/retrieve_search_history")
+    const { search_history, pending, error } = useFetchSearchHistory("http://localhost:4000/retrieve_search_history")
 
     const matched_profiles = useFetchMatches("http://localhost:5000/match", use_so_filter, algo_config)
 

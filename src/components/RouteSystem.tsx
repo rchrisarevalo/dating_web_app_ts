@@ -40,8 +40,8 @@ interface RoutesProps {
 export const RoutingSystem = () => {
     const { auth, pending, error, username, profile_pic, status_code } = useFetchLogin()
     const { profile_page, profile_page_pending, profile_page_error } = useFetchProfile(auth)
-    const { algo_config, use_so_filter, algo_pending, algo_error } = useFetchAlgoConfig("http://localhost:5000/privacy/check_recommendation_settings", auth)
-    const profile_data = useFetchProfiles("http://localhost:5000/get_user_profiles", auth)
+    const { algo_config, use_so_filter, algo_pending, algo_error } = useFetchAlgoConfig("http://localhost:4000/privacy/check_recommendation_settings", auth)
+    const profile_data = useFetchProfiles("http://localhost:4000/get_user_profiles", auth)
     const path = useLocation().pathname
     const domain_path = path.split("/")[1]
 

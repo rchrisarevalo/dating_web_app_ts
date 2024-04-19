@@ -25,7 +25,7 @@ export const useFetchProfile = (auth: boolean) => {
     useEffect(() => {
         if (auth)
         {
-            fetch("http://localhost:5000/profile", {
+            fetch("http://localhost:4000/profile", {
                 method: 'POST',
                 credentials: 'include',
                 body: JSON.stringify({}),

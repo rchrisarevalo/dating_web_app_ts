@@ -192,206 +192,143 @@ def test_login_with_invalid_token():
     assert final_response.status_code == 498
     assert final_response.json()["detail"]["message"] == "Invalid token!"
 
-# Given that I am a logged in user, I would want to view certain pages when logged in.
-# When I log in, I should receive a valid session token,
-# And if I click on a page such as the account settings, for example,
-# Then I should be able to view it with no problems.
-def test_protected_routes_with_valid_token():
-    try:
-        # Test a bunch of different routes with a valid JWT token.
-        # Dummy user information.
-        user_info = {
-            "first_name": "Kathy",
-            "middle_name": "Adriana",
-            "last_name": "Wood",
-            "username": "kathy.a.wood",
-            "password": "password123",
-            "birth_month": "January",
-            "birth_date": "20",
-            "birth_year": "1998",
-            "state": "California",
-            "city": "San Francisco",
-            "height_feet": "5",
-            "height_inches": "5",
-            "gender": "Female",
-            "sexual_orientation": "Heterosexual",
-            "interested_in": "Males",
-            "relationship_status": "Single",
-            "so_filter_choice": "true",
-            "interests": "Reading, Writing, Coding, Hiking, Biking, Swimming, Running, Walking, Eating, Sleeping, Playing, Gaming, Watching, Listening, Talking, Thinking, Loving, Living, Breathing, Being, Existing, etc.",
-            "age": 23,
-            "pic": "test_user.jpg"
-        }
+# # Given that I am a logged in user, I would want to view certain pages when logged in.
+# # When I log in, I should receive a valid session token,
+# # And if I click on a page such as the account settings, for example,
+# # Then I should be able to view it with no problems.
+# def test_protected_routes_with_valid_token():
+#     try:
+#         # Test a bunch of different routes with a valid JWT token.
+#         # Dummy user information.
+#         user_info = {
+#             "first_name": "Kathy",
+#             "middle_name": "Adriana",
+#             "last_name": "Wood",
+#             "username": "kathy.a.wood",
+#             "password": "password123",
+#             "birth_month": "January",
+#             "birth_date": "20",
+#             "birth_year": "1998",
+#             "state": "California",
+#             "city": "San Francisco",
+#             "height_feet": "5",
+#             "height_inches": "5",
+#             "gender": "Female",
+#             "sexual_orientation": "Heterosexual",
+#             "interested_in": "Males",
+#             "relationship_status": "Single",
+#             "so_filter_choice": "true",
+#             "interests": "Reading, Writing, Coding, Hiking, Biking, Swimming, Running, Walking, Eating, Sleeping, Playing, Gaming, Watching, Listening, Talking, Thinking, Loving, Living, Breathing, Being, Existing, etc.",
+#             "age": 23,
+#             "pic": "test_user.jpg"
+#         }
 
-        # Sign up the user.
-        signup_response = create_dummy_user(user_info)
-        assert signup_response.status_code == 200
+#         # Sign up the user.
+#         signup_response = create_dummy_user(user_info)
+#         assert signup_response.status_code == 200
 
-        # Log in the user.
-        login_response = client.post('/login', data={"username": user_info["username"], "password": user_info["password"]})
-        assert login_response.status_code == 200
-        assert login_response.json() != None
-        assert jwt.decode(login_response.json()["token"], os.getenv('SK_KEY'), algorithms=['HS256'], verify=True) != None
+#         # Log in the user.
+#         login_response = client.post('/login', data={"username": user_info["username"], "password": user_info["password"]})
+#         assert login_response.status_code == 200
+#         assert login_response.json() != None
+#         assert jwt.decode(login_response.json()["token"], os.getenv('SK_KEY'), algorithms=['HS256'], verify=True) != None
 
-        # Retrieve the token.
-        token = login_response.json()["token"]
+#         # Retrieve the token.
+#         token = login_response.json()["token"]
 
-        # Test the profile route with the valid token.
-        profile_response = client
-        profile_response.cookies.set('username', user_info["username"])
-        profile_response.cookies.set('user_session', token)
-        p_response = profile_response.post('/profile', json={})
-        assert p_response.status_code == 200
+#         # Test the profile route with the valid token.
+#         profile_response = client
+#         profile_response.cookies.set('username', user_info["username"])
+#         profile_response.cookies.set('user_session', token)
+#         p_response = profile_response.post('/profile', json={})
+#         assert p_response.status_code == 200
         
-        # Test the recommendation settings route with the valid token.
-        recommendation_settings_response = client
-        recommendation_settings_response.cookies.set('username', user_info["username"])
-        recommendation_settings_response.cookies.set('user_session', token)
-        rs_response = recommendation_settings_response.get('/privacy/check_recommendation_settings')
-        assert rs_response.status_code == 200
+#         # Test the recommendation settings route with the valid token.
+#         recommendation_settings_response = client
+#         recommendation_settings_response.cookies.set('username', user_info["username"])
+#         recommendation_settings_response.cookies.set('user_session', token)
+#         rs_response = recommendation_settings_response.get('/privacy/check_recommendation_settings')
+#         assert rs_response.status_code == 200
 
-        # Test the retrieve search history route with the valid token.
-        ret_search_hist_response = client
-        ret_search_hist_response.cookies.set('username', user_info["username"])
-        ret_search_hist_response.cookies.set('user_session', token)
-        ret_search_hist_response = ret_search_hist_response.get('/retrieve_search_history')
-        assert rs_response.status_code == 200
+#         # Test the retrieve search history route with the valid token.
+#         ret_search_hist_response = client
+#         ret_search_hist_response.cookies.set('username', user_info["username"])
+#         ret_search_hist_response.cookies.set('user_session', token)
+#         ret_search_hist_response = ret_search_hist_response.get('/retrieve_search_history')
+#         assert rs_response.status_code == 200
     
-    finally:
-        delete_dummy_user(user_info, db, cursor)
+#     finally:
+#         delete_dummy_user(user_info, db, cursor)
 
-# Given that I am a logged in user, I should be able to view certain pages.
-# When I log in, I should receive a valid token.
-# When I try to modify or modify the token itself,
-# And I try to visit my account settings page, for example,
-# then I should receive an error saying that I need to reload the page.
-def test_protected_routes_with_invalid_token():
-    try:
-        # Test a bunch of different routes with a valid JWT token.
-        # Dummy user information.
-        user_info = {
-            "first_name": "Kathy",
-            "middle_name": "Adriana",
-            "last_name": "Wood",
-            "username": "kathy.a.wood",
-            "password": "password123",
-            "birth_month": "January",
-            "birth_date": "20",
-            "birth_year": "1998",
-            "state": "California",
-            "city": "San Francisco",
-            "height_feet": "5",
-            "height_inches": "5",
-            "gender": "Female",
-            "sexual_orientation": "Heterosexual",
-            "interested_in": "Males",
-            "relationship_status": "Single",
-            "so_filter_choice": "true",
-            "interests": "Reading, Writing, Coding, Hiking, Biking, Swimming, Running, Walking, Eating, Sleeping, Playing, Gaming, Watching, Listening, Talking, Thinking, Loving, Living, Breathing, Being, Existing, etc.",
-            "age": 23,
-            "pic": "test_user.jpg"
-        }
+# # Given that I am a logged in user, I should be able to view certain pages.
+# # When I log in, I should receive a valid token.
+# # When I try to modify or modify the token itself,
+# # And I try to visit my account settings page, for example,
+# # then I should receive an error saying that I need to reload the page.
+# def test_protected_routes_with_invalid_token():
+#     try:
+#         # Test a bunch of different routes with a valid JWT token.
+#         # Dummy user information.
+#         user_info = {
+#             "first_name": "Kathy",
+#             "middle_name": "Adriana",
+#             "last_name": "Wood",
+#             "username": "kathy.a.wood",
+#             "password": "password123",
+#             "birth_month": "January",
+#             "birth_date": "20",
+#             "birth_year": "1998",
+#             "state": "California",
+#             "city": "San Francisco",
+#             "height_feet": "5",
+#             "height_inches": "5",
+#             "gender": "Female",
+#             "sexual_orientation": "Heterosexual",
+#             "interested_in": "Males",
+#             "relationship_status": "Single",
+#             "so_filter_choice": "true",
+#             "interests": "Reading, Writing, Coding, Hiking, Biking, Swimming, Running, Walking, Eating, Sleeping, Playing, Gaming, Watching, Listening, Talking, Thinking, Loving, Living, Breathing, Being, Existing, etc.",
+#             "age": 23,
+#             "pic": "test_user.jpg"
+#         }
 
-        # Sign up the user.
-        signup_response = create_dummy_user(user_info)
-        assert signup_response.status_code == 200
+#         # Sign up the user.
+#         signup_response = create_dummy_user(user_info)
+#         assert signup_response.status_code == 200
 
-        # Log in the user.
-        login_response = client.post('/login', data={"username": user_info["username"], "password": user_info["password"]})
-        assert login_response.status_code == 200
-        assert login_response.json() != None
-        assert jwt.decode(login_response.json()["token"], os.getenv('SK_KEY'), algorithms=['HS256'], verify=True) != None
+#         # Log in the user.
+#         login_response = client.post('/login', data={"username": user_info["username"], "password": user_info["password"]})
+#         assert login_response.status_code == 200
+#         assert login_response.json() != None
+#         assert jwt.decode(login_response.json()["token"], os.getenv('SK_KEY'), algorithms=['HS256'], verify=True) != None
 
-        # Generate a "token" to test out on the protected routes.
-        invalid_token = os.urandom(40).hex()
+#         # Generate a "token" to test out on the protected routes.
+#         invalid_token = os.urandom(40).hex()
 
-        # Unlike the previous test, we will be testing the following routes with an invalid token,
-        # even though the valid token is either stored in the cookie or in the database.
-        profile_response = client
-        profile_response.cookies.set('username', user_info["username"])
-        profile_response.cookies.set('user_session', invalid_token)
-        p_response = profile_response.post('/profile', json={})
-        assert p_response.status_code == 498
+#         # Unlike the previous test, we will be testing the following routes with an invalid token,
+#         # even though the valid token is either stored in the cookie or in the database.
+#         profile_response = client
+#         profile_response.cookies.set('username', user_info["username"])
+#         profile_response.cookies.set('user_session', invalid_token)
+#         p_response = profile_response.post('/profile', json={})
+#         assert p_response.status_code == 498
         
-        # Test the recommendation settings route with the valid token.
-        recommendation_settings_response = client
-        recommendation_settings_response.cookies.set('username', user_info["username"])
-        recommendation_settings_response.cookies.set('user_session', invalid_token)
-        rs_response = recommendation_settings_response.get('/privacy/check_recommendation_settings')
-        assert rs_response.status_code == 498
+#         # Test the recommendation settings route with the valid token.
+#         recommendation_settings_response = client
+#         recommendation_settings_response.cookies.set('username', user_info["username"])
+#         recommendation_settings_response.cookies.set('user_session', invalid_token)
+#         rs_response = recommendation_settings_response.get('/privacy/check_recommendation_settings')
+#         assert rs_response.status_code == 498
 
-        # Test the retrieve search history route with the valid token.
-        ret_search_hist_response = client
-        ret_search_hist_response.cookies.set('username', user_info["username"])
-        ret_search_hist_response.cookies.set('user_session', invalid_token)
-        ret_search_hist_response = ret_search_hist_response.get('/retrieve_search_history')
-        assert rs_response.status_code == 498
+#         # Test the retrieve search history route with the valid token.
+#         ret_search_hist_response = client
+#         ret_search_hist_response.cookies.set('username', user_info["username"])
+#         ret_search_hist_response.cookies.set('user_session', invalid_token)
+#         ret_search_hist_response = ret_search_hist_response.get('/retrieve_search_history')
+#         assert rs_response.status_code == 498
     
-    finally:
-        delete_dummy_user(user_info, db, cursor)
-    
-def test_retrieve_profile_information():
-    try:
-        # Dummy user information.
-        dummy_user = {
-            "first_name": "William",
-            "middle_name": "James",
-            "last_name": "Griffin",
-            "username": "william.j.griff01",
-            "password": "william123",
-            "birth_month": "June",
-            "birth_date": "13",
-            "birth_year": "2001",
-            "state": "Texas",
-            "city": "Houston",
-            "height_feet": "6",
-            "height_inches": "2",
-            "gender": "Male",
-            "sexual_orientation": "Heterosexual",
-            "interested_in": "Females",
-            "relationship_status": "Married",
-            "so_filter_choice": "true",
-            "interests": "Gardening, Reading, Writing Code, and Playing Video Games",
-            "age": 22,
-            "pic": "william_user.jpg"
-        }
-        
-        # Sign up the dummy user.
-        signup_response = create_dummy_user(dummy_user)
-        
-        # Assert that the sign up was successful.
-        assert signup_response.status_code == 200
-        
-        # Log the user in.
-        login = client.post('/login', data={"username": dummy_user["username"], "password": dummy_user["password"]}) 
-        
-        # Retrieve the user's profile information.
-        profile = client
-        profile.cookies.set('user_session', login.json()["token"])
-        profile.cookies.set('username', dummy_user["username"])
-        profile_res = profile.post('/profile', json={})
-
-        # Store profile information in JSON dictionary.
-        profile_information = profile_res.json()
-        
-        # Cross-reference the values in the profile_information dictionary with those
-        # in the dummy_user dictionary.
-        assert dummy_user["first_name"] == profile_information["first_name"]
-        assert dummy_user["middle_name"] == profile_information["middle_name"]
-        assert dummy_user["last_name"] == profile_information["last_name"]
-        assert dummy_user["username"] == profile_information["username"]
-        assert dummy_user["interests"] == profile_information["interests"]
-        assert dummy_user["height_feet"] + "'" + dummy_user["height_inches"] + "''" == profile_information["height"]
-        assert dummy_user["gender"] == profile_information["gender"]
-        assert dummy_user["sexual_orientation"] == profile_information["sexual_orientation"]
-        assert dummy_user["relationship_status"] == profile_information["relationship_status"]
-        assert dummy_user["birth_month"] == profile_information["birth_month"]
-        assert dummy_user["birth_date"] == profile_information["birth_date"]
-        assert dummy_user["birth_year"] == profile_information["birth_year"]
-    
-    finally:
-        # Clear the dummy user after performing all of the tests.
-        delete_dummy_user(dummy_user, db, cursor)
+#     finally:
+#         delete_dummy_user(user_info, db, cursor)
     
 # Test the /update_profile/DOB route to see if the user is able to update their DOB
 # provided that they registered for an account if they were at least 18 years old or
