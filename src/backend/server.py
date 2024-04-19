@@ -840,7 +840,10 @@ async def search(request: Request):
     try:
         cursor.execute(statement, params)
 
-        search_results: list[dict[str, any]] = [{col[0]: record for col, record in zip(cursor.description, records)} for records in cursor]
+        search_results: list[dict[str, any]] = [
+            {col[0]: record for col, record in zip(cursor.description, records)} 
+            for records in cursor
+        ]
 
         for record in search_results:
             record.update({"uri": bytes(record["uri"]).decode('utf-8')})
