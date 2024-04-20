@@ -1,9 +1,6 @@
 from fastapi import FastAPI, Request, Response, HTTPException, Depends, APIRouter
 from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi_cache import FastAPICache
-from fastapi_cache.backends.inmemory import InMemoryBackend
-from fastapi_cache.decorator import cache
 from passlib.context import CryptContext
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -30,8 +27,6 @@ import asyncio
 PATH = 'secret.env'
 
 server = FastAPI(debug=True)
-
-FastAPICache.init(InMemoryBackend(), prefix="fastapi-cache")
 
 # Load the .env file from the path specified above.
 load_dotenv(PATH)
@@ -175,8 +170,6 @@ async def logout(request: Request, response: Response):
         await delete_session(request.cookies.get("username"), request.cookies.get("user_session"), db, cursor)
         response.set_cookie(key="user_session", value=request.cookies.get("user_session"), max_age=0, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
         response.set_cookie(key="username", value="", max_age=0, path="/", domain="localhost", secure=True, httponly=True, samesite='strict')
-
-        await FastAPICache.clear()
 
         # Return the response indicating that the cookies have been deleted.
         return {"message": "Cookie has been deleted!"}

@@ -24,6 +24,7 @@ var httpServer = http.createServer(server)
 var socket_server = new Server(httpServer, {
     cors: {
         host: 'http://localhost:5173/',
+        maxAge: 3600
     }
 })
 
@@ -54,11 +55,6 @@ const createConnection = async () => {
 
     return client
 }
-
-const verifySession = async (username, token, sk_key) => {
-    
-}
-
 
 // ==================================================
 // Create socket server connection so that client
@@ -221,7 +217,7 @@ protected_route.post('/profile', async (req, res) => {
     } finally {
         setTimeout(async () => {
             await db.end()
-        }, 1000)
+        }, 25)
     }
 })
 
@@ -242,7 +238,7 @@ protected_route.get('/privacy/check_recommendation_settings', async (req, res) =
     } finally {
         setTimeout(async () => {
             await db.end()
-        }, 1000)
+        }, 25)
     }
 })
 
@@ -265,7 +261,7 @@ protected_route.get('/retrieve_search_history', async (req, res) => {
     } finally {
         setTimeout(async () => {
             await db.end()
-        }, 1000)
+        }, 25)
     }
 })
 
@@ -285,7 +281,7 @@ protected_route.get("/get_user_profiles", async (req, res) => {
     } finally {
         setTimeout(async () => {
             await db.end()
-        }, 1000)
+        }, 25)
     }
 })
 
@@ -306,7 +302,7 @@ protected_route.get("/check_messaged_users", async (req, res) => {
     } finally {
         setTimeout(async () => {
             await db.end()
-        }, 1000)
+        }, 25)
     }
 })
 
@@ -331,7 +327,7 @@ protected_route.post('/retrieve_messages', async (req, res) => {
     } finally {
         setTimeout(async () => {
             await db.end()
-        }, 1000)
+        }, 25)
     }
 })
 
@@ -353,7 +349,7 @@ protected_route.get("/retrieve_notification_count", async (req, res) => {
         } finally {
             setTimeout(async () => {
                 await db.end()
-            }, 1000)
+            }, 25)
         }
     } else {
         res.status(400).send({"message": "Missing username for query parameter."})
@@ -383,7 +379,7 @@ protected_route.get("/retrieve_blocked_users", async (req, res) => {
     } finally {
         setTimeout(async () => {
             await db.end()
-        }, 1000)
+        }, 25)
     }
 })
 
@@ -409,7 +405,7 @@ protected_route.post('/retrieve_block_status', async (req, res) => {
     } finally {
         setTimeout(async () => {
             await db.end()
-        }, 1000)
+        }, 25)
     }
 })
 
