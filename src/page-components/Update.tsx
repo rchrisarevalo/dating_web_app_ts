@@ -65,6 +65,10 @@ export const Update = (props: UpdateProps) => {
     // State variable that stores pending request status.
     const [pending, setPending] = useState(true)
 
+    // State variable that stores current character count
+    // of bio.
+    const [curBioCharCount, setCurBioCharCount] = useState(0)
+
     useEffect(() => {
         const retrieveProfile = async () => {
             const res = await fetch("http://localhost:4000/profile", {
@@ -98,6 +102,7 @@ export const Update = (props: UpdateProps) => {
 
     useEffect(() => {
         setHandleBioText(profile.bio)
+        setCurBioCharCount(profile.bio.length)
         if (profile.name !== "") {
             setHandleFirstName(profile.name.split(" ")[0])
             setHandleMiddleName(profile.name.split(" ")[1])
@@ -646,7 +651,9 @@ export const Update = (props: UpdateProps) => {
                                 )}
                                 {change ?
                                     <div className="change-inputs">
-                                        <textarea id="bio-change" rows={10} cols={40} value={handleBioText} onChange={handle_bio_text}></textarea>
+                                        <textarea id="bio-change" rows={10} cols={30} value={handleBioText} onChange={(e) => {handle_bio_text(); setCurBioCharCount(e.target.value.length)}} maxLength={300}></textarea>
+                                        <br></br>
+                                        <span>{curBioCharCount}/300</span>
                                         <br></br>
                                         <button value="change-bio" id="change-bio" onClick={display_change}>Cancel</button>
                                         <br></br>
