@@ -14,7 +14,7 @@ export const useNotificationUpdate = (currentUser: string, connection: typeof so
     useEffect(() => {
         if (currentUser) {
             const retrieveNotificationCount = async () => {
-                await fetch(`http://localhost:5000/retrieve_notification_count?username=${currentUser}`, {
+                await fetch(`http://localhost:4000/retrieve_notification_count?username=${currentUser}`, {
                     method: 'GET',
                     credentials: 'include',
                     headers: {
@@ -59,7 +59,7 @@ export const useNotificationUpdate = (currentUser: string, connection: typeof so
                 // then update their notification counter.
                 if (path.pathname !== "/profile/recent_messages") {
                     const retrieveNotificationCount = async () => {
-                        await fetch(`http://localhost:5000/retrieve_notification_count?username=${retrieve_username_from_path}`, {
+                        await fetch(`http://localhost:4000/retrieve_notification_count?username=${retrieve_username_from_path}`, {
                             method: 'GET',
                             credentials: 'include',
                             headers: {

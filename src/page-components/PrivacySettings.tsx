@@ -14,7 +14,7 @@ interface PrivacySettingsProps {
 
 export const PrivacySettings = (props: PrivacySettingsProps) => {
     const { username, auth } = props
-    const { algo_config, use_so_filter, algo_pending, algo_error } = useFetchAlgoConfig("http://localhost:5000/privacy/check_recommendation_settings", auth)
+    const { algo_config, use_so_filter, algo_pending, algo_error } = useFetchAlgoConfig("http://localhost:4000/privacy/check_recommendation_settings", auth)
 
     const [displayModal, setDisplayModal] = useState(false)
     const [displaySOFilterModal, setDisplaySOFilterModal] = useState(false)

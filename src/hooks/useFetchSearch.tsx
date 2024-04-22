@@ -54,23 +54,19 @@ export const useFetchSearchHistory = (endpoint: string) => {
 
     useEffect(() => {
         const fetchSearchHistory = async () => {
-            fetch(endpoint, {
+            const res = await fetch(endpoint, {
                 method: 'GET',
                 credentials: 'include'
-            }).then((res) => {
-                if (res.ok) {
-                    return res.json()
-                } else {
-                    throw res.status
-                }
-            }).then((data) => {
+            })
+
+            if (res.ok) {
+                const data = await res.json()
                 setSearchHistory(data)
                 setPending(false)
-            }).catch((error) => {
-                console.log(error)
+            } else {
                 setPending(false)
                 setError(true)
-            })
+            }
         }
         fetchSearchHistory()
     }, [endpoint])
@@ -78,7 +74,7 @@ export const useFetchSearchHistory = (endpoint: string) => {
     return { search_history: searchHistory, pending: pending, error: error }
 }
 
-export const useFetchProfiles = (endpoint: string, auth: boolean) => {
+export const useFetchRoutes = (endpoint: string, auth: boolean) => {
     const [profiles, setProfiles] = useState([{
         username: ""
     }])
@@ -89,24 +85,23 @@ export const useFetchProfiles = (endpoint: string, auth: boolean) => {
     useEffect(() => {
         if (auth)
         {
-            fetch(endpoint, {
-                method: 'GET',
-                credentials: 'include'
-            }).then((res) => {
+            const fetchUserRoutes = async () => {
+                const res = await fetch(endpoint, {
+                    method: 'GET',
+                    credentials: 'include'
+                })
+
                 if (res.ok) {
-                    return res.json()
+                    const data = await res.json()
+                    setPending(false)
+                    setProfiles(data)
                 } else {
-                    throw res.status
+                    setPending(false)
+                    setError(true)
                 }
-            }).then((data) => {
-                // Include the age of the user to their profile object using their DOB.
-                setPending(false)
-                setProfiles(data)
-            }).catch((error) => {
-                console.log(error)
-                setPending(false)
-                setError(true)
-            })
+            }
+
+            fetchUserRoutes()
         }
     }, [endpoint, auth])
 

@@ -32,7 +32,7 @@ export const RecentMessages = () => {
     })
 
     useEffect(() => {
-        fetch('http://localhost:5000/check_messaged_users', {
+        fetch('http://localhost:4000/check_messaged_users', {
             method: 'GET',
             credentials: 'include',
             headers: {

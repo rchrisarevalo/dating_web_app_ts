@@ -43,7 +43,7 @@ export const User = (props: UserProps) => {
     // profile information, such as their name, bio, age, etc.
     useEffect(() => {
         const retrieveUserProfile = async () => {
-            await fetch(`http://localhost:5000/profile`, {
+            await fetch(`http://localhost:4000/profile`, {
                 method: 'POST',
                 credentials: 'include',
                 body: JSON.stringify({
@@ -83,7 +83,7 @@ export const User = (props: UserProps) => {
 
     // Retrieve user's blocked status.
     useEffect(() => {
-        fetch("http://localhost:5000/retrieve_block_status", {
+        fetch("http://localhost:4000/retrieve_block_status", {
             method: 'POST',
             credentials: 'include',
             body: JSON.stringify({

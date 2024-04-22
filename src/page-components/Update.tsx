@@ -67,20 +67,14 @@ export const Update = (props: UpdateProps) => {
 
     useEffect(() => {
         const retrieveProfile = async () => {
-            await fetch("http://localhost:5000/profile", {
+            const res = await fetch("http://localhost:4000/profile", {
                 method: 'POST',
                 credentials: 'include',
-                body: JSON.stringify({}),
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            }).then((res) => {
-                if (res.ok) {
-                    return res.json()
-                } else {
-                    throw res.status
-                }
-            }).then((data) => {
+                body: JSON.stringify({})
+            })
+
+            if (res.ok) {
+                const data = await res.json()
                 setProfile({
                     profile_pic: data.uri,
                     name: `${data.first_name} ${data.middle_name} ${data.last_name}`,
@@ -94,11 +88,10 @@ export const Update = (props: UpdateProps) => {
                     birth_year: data.birth_year
                 })
                 setPending(false)
-            }).catch((error) => {
-                console.log(error)
+            } else {
                 setPending(false)
                 setError(true)
-            })
+            }
         }
         retrieveProfile()
     }, [username])

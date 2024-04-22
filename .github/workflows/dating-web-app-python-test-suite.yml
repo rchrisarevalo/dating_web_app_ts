@@ -112,17 +112,12 @@ jobs:
     - name: Allow a user to use protected resources with valid token.
       run: |
         cd src/backend
-        pytest server_test.py::test_protected_routes_with_valid_token -v
+        pytest server_test.py::test_protected_route_with_valid_token -v
       
     - name: Prevent a user from using protected resources with an invalid token.
       run: |
         cd src/backend
-        pytest server_test.py::test_protected_routes_with_invalid_token -v
-
-    - name: Retrieve a user's profile information if they are currently logged in.
-      run: |
-        cd src/backend
-        pytest server_test.py::test_retrieve_profile_information -v
+        pytest server_test.py::test_protected_route_with_invalid_token -v
 
     - name: Allow users to change their DOB if they registered for an account using a valid DOB. Otherwise, suspend/ban their account if they did not do so.
       run: |
