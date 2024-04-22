@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useFetchLogin } from "../hooks/useFetchLogin";
 import { useFetchProfile } from "../hooks/useFetchProfile";
-import { useFetchProfiles } from "../hooks/useFetchSearch";
+import { useFetchRoutes } from "../hooks/useFetchSearch";
 import { useFetchAlgoConfig } from "../hooks/useFetchSearch";
 import { useNotificationUpdate } from "../hooks/useNotificationUpdate";
 
@@ -41,7 +41,7 @@ export const RoutingSystem = () => {
     const { auth, pending, error, username, profile_pic, status_code } = useFetchLogin()
     const { profile_page, profile_page_pending, profile_page_error } = useFetchProfile(auth)
     const { algo_config, use_so_filter, algo_pending, algo_error } = useFetchAlgoConfig("http://localhost:4000/privacy/check_recommendation_settings", auth)
-    const profile_data = useFetchProfiles("http://localhost:4000/get_user_profiles", auth)
+    const profile_data = useFetchRoutes("http://localhost:4000/get_user_routes", auth)
     const path = useLocation().pathname
     const domain_path = path.split("/")[1]
 

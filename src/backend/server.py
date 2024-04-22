@@ -232,10 +232,10 @@ async def signup(request: Request):
             return {"message": "Successfully registered for an account!"}
             
         except db.DatabaseError:
-            return {"message": "An error occurred with the database. Please try again later."}, 500
+            raise HTTPException(500, {"message": "An error occurred with the database. Please try again later."})
         
         except Exception:
-            return {"message": "A server error has occurred. Please try again later."}, 500
+            raise HTTPException(500, {"message": "A server error has occurred. Please try again later."})
         
         finally:
             await terminate_connection(db)
@@ -296,6 +296,10 @@ async def retrieve_pic(request: Request):
     pic = base64.b64encode(bytes(pic)).decode('utf-8')
     
     return {"pic": pic}
+
+@protected_route.get("/protected_root")
+async def protected_root():
+    return {"message": "If you see this, this means that you were able to access it!"}
 
 @protected_route.route("/update_profile_pic", methods=["POST"])
 async def update_profile_pic(request: Request):

@@ -25,37 +25,37 @@ export const useFetchProfile = (auth: boolean) => {
     useEffect(() => {
         if (auth)
         {
-            fetch("http://localhost:4000/profile", {
-                method: 'POST',
-                credentials: 'include',
-                body: JSON.stringify({}),
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            }).then((res) => {
-                if (res.ok) {
-                    return res.json()
-                } else {
-                    throw res.status
-                }
-            }).then((data) => {
-                setProfile({
-                    username: data.username,
-                    name: `${data.first_name} ${data.middle_name} ${data.last_name}`,
-                    age: CalculateBirthday(data.birth_month, parseInt(data.birth_date), parseInt(data.birth_year)),
-                    height: data.height,
-                    interests: data.interests,
-                    sexual_orientation: data.sexual_orientation,
-                    relationship_status: data.relationship_status,
-                    profile_pic: data.uri
+            const fetchProfile = async () => {
+                const res = await fetch("http://localhost:4000/profile", {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: JSON.stringify({}),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
                 })
-                sessionStorage.setItem("profile_pic", data.uri)
-                setPending(false)
-            }).catch((error) => {
-                console.log(error)
-                setPending(false)
-                setError(true)
-            })
+
+                if (res.ok) {
+                    const data = await res.json()
+
+                    setProfile({
+                        username: data.username,
+                        name: `${data.first_name} ${data.middle_name} ${data.last_name}`,
+                        age: CalculateBirthday(data.birth_month, parseInt(data.birth_date), parseInt(data.birth_year)),
+                        height: data.height,
+                        interests: data.interests,
+                        sexual_orientation: data.sexual_orientation,
+                        relationship_status: data.relationship_status,
+                        profile_pic: data.uri
+                    })
+                    sessionStorage.setItem("profile_pic", data.uri)
+                    setPending(false)
+                } else {
+                    setPending(false)
+                    setError(true)
+                }
+            }
+            fetchProfile()
         }
     }, [auth])
 

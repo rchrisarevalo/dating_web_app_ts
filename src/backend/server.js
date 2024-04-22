@@ -265,7 +265,7 @@ protected_route.get('/retrieve_search_history', async (req, res) => {
     }
 })
 
-protected_route.get("/get_user_profiles", async (req, res) => {
+protected_route.get("/get_user_routes", async (req, res) => {
     const username = req.cookies.username
     const db = await createConnection()
 
