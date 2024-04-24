@@ -43,7 +43,7 @@ export const User = (props: UserProps) => {
     // profile information, such as their name, bio, age, etc.
     useEffect(() => {
         const retrieveUserProfile = async () => {
-            await fetch(`http://localhost:4000/profile`, {
+            await fetch(`http://localhost:4000/profile/${retrieve_username_from_path}`, {
                 method: 'POST',
                 credentials: 'include',
                 body: JSON.stringify({

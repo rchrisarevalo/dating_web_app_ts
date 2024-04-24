@@ -23,10 +23,18 @@ import base64
 import json
 import os
 import asyncio
+import socketio
 
 PATH = 'secret.env'
 
 server = FastAPI(debug=True)
+
+# Create SocketIO instance in FastAPI for real-time communication between
+# client and Express.js server.
+sio = socketio.AsyncServer(
+    cors_allowed_origins=[],
+    async_mode="asgi"
+)
 
 # Load the .env file from the path specified above.
 load_dotenv(PATH)
@@ -37,13 +45,17 @@ DB_KEY=os.getenv('DB_KEY') if os.getenv("SK_KEY") else os.environ["SK_KEY"]
 
 server.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://localhost:4000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"]
 )
 
-context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+# Mount socket into the server as an ASGI app, as the FastAPI server
+# also uses ASGI to run.
+server.mount("/socket.io", socketio.ASGIApp(sio))
+
+context = CryptContext(schemes=['bcrypt'])
 
 limit = Limiter(
     key_func=get_remote_address,
@@ -96,6 +108,18 @@ async def check_token(request: Request):
 
 protected_route = APIRouter(dependencies=[Depends(check_token)])
 
+@sio.on('connect')
+async def connect(sid: str, environ: dict):
+    print("Client connected!")
+
+@sio.on('request_update_profile')
+async def request_update_profile(sid: str):
+    await sio.emit('notify-of-update-profile-request', sid, to=sid)
+
+@sio.on('disconnect')
+async def disconnect(sid: str):
+    print(f"Client {sid} disconnected!")
+
 @server.get("/")
 async def index():
     return {"status": "Working!"}
@@ -147,6 +171,7 @@ async def login(request: Request, response: Response):
     
     # Handle exceptions with JWT token should they occur.   
     except jwt.InvalidKeyError:
+        print("Invalid key!")
         raise HTTPException(401, {"error": "You provided an invalid key"})
 
     except jwt.InvalidSignatureError:

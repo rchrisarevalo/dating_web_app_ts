@@ -29,7 +29,7 @@ import { TOS } from "../page-components/TOS";
 import { UserNotExist } from "./UserNotExist";
 
 // Import socket connection.
-import { socket_conn } from "../functions/SocketConn";
+import { socket_conn, py_conn } from "../functions/SocketConn";
 import { Nav } from "./Nav";
 
 // Interface for protected routes props.
@@ -39,7 +39,7 @@ interface RoutesProps {
 
 export const RoutingSystem = () => {
     const { auth, pending, error, username, profile_pic, status_code } = useFetchLogin()
-    const { profile_page, profile_page_pending, profile_page_error } = useFetchProfile(auth)
+    const { profile_page, profile_page_pending, profile_page_error } = useFetchProfile(auth, username)
     const { algo_config, use_so_filter, algo_pending, algo_error } = useFetchAlgoConfig("http://localhost:4000/privacy/check_recommendation_settings", auth)
     const profile_data = useFetchRoutes("http://localhost:4000/get_user_routes", auth)
     const path = useLocation().pathname
@@ -49,6 +49,7 @@ export const RoutingSystem = () => {
         const { children } = props
 
         const [connection] = useState(socket_conn)
+        const [pyConn] = useState(py_conn)
 
         // Connect socket connection if user is authenticated.
         useEffect(() => {
@@ -56,18 +57,25 @@ export const RoutingSystem = () => {
             // their login has been verified.
             if (!pending && !error && auth) {
                 connection.connect()
+                pyConn.connect()
             } 
             
             // Otherwise, disconnect them from the socket.
             else {
                 connection.disconnect()
+                pyConn.disconnect()
             }
 
             // Connect the user to the socket to allow them to send real-time
             // messages to other users.
             connection.on('connect', () => {
-                console.log("We are connecting!")
+                console.log("Connected!")
                 connection.emit('store-user-socket-id', username, connection.id)
+            })
+
+            pyConn.on('connect', () => {
+                console.log("Connected!")
+                console.log("Connected to Python socket!")
             })
 
             // Disconnect the user from the socket once they have logged out
@@ -77,10 +85,15 @@ export const RoutingSystem = () => {
                 connection.emit('remove-user-socket-id', username)
             })
 
+
+            pyConn.on('disconnect', () => {
+                console.log("Disconnected!")
+            })
             // Cleanup function to prevent the socket connection
             // from running more than once.
             return () => {
                 connection.off('connect')
+                pyConn.off('connect')
             }
         }, [connection])
 

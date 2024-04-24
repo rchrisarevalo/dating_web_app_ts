@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { CurrentProfile } from '../types/types.config';
 import { CalculateBirthday } from '../functions/CalculateBirthday';
 
-export const useFetchProfile = (auth: boolean) => {
+export const useFetchProfile = (auth: boolean, username: string) => {
     const [profile, setProfile] = useState<CurrentProfile>({
         username: "",
         name: "",
@@ -26,7 +26,7 @@ export const useFetchProfile = (auth: boolean) => {
         if (auth)
         {
             const fetchProfile = async () => {
-                const res = await fetch("http://localhost:4000/profile", {
+                const res = await fetch(`http://localhost:4000/profile/${username}`, {
                     method: 'POST',
                     credentials: 'include',
                     body: JSON.stringify({}),
