@@ -31,7 +31,7 @@ export const useFetchMessages = (receiver: string, submitted: boolean) => {
             }
         }
         const fetchReceiverDetails = async () => {
-            const res = await fetch(`http://localhost:4000/profile`, {
+            const res = await fetch(`http://localhost:4000/profile/${receiver}`, {
                 method: 'POST',
                 credentials: 'include',
                 body: JSON.stringify({username: receiver}),

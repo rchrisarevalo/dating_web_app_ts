@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CalculateBirthday } from '../functions/CalculateBirthday';
-import { socket_conn } from '../functions/SocketConn';
+import { socket_conn, py_conn } from '../functions/SocketConn';
 import { MonthToNum, NumToMonth } from '../functions/Calendar';
 import { Link } from 'react-router-dom';
 import { IoArrowBackCircleSharp } from 'react-icons/io5';
@@ -58,6 +58,7 @@ export const Update = (props: UpdateProps) => {
     // State variable that handles socket connection.
     // eslint-disable-next-line no-unused-vars
     const [connection] = useState(socket_conn)
+    const [pyConn] = useState(py_conn)
 
     // State variable that stores error status.
     const [error, setError] = useState(false)
@@ -71,7 +72,7 @@ export const Update = (props: UpdateProps) => {
 
     useEffect(() => {
         const retrieveProfile = async () => {
-            const res = await fetch("http://localhost:4000/profile", {
+            const res = await fetch(`http://localhost:4000/profile/${username}`, {
                 method: 'POST',
                 credentials: 'include',
                 body: JSON.stringify({})
@@ -113,6 +114,12 @@ export const Update = (props: UpdateProps) => {
         setHandleBirthMonth(profile.birth_month)
         setHandleBirthYear(profile.birth_year)
     }, [profile.bio, profile.name, profile.birth_date, profile.birth_month, profile.birth_year])
+
+    useEffect(() => {
+        pyConn.on('notify-of-update-profile-request', () => {
+            connection.emit('receive-update-profile-request')
+        })
+    }, [pyConn])
 
     const display_dob_change = () => {
         if (DOBChange === false) {
@@ -228,10 +235,6 @@ export const Update = (props: UpdateProps) => {
         const new_username = (document.getElementById("new_username") as HTMLInputElement).value
 
         if (new_username.length > 0) {
-            // Update user's socket ID username key to accommodate username change.
-            sessionStorage.setItem("username", new_username)
-            connection.emit('update-user-socket-id', username, new_username, connection.id)
-
             fetch("http://localhost:5000/update_profile/username", {
                 method: 'PUT',
                 credentials: 'include',
@@ -249,6 +252,10 @@ export const Update = (props: UpdateProps) => {
                     throw res.status
                 }
             }).then((data) => {
+                // Update user's socket ID username key to accommodate username change.
+                sessionStorage.setItem("username", new_username)
+                connection.emit('update-user-socket-id', username, new_username, connection.id)
+                pyConn.emit('request_update_profile')
                 console.log(data)
                 window.location.reload()
             }).catch((error) => {
@@ -284,6 +291,7 @@ export const Update = (props: UpdateProps) => {
                 }
             }).then((data) => {
                 console.log(data)
+                pyConn.emit('request_update_profile')
                 window.location.reload()
             }).catch((error) => {
                 console.log(error)
@@ -318,6 +326,7 @@ export const Update = (props: UpdateProps) => {
                     }
                 }).then((data) => {
                     console.log(data)
+                    pyConn.emit('request_update_profile')
                     window.location.reload()
                 }).catch((error) => {
                     console.log(error)
@@ -342,6 +351,7 @@ export const Update = (props: UpdateProps) => {
                     }
                 }).then((data) => {
                     console.log(data)
+                    pyConn.emit('request_update_profile')
                     window.location.reload()
                 }).catch((error) => {
                     console.log(error)
@@ -374,6 +384,7 @@ export const Update = (props: UpdateProps) => {
                 }
             }).then((data) => {
                 console.log(data)
+                pyConn.emit('request_update_profile')
                 window.location.reload()
             }).catch((error) => {
                 console.log(error)
@@ -405,6 +416,7 @@ export const Update = (props: UpdateProps) => {
                 }
             }).then((data) => {
                 console.log(data)
+                pyConn.emit('request_update_profile')
                 window.location.reload()
             }).catch((error) => {
                 console.log(error)
@@ -436,6 +448,7 @@ export const Update = (props: UpdateProps) => {
                 }
             }).then((data) => {
                 console.log(data)
+                pyConn.emit('request_update_profile')
                 window.location.reload()
             }).catch((error) => {
                 console.log(error)

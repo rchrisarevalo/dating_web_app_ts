@@ -1,6 +1,6 @@
 import { IoMenuOutline } from 'react-icons/io5';
 
-import logo from '../images/logo.png';
+import logo from '../images/New Dating App Logo (White).png';
 
 export const TOS = () => {
     return (

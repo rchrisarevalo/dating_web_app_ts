@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from 'react-router-dom';
 import { IoChatboxEllipsesOutline, IoSettingsOutline, IoSearchOutline, IoLogOutOutline, IoSendOutline } from "react-icons/io5"
 import { ProfilePicture } from "./ProfilePicture";
-import { socket_conn } from "../functions/SocketConn";
+import { socket_conn, py_conn } from "../functions/SocketConn";
 import { NotificationCounter } from "./NotificationCounter";
 
 import MediaQuery from "react-responsive";
@@ -28,10 +28,12 @@ export const Nav = (props: NavProps) => {
 
     // eslint-disable-next-line no-unused-vars
     const [connection] = useState(socket_conn)
+    const [pyConn] = useState(py_conn)
 
     const handleLogout = () => {
         connection.emit('remove-user-socket-id', username)
         connection.disconnect()
+        pyConn.disconnect()
 
         fetch("http://localhost:5000/logout", {
             method: 'POST',

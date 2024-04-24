@@ -6,3 +6,4 @@
 import { io } from "socket.io-client";
 
 export const socket_conn = io("http://localhost:4000", { autoConnect: false })
+export const py_conn = io("http://localhost:5000", { autoConnect: false })
