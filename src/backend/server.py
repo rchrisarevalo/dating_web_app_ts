@@ -110,7 +110,7 @@ protected_route = APIRouter(dependencies=[Depends(check_token)])
 
 @sio.on('connect')
 async def connect(sid: str, environ: dict):
-    print(f"Client {sid} from {environ.get("HTTP_ORIGIN")} connected!")
+    print("Client connected!")
 
 @sio.on('request_update_profile')
 async def request_update_profile(sid: str):
