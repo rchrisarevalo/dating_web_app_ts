@@ -51,7 +51,7 @@ server.add_middleware(
     allow_headers=["*"]
 )
 
-# Mount socket into the server as an ASGI app, as the server
+# Mount socket into the server as an ASGI app, as the FastAPI server
 # also uses ASGI to run.
 server.mount("/socket.io", socketio.ASGIApp(sio))
 

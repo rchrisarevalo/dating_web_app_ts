@@ -207,13 +207,23 @@ const profileCache = (req, res, next) => {
     }
 }
 
+const recentMessageCache = (req, res, next) => {
+    const username = req.cookies.username
+    const recent_msg_cache_key = `${username}-recent-messages-${req.cookies.session}`
+
+    if (cache.get(recent_msg_cache_key))
+        res.status(200).send(cache.get(recent_msg_cache_key))
+    else
+    {
+        next()
+    }
+}
+
 server.get('/', async (req, res) => {
     res.status(200).send({"message": "This server is working!"})
 })
 
 protected_route.post('/profile/:user', profileCache, async (req, res) => {
-    let username = ""
-    const data = req.body
     const db = await createConnection()
     
     try {
@@ -309,7 +319,7 @@ protected_route.get("/get_user_routes", async (req, res) => {
     }
 })
 
-protected_route.get("/check_messaged_users", async (req, res) => {
+protected_route.get("/check_messaged_users", recentMessageCache, async (req, res) => {
     const username = req.cookies.username
     const db = await createConnection()
 
@@ -319,7 +329,7 @@ protected_route.get("/check_messaged_users", async (req, res) => {
         await db.connect()
         let db_res = await db.query(statement, params)
         db_res.rows.map(result => result.uri = Buffer.from(result.uri).toString())
-
+        cache.set(`${username}-recent-messages-${req.cookies.session}`, db_res.rows, 300)
         res.status(200).send(db_res.rows)
     } catch {
         res.status(500).send({"message": "Failed to retrieve messaged users."})
