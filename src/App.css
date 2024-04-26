@@ -1370,20 +1370,20 @@ hr {
 }
 
 .user-feedback-column #positive:hover {
-  color: red;
-  background: transparent !important;
+  color: white;
+  background: red;
   transition: .5s;
 }
 
 .user-feedback-column #neutral:hover {
-  color: grey;
-  background: transparent !important;
+  color: white;
+  background: grey;
   transition: .5s;
 }
 
 .user-feedback-column #negative:hover {
-  color: blue;
-  background: transparent !important;
+  color: white;
+  background: blue;
   transition: .5s;
 }
 
