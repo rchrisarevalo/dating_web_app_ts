@@ -128,9 +128,9 @@ export const RecentMessages = () => {
                                                                 <div className="user-feedback-column">
                                                                     <>
                                                                         {recent.rating_type === "positive" ?
-                                                                            <button onClick={() => handleRatingSubmission({ rating_type: "positive", original_rating_type: recent.rating_type, username: recent.user2, logged_in_user: retrieveUsername, index: i })} id="positive">
+                                                                            <button onClick={() => handleRatingSubmission({ rating_type: "positive", original_rating_type: recent.rating_type, username: recent.user2, logged_in_user: retrieveUsername, index: i })} style={{background: 'red'}} id="positive">
                                                                                 <div className="user-feedback-column">
-                                                                                    <IoHeart size={30} color='red' />
+                                                                                    <IoHeart size={30} />
                                                                                 </div>
                                                                             </button>
                                                                             :
@@ -144,9 +144,9 @@ export const RecentMessages = () => {
                                                                 </div>
                                                                 <div className="user-feedback-column">
                                                                     {recent.rating_type === "neutral" ?
-                                                                        <button onClick={() => handleRatingSubmission({ rating_type: "neutral", original_rating_type: recent.rating_type, username: recent.user2, logged_in_user: retrieveUsername, index: i })} id="neutral">
+                                                                        <button onClick={() => handleRatingSubmission({ rating_type: "neutral", original_rating_type: recent.rating_type, username: recent.user2, logged_in_user: retrieveUsername, index: i })} style={{background: 'grey'}} id="neutral">
                                                                             <div className="user-feedback-column">
-                                                                                <IoHeartHalfOutline size={30} color='yellow' />
+                                                                                <IoHeartHalfOutline size={30} />
                                                                             </div>
                                                                         </button>
                                                                         :
@@ -160,9 +160,9 @@ export const RecentMessages = () => {
                                                                 <div className="user-feedback-column">
                                                                     {recent.rating_type === "negative" ?
                                                                         <div className="user-feedback-column">
-                                                                            <button onClick={() => handleRatingSubmission({ rating_type: "negative", original_rating_type: recent.rating_type, username: recent.user2, logged_in_user: retrieveUsername, index: i })} id="negative">
+                                                                            <button onClick={() => handleRatingSubmission({ rating_type: "negative", original_rating_type: recent.rating_type, username: recent.user2, logged_in_user: retrieveUsername, index: i })} style={{background: 'blue'}} id="negative">
                                                                                 <div className="user-feedback-column">
-                                                                                    <IoHeartDislike size={30} color='blue' />
+                                                                                    <IoHeartDislike size={30} />
                                                                                 </div>
                                                                             </button>
                                                                         </div>

@@ -1353,6 +1353,10 @@ hr {
 }
 
 .user-feedback-column button {
+  margin-left: 20px;
+  margin-right: 20px;
+  border-radius: 15px;
+  padding: 7px 7px;
   z-index: 5;
   background: transparent;
   color: white;
@@ -1367,16 +1371,19 @@ hr {
 
 .user-feedback-column #positive:hover {
   color: red;
+  background: transparent !important;
   transition: .5s;
 }
 
 .user-feedback-column #neutral:hover {
-  color: yellow;
+  color: grey;
+  background: transparent !important;
   transition: .5s;
 }
 
 .user-feedback-column #negative:hover {
   color: blue;
+  background: transparent !important;
   transition: .5s;
 }
 
