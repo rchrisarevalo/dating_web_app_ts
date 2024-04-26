@@ -19,6 +19,8 @@ export type CurrentProfile = {
     profile_pic: string
 }
 
+export type CurrentRequestStatus = boolean
+
 export type ConfirmPwd = {
     password: string,
     confirm_password: string

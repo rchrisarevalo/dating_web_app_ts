@@ -259,6 +259,18 @@ protected_route.post('/profile/:user', profileCache, async (req, res) => {
     }
 })
 
+protected_route.post('/privacy/fetch_req_status', async (req, res) => {
+    const username = req.cookies.username
+    const data = req.body
+    const db = await createConnection()
+
+    try {
+        res.status(200).send({"message": "Fetched user request status!"})
+    } catch {
+        res.status(500).send({"message": "Failed to retrieve request status."})
+    }
+})
+
 protected_route.get('/privacy/check_recommendation_settings', async (req, res) => {
     const username = req.cookies.username
     const db = await createConnection()

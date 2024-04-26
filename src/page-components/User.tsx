@@ -6,6 +6,7 @@ import { Loading } from '../components/Loading'
 import { MobileFooter } from '../components/MobileFooter'
 
 import { useLogVisit } from '../hooks/useLogVisit'
+import { CurrentProfile, CurrentRequestStatus } from '../types/types.config'
 
 interface UserProps {
     username: string
@@ -16,7 +17,7 @@ export const User = (props: UserProps) => {
     // by them.
     const { username } = props
 
-    const [profile, setProfile] = useState({
+    const [profile, setProfile] = useState<CurrentProfile>({
         username: "",
         name: "",
         age: 0,
@@ -26,6 +27,8 @@ export const User = (props: UserProps) => {
         relationship_status: "",
         profile_pic: ""
     })
+
+    const [requestStatus, setRequestStatus] = useState<CurrentRequestStatus>(false)
 
     // State variable that stores user's block status (i.e., false = user not blocked, true = user is blocked).
     const [blocked, setBlocked] = useState(false)
@@ -120,6 +123,9 @@ export const User = (props: UserProps) => {
                         <div className="profile-page-section">
                             <div className="profile-page-pic">
                                 <img src={`data:image/png;base64,${profile.profile_pic}`} alt="profile-pic"></img>
+                            </div>
+                            <div className="profile-page-bio">
+                                <button style={{ background: 'rgb(30, 15, 87)', color: 'rgb(205, 44, 226)', border: 'none', borderRadius: '20px', padding: '5px 20px', fontWeight: '1000', fontSize: '18.5px' }}>Send Chat Request</button>
                             </div>
                             <div className="profile-page-bio">
                                 <h1>{`${profile.name}, ${profile.age}`}</h1>
