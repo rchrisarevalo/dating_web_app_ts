@@ -64,7 +64,7 @@ export const Login = () => {
                 setAuthenticated(false)
                 
                 if (error.status != 429) {
-                    setErrorMessage(error.statusText)
+                    setErrorMessage("You have entered the wrong username/password. Try again!")
                 } else {
                     setErrorMessage(error.statusText)
                 }
@@ -142,7 +142,6 @@ export const Login = () => {
                             </>    
                         }
                     </div>
-                    <br></br>
                     <div className="login-page-buttons">
                         <button onClick={() => handleLogin} id="login-button">Sign In</button>
                     </div>

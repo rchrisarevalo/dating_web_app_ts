@@ -104,7 +104,8 @@ socket_server.on('connection', (socket) => {
 
     // Print message after disconnecting from server.
     socket.on('disconnect', () => {
-        // Clear all of the cache.
+        // Clear all of the cache when the user
+        // disconnects from the socket.
         cache.flushAll()
         console.log("Disconnected!")
     })
@@ -175,6 +176,7 @@ protected_route.use(async (req, res, next) => {
                         // as the origin of the server request, the client, to further
                         // protect backend endpoints from being accessed through unauthorized
                         // means.
+                        console.log("Token verified!")
                         if (payload_issuer == origin) {
                             next()
                         } else {
@@ -279,6 +281,8 @@ protected_route.get('/privacy/check_recommendation_settings', async (req, res) =
 protected_route.get('/retrieve_search_history', async (req, res) => {
     const username = req.cookies.username
     const db = await createConnection()
+
+    console.log("In this endpoint!")
 
     try {
         const statement = `

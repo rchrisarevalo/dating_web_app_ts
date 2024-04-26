@@ -122,6 +122,23 @@ export const User = (props: UserProps) => {
                                 <img src={`data:image/png;base64,${profile.profile_pic}`} alt="profile-pic"></img>
                             </div>
                             <div className="profile-page-bio">
+                                <div className="profile-page-details-row">
+                                    <button style={
+                                        { 
+                                            background: 'rgb(30, 15, 87)', 
+                                            color: 'rgb(205, 44, 226)', 
+                                            border: 'none', 
+                                            borderRadius: '20px', 
+                                            padding: '5px 20px', 
+                                            fontWeight: '1000', 
+                                            fontSize: '20px' 
+                                        }
+                                    }>
+                                        Send Chat Request
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="profile-page-bio">
                                 <h1>{`${profile.name}, ${profile.age}`}</h1>
                                 {profile.interests.split("\n").map((paragraph, i) => 
                                     <p key={`profile-interests-paragraph-${i}`}>

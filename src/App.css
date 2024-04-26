@@ -1353,8 +1353,8 @@ hr {
 }
 
 .user-feedback-column button {
-  margin-left: 20px;
-  margin-right: 20px;
+  margin-left: 5px;
+  margin-right: 5px;
   border-radius: 15px;
   padding: 7px 7px;
   z-index: 5;
