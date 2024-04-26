@@ -157,6 +157,10 @@ protected_route.use(async (req, res, next) => {
                 // in its string form.
                 const db_token = retrieved_token[0]["session"]
 
+                if (!db_token || typeof(db_token) == "undefined") {
+                    res.status(403).send({"message": "There is no existing token in the database."})
+                }
+
                 // Decode the token.
                 //
                 // If successful, move to the next request to indicate that
