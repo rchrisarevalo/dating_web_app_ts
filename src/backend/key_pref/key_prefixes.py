@@ -8,6 +8,13 @@ def visit_key_func(request: Request):
     
     return (username, visiting_user)
 
+def chat_req_key_func(request: Request):
+    data: dict = asyncio.run(request.json())
+    username = request.cookies.get("username")
+    requestee = data.get("requestee")
+
+    return (username, requestee)
+
 async def user_profiles_key(*args, **kwargs):
     request: Request = kwargs["request"]
     username = request.cookies.get("username")

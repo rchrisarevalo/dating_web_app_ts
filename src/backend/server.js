@@ -152,7 +152,7 @@ protected_route.use(async (req, res, next) => {
             const retrieved_token = r.rows
             // Edge case to ensure that the list is not empty and to
             // prevent an error from occurring.
-            if (retrieved_token) {
+            if (retrieved_token && "session" in retrieved_token[0]) {
                 // Retrieve the token from the list
                 // in its string form.
                 const db_token = retrieved_token[0]["session"]
@@ -259,15 +259,42 @@ protected_route.post('/profile/:user', profileCache, async (req, res) => {
     }
 })
 
-protected_route.post('/privacy/fetch_req_status', async (req, res) => {
+protected_route.post('/privacy/fetch_chat_req_status', async (req, res) => {
     const username = req.cookies.username
     const data = req.body
     const db = await createConnection()
 
     try {
-        res.status(200).send({"message": "Fetched user request status!"})
+        const statement = `
+            SELECT requestor, requestee, request_accepted AS approved FROM Chat_Requests 
+            WHERE (requestor=$1 AND requestee=$2)
+            OR (requestor=$3 AND requestee=$4)
+        `
+        const params = [username, data["requestee"], data["requestee"], username]
+        await db.connect()
+
+        let db_res = await db.query(statement, params)
+
+        if (db_res.rows.length !== 0) {
+            if (username == db_res.rows[0].requestor) {
+                db_res.rows[0].is_requestor = true
+            } else {
+                db_res.rows[0].is_requestor = false
+            }
+    
+            db_res.rows[0].sent = true
+           
+            res.status(200).send(db_res.rows[0])
+        } else {
+            res.status(200).send({})
+        }
     } catch {
+        console.log("Error fetching!")
         res.status(500).send({"message": "Failed to retrieve request status."})
+    } finally {
+        setTimeout(async () => {
+            await db.end()
+        }, 25)
     }
 })
 
@@ -403,6 +430,54 @@ protected_route.get("/retrieve_notification_count", async (req, res) => {
         }
     } else {
         res.status(400).send({"message": "Missing username for query parameter."})
+    }
+})
+
+protected_route.get("/retrieve_request_count", async (req, res) => {
+    const username = req.cookies.username
+    const db = await createConnection()
+
+    try {
+        const statement = `
+            SELECT COUNT(*) as request_count FROM Chat_Requests
+            WHERE (requestor!=$1 AND requestee=$2) 
+            AND request_accepted=$3
+        `
+        const params = [username, username, false]
+        await db.connect()
+        const db_res = await db.query(statement, params)
+        db_res.rows[0].request_count = parseInt(db_res.rows[0].request_count)
+        res.status(200).send(db_res.rows[0])
+    } catch {
+        res.status(500).send({"message": "Failed to retrive request count!"})
+    } finally {
+        setTimeout(async () => {
+            await db.end()
+        }, 25)
+    }
+})
+
+protected_route.get("/retrieve_chat_requests", async (req, res) => {
+    const username = req.cookies.username
+    const db = await createConnection()
+
+    try {
+        const statement = "SELECT * FROM retrieve_chat_reqs($1)"
+        const params = [username]
+        await db.connect()
+
+        let db_res = await db.query(statement, params)
+
+        // Turn the Buffer type into a readable UTF-8 string for the client to read
+        // in order to display the image of the user.
+        db_res.rows.map(result => result.uri = Buffer.from(result.uri).toString())
+        res.status(200).send(db_res.rows)
+    } catch {
+        res.status(500).send({"message": "Failed to retrieve chat requests."})
+    } finally {
+        setTimeout(async () => {
+            await db.end()
+        }, 25)
     }
 })
 

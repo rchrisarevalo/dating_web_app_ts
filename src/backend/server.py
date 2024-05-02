@@ -539,8 +539,106 @@ async def update_bio(request: Request):
         return {"message": "Successfully updated bio!"}
     
     except db.DatabaseError:
-        return {"message": "Error updating bio."}, 500
+        raise HTTPException(500, {"message": "Error updating bio."})
     
+    finally:
+        await terminate_connection(db)
+
+@protected_route.post("/privacy/make_chat_request")
+@limit.limit(os.environ["REQUEST_LIMIT"], key_func=visit_key_func)
+def make_chat_request(request: Request):
+    data: dict = asyncio.run(request.json())
+    username: str = request.cookies.get("username")
+    
+    db: p.extensions.connection = asyncio.run(create_connection())
+    cursor: p.extensions.cursor = db.cursor()
+
+    try:
+        make_req: str = "CALL make_chat_request(%s, %s)"
+        params: list = [username, data["requestee"]]
+        cursor.execute(make_req, params)
+        db.commit()
+
+        return {"message": "Chat request successfully made!"}
+
+    except db.DatabaseError:
+        raise HTTPException(500, {"message": "Chat request failed to be sent!"})
+    
+    except Exception:
+        raise HTTPException(500, {"message": "Error! Try again later!"})
+
+    finally:
+        asyncio.run(terminate_connection(db))
+
+@protected_route.put("/privacy/chat_request_response")
+async def chat_request_response(request: Request):
+    data: dict = await request.json()
+    username: str = request.cookies.get("username")
+    query: str = request.query_params.get("r")
+
+    db: p.extensions.connection = await create_connection()
+    cursor: p.extensions.cursor = db.cursor()
+
+    try:
+        if query == "approve":
+            statement = "CALL approve_chat_request(%s, %s)"
+            params = [data["requestor"], username]
+            cursor.execute(statement, params)
+            db.commit()
+
+        elif query == "deny":
+            statement = "CALL deny_chat_request(%s, %s)"
+            params = [data["requestor"], username]
+            cursor.execute(statement, params)
+            db.commit()
+
+        statement = "SELECT * FROM retrieve_chat_reqs(%s)"
+        params = [username]
+        cursor.execute(statement, params)
+
+        chat_reqs: list[dict[str, any]] = [{column.name: record 
+                                            for column, record 
+                                            in zip(cursor.description, records)} 
+                                            for records in cursor.fetchall()]
+        
+        for record in chat_reqs:
+            record.update({"uri": bytes(record["uri"]).decode('utf-8')})
+
+        return chat_reqs
+
+    except db.DatabaseError as d:
+        print(d)
+        raise HTTPException(500, {"message": "Chat request response failed to be processed."})
+
+    except Exception as e:
+        print(e)
+        raise HTTPException(500, {"message": "Server error. Please try again later."})
+    
+    finally:
+        await terminate_connection(db)
+
+@protected_route.put("/privacy/delete_chat_request")
+async def delete_chat_request(request: Request):
+    data: dict = await request.json()
+    username: str = request.cookies.get("username")
+
+    db: p.extensions.connection = await create_connection()
+    cursor: p.extensions.cursor = db.cursor()
+
+    try:
+        del_req: str = "CALL delete_chat_request(%s, %s)"
+        params: list = [username, data["requestee"]]
+        cursor.execute(del_req, params)
+        db.commit()
+
+        return {"message": "Chat request successfully deleted!"}
+    
+    except db.DatabaseError:
+        raise HTTPException(500, {"message": "Chat request failed to be deleted!"})
+    
+    except Exception:
+        raise HTTPException(500, {"message": "Error! Try again later!"})
+
     finally:
         await terminate_connection(db)
         

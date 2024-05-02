@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from 'react-router-dom';
-import { IoChatboxEllipsesOutline, IoSettingsOutline, IoSearchOutline, IoLogOutOutline, IoSendOutline } from "react-icons/io5"
+import { IoChatboxEllipsesOutline, IoSettingsOutline, IoSearchOutline, IoLogOutOutline, IoSendOutline, IoMailOutline } from "react-icons/io5"
 import { ProfilePicture } from "./ProfilePicture";
 import { socket_conn, py_conn } from "../functions/SocketConn";
 import { NotificationCounter } from "./NotificationCounter";
@@ -11,18 +11,22 @@ import MediaQuery from "react-responsive";
 interface NavProps {
     username: string,
     notificationCounter: number,
+    chatRequestCounter: number,
     error: boolean,
     pending: boolean
+    chat_request_error: boolean,
+    chat_request_pending: boolean
 }
 
 interface UserNavProps {
     current_user_username: string,
     logged_in_user_username: string,
     blocked: boolean,
+    chat_request_approved: boolean
 }
 
 export const Nav = (props: NavProps) => {
-    const { username, notificationCounter, error, pending } = props
+    const { username, notificationCounter, chatRequestCounter, error, pending, chat_request_error, chat_request_pending } = props
 
     const path = useLocation()
 
@@ -64,6 +68,7 @@ export const Nav = (props: NavProps) => {
                     <div id="profile-nav-col">
                         <Link to={`/profile/options/`} rel="noreferrer"><IoSettingsOutline size={20} style={{ marginBottom: 2 }} /></Link>
                         <Link to={`/profile/recent_messages`}><NotificationCounter counter={notificationCounter} pending={pending} error={error} /><IoChatboxEllipsesOutline size={20} /></Link>
+                        <Link to={`/profile/follow_requests`}><NotificationCounter counter={chatRequestCounter} pending={chat_request_pending} error={chat_request_error} /><IoMailOutline size={20} /></Link>
                         <Link to={`/profile/search`}><IoSearchOutline size={20} style={{ marginBottom: 2 }} /></Link>
                     </div>
                     <div id="profile-nav-col">
@@ -81,6 +86,7 @@ export const Nav = (props: NavProps) => {
                     }
                     <li><Link to={`/profile/options`}><IoSettingsOutline size={30} />Settings</Link></li>
                     <li><Link to={"/profile/recent_messages"}><NotificationCounter counter={notificationCounter} error={error} pending={pending} /><IoChatboxEllipsesOutline size={30} />Messages</Link></li>
+                    <li><Link to={`/profile/follow_requests`}><NotificationCounter counter={chatRequestCounter} pending={chat_request_pending} error={chat_request_error} /><IoMailOutline size={30} />Chat Requests</Link></li>
                     <li><Link to={`/profile/search`}><IoSearchOutline size={30} />Search</Link></li>
                     {((path.pathname !== '/profile') && (path.pathname !== '/profile/')) ?
                         <li><Link to={`/profile`}><ProfilePicture /></Link></li>
@@ -94,7 +100,7 @@ export const Nav = (props: NavProps) => {
 }
 
 export const UserNav = (props: UserNavProps) => {
-    const { current_user_username, logged_in_user_username, blocked } = props
+    const { current_user_username, logged_in_user_username, blocked, chat_request_approved } = props
 
     const handleBlockUser = () => {
         fetch("http://localhost:5000/block", {
@@ -128,7 +134,8 @@ export const UserNav = (props: UserNavProps) => {
                 <Link to={`/profile/`}><ProfilePicture />{`\t\t ${sessionStorage.getItem("username")}`}</Link>
             </div>
             <div id="profile-nav-col">
-                {!blocked && <Link to={`/message/${current_user_username}`}><IoSendOutline size={20} style={{ marginBottom: 0.5 }} /></Link>}
+                {(chat_request_approved) && <Link to={`/message/${current_user_username}`}><IoSendOutline size={20} style={{ marginBottom: 0.5 }} /></Link>}
+                <Link to={`/profile/follow_requests`}><IoMailOutline size={20} /></Link>
                 <Link to={`/profile/search`}><IoSearchOutline size={20} style={{ marginBottom: 3 }} /></Link>
             </div>
             <div id="profile-nav-col">

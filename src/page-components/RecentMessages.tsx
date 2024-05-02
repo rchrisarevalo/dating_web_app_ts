@@ -10,6 +10,7 @@ import { Loading } from '../components/Loading'
 import { RatingSubmission } from '../types/types.config'
 import MediaQuery from 'react-responsive'
 import { Spinner } from 'react-bootstrap'
+import { socket_conn } from '../functions/SocketConn'
 
 export const RecentMessages = () => {
 
@@ -58,9 +59,17 @@ export const RecentMessages = () => {
 
     const handleRatingSubmission = (user_rating_details: RatingSubmission) => {
 
+        console.log(user_rating_details.rating_type, user_rating_details.original_rating_type)
+
         setRecentMessagedUsers((prev) => {
             const updatedRecentMessages = [...prev]
-            updatedRecentMessages[user_rating_details.index]["rating_type"] = user_rating_details.rating_type
+
+            if (user_rating_details.rating_type != user_rating_details.original_rating_type) {
+                updatedRecentMessages[user_rating_details.index]["rating_type"] = user_rating_details.rating_type
+            } else {
+                updatedRecentMessages[user_rating_details.index]["rating_type"] = ""
+            }
+
             return updatedRecentMessages
         })
 
@@ -77,13 +86,20 @@ export const RecentMessages = () => {
                 throw res.status
             }
         }).then(() => {
+            socket_conn.emit('receive-update-profile-request')
             setRatingChangeStatus({ ...ratingChangeStatus, error: false })
         }).catch((error) => {
             setRatingChangeStatus({ ...ratingChangeStatus, error: true })
 
             setRecentMessagedUsers((prev) => {
                 const originalRecentMessages = [...prev]
-                originalRecentMessages[user_rating_details.index]["rating_type"] = user_rating_details.original_rating_type
+
+                if (user_rating_details.rating_type != user_rating_details.original_rating_type) {
+                    originalRecentMessages[user_rating_details.index]["rating_type"] = user_rating_details.original_rating_type
+                } else {
+                    originalRecentMessages[user_rating_details.index]["rating_type"] = ""
+                }
+
                 return originalRecentMessages
             })
 
@@ -128,13 +144,28 @@ export const RecentMessages = () => {
                                                                 <div className="user-feedback-column">
                                                                     <>
                                                                         {recent.rating_type === "positive" ?
-                                                                            <button onClick={() => handleRatingSubmission({ rating_type: "positive", original_rating_type: recent.rating_type, username: recent.user2, logged_in_user: retrieveUsername, index: i })} style={{background: 'red'}} id="positive">
+                                                                            <button onClick={() => handleRatingSubmission({
+                                                                                rating_type: "positive",
+                                                                                original_rating_type: recent.rating_type,
+                                                                                username: recent.user2,
+                                                                                logged_in_user: retrieveUsername,
+                                                                                index: i
+                                                                            })}
+                                                                                style={{ background: 'red' }}
+                                                                                id="positive">
                                                                                 <div className="user-feedback-column">
                                                                                     <IoHeart size={30} />
                                                                                 </div>
                                                                             </button>
                                                                             :
-                                                                            <button onClick={() => handleRatingSubmission({ rating_type: "positive", original_rating_type: recent.rating_type, username: recent.user2, logged_in_user: retrieveUsername, index: i })} id="positive">
+                                                                            <button onClick={() => handleRatingSubmission({
+                                                                                rating_type: "positive",
+                                                                                original_rating_type: recent.rating_type,
+                                                                                username: recent.user2,
+                                                                                logged_in_user: retrieveUsername,
+                                                                                index: i
+                                                                            })}
+                                                                                id="positive">
                                                                                 <div className="user-feedback-column">
                                                                                     <IoHeartOutline size={30} />
                                                                                 </div>
@@ -144,13 +175,28 @@ export const RecentMessages = () => {
                                                                 </div>
                                                                 <div className="user-feedback-column">
                                                                     {recent.rating_type === "neutral" ?
-                                                                        <button onClick={() => handleRatingSubmission({ rating_type: "neutral", original_rating_type: recent.rating_type, username: recent.user2, logged_in_user: retrieveUsername, index: i })} style={{background: 'grey'}} id="neutral">
+                                                                        <button onClick={() => handleRatingSubmission({
+                                                                            rating_type: "neutral",
+                                                                            original_rating_type: recent.rating_type,
+                                                                            username: recent.user2,
+                                                                            logged_in_user: retrieveUsername,
+                                                                            index: i
+                                                                        })}
+                                                                            style={{ background: 'grey' }}
+                                                                            id="neutral">
                                                                             <div className="user-feedback-column">
                                                                                 <IoHeartHalfOutline size={30} />
                                                                             </div>
                                                                         </button>
                                                                         :
-                                                                        <button onClick={() => handleRatingSubmission({ rating_type: "neutral", original_rating_type: recent.rating_type, username: recent.user2, logged_in_user: retrieveUsername, index: i })} id="neutral">
+                                                                        <button onClick={() => handleRatingSubmission({
+                                                                            rating_type: "neutral",
+                                                                            original_rating_type: recent.rating_type,
+                                                                            username: recent.user2,
+                                                                            logged_in_user: retrieveUsername,
+                                                                            index: i
+                                                                        })}
+                                                                            id="neutral">
                                                                             <div className="user-feedback-column">
                                                                                 <IoHeartHalfOutline size={30} />
                                                                             </div>
@@ -160,7 +206,14 @@ export const RecentMessages = () => {
                                                                 <div className="user-feedback-column">
                                                                     {recent.rating_type === "negative" ?
                                                                         <div className="user-feedback-column">
-                                                                            <button onClick={() => handleRatingSubmission({ rating_type: "negative", original_rating_type: recent.rating_type, username: recent.user2, logged_in_user: retrieveUsername, index: i })} style={{background: 'blue'}} id="negative">
+                                                                            <button onClick={() => handleRatingSubmission({
+                                                                                rating_type: "negative",
+                                                                                original_rating_type: recent.rating_type,
+                                                                                username: recent.user2,
+                                                                                logged_in_user: retrieveUsername,
+                                                                                index: i
+                                                                            })} style={{ background: 'blue' }}
+                                                                                id="negative">
                                                                                 <div className="user-feedback-column">
                                                                                     <IoHeartDislike size={30} />
                                                                                 </div>
@@ -168,7 +221,14 @@ export const RecentMessages = () => {
                                                                         </div>
                                                                         :
                                                                         <div className="user-feedback-column">
-                                                                            <button onClick={() => handleRatingSubmission({ rating_type: "negative", original_rating_type: recent.rating_type, username: recent.user2, logged_in_user: retrieveUsername, index: i })} id="negative">
+                                                                            <button onClick={() => handleRatingSubmission({
+                                                                                rating_type: "negative",
+                                                                                original_rating_type: recent.rating_type,
+                                                                                username: recent.user2,
+                                                                                logged_in_user: retrieveUsername,
+                                                                                index: i
+                                                                            })}
+                                                                                id="negative">
                                                                                 <div className="user-feedback-column">
                                                                                     <IoHeartDislikeOutline size={30} />
                                                                                 </div>
@@ -209,13 +269,27 @@ export const RecentMessages = () => {
                                                                 <div className="user-feedback-column">
                                                                     <>
                                                                         {recent.rating_type === "positive" ?
-                                                                            <button onClick={() => handleRatingSubmission({ rating_type: "positive", original_rating_type: recent.rating_type, username: recent.user2, logged_in_user: retrieveUsername, index: i })} id="positive">
+                                                                            <button onClick={() => handleRatingSubmission({
+                                                                                rating_type: "positive",
+                                                                                original_rating_type: recent.rating_type,
+                                                                                username: recent.user2,
+                                                                                logged_in_user: retrieveUsername,
+                                                                                index: i
+                                                                            })} style={{ background: 'red' }}
+                                                                                id="positive">
                                                                                 <div className="user-feedback-column">
-                                                                                    <IoHeart size={30} color='red' />
+                                                                                    <IoHeart size={30} />
                                                                                 </div>
                                                                             </button>
                                                                             :
-                                                                            <button onClick={() => handleRatingSubmission({ rating_type: "positive", original_rating_type: recent.rating_type, username: recent.user2, logged_in_user: retrieveUsername, index: i })} id="positive">
+                                                                            <button onClick={() => handleRatingSubmission({
+                                                                                rating_type: "positive",
+                                                                                original_rating_type: recent.rating_type,
+                                                                                username: recent.user2,
+                                                                                logged_in_user: retrieveUsername,
+                                                                                index: i
+                                                                            })}
+                                                                                id="positive">
                                                                                 <div className="user-feedback-column">
                                                                                     <IoHeartOutline size={30} />
                                                                                 </div>
@@ -225,13 +299,28 @@ export const RecentMessages = () => {
                                                                 </div>
                                                                 <div className="user-feedback-column">
                                                                     {recent.rating_type === "neutral" ?
-                                                                        <button onClick={() => handleRatingSubmission({ rating_type: "neutral", original_rating_type: recent.rating_type, username: recent.user2, logged_in_user: retrieveUsername, index: i })} id="neutral">
+                                                                        <button onClick={() => handleRatingSubmission({
+                                                                            rating_type: "neutral",
+                                                                            original_rating_type: recent.rating_type,
+                                                                            username: recent.user2,
+                                                                            logged_in_user: retrieveUsername,
+                                                                            index: i
+                                                                        })}
+                                                                            style={{ background: 'grey' }}
+                                                                            id="neutral">
                                                                             <div className="user-feedback-column">
-                                                                                <IoHeartHalfOutline size={30} color='yellow' />
+                                                                                <IoHeartHalfOutline size={30} />
                                                                             </div>
                                                                         </button>
                                                                         :
-                                                                        <button onClick={() => handleRatingSubmission({ rating_type: "neutral", original_rating_type: recent.rating_type, username: recent.user2, logged_in_user: retrieveUsername, index: i })} id="neutral">
+                                                                        <button onClick={() => handleRatingSubmission({
+                                                                            rating_type: "neutral",
+                                                                            original_rating_type: recent.rating_type,
+                                                                            username: recent.user2,
+                                                                            logged_in_user: retrieveUsername,
+                                                                            index: i
+                                                                        })}
+                                                                            id="neutral">
                                                                             <div className="user-feedback-column">
                                                                                 <IoHeartHalfOutline size={30} />
                                                                             </div>
@@ -241,15 +330,30 @@ export const RecentMessages = () => {
                                                                 <div className="user-feedback-column">
                                                                     {recent.rating_type === "negative" ?
                                                                         <div className="user-feedback-column">
-                                                                            <button onClick={() => handleRatingSubmission({ rating_type: "negative", original_rating_type: recent.rating_type, username: recent.user2, logged_in_user: retrieveUsername, index: i })} id="negative">
+                                                                            <button onClick={() => handleRatingSubmission({
+                                                                                rating_type: "negative",
+                                                                                original_rating_type: recent.rating_type,
+                                                                                username: recent.user2,
+                                                                                logged_in_user: retrieveUsername,
+                                                                                index: i
+                                                                            })}
+                                                                                style={{ background: 'blue' }}
+                                                                                id="negative">
                                                                                 <div className="user-feedback-column">
-                                                                                    <IoHeartDislike size={30} color='blue' />
+                                                                                    <IoHeartDislike size={30} />
                                                                                 </div>
                                                                             </button>
                                                                         </div>
                                                                         :
                                                                         <div className="user-feedback-column">
-                                                                            <button onClick={() => handleRatingSubmission({ rating_type: "negative", original_rating_type: recent.rating_type, username: recent.user2, logged_in_user: retrieveUsername, index: i })} id="negative">
+                                                                            <button onClick={() => handleRatingSubmission({
+                                                                                rating_type: "negative",
+                                                                                original_rating_type: recent.rating_type,
+                                                                                username: recent.user2,
+                                                                                logged_in_user: retrieveUsername,
+                                                                                index: i
+                                                                            })}
+                                                                                id="negative">
                                                                                 <div className="user-feedback-column">
                                                                                     <IoHeartDislikeOutline size={30} />
                                                                                 </div>

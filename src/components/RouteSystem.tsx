@@ -5,6 +5,7 @@ import { useFetchProfile } from "../hooks/useFetchProfile";
 import { useFetchRoutes } from "../hooks/useFetchSearch";
 import { useFetchAlgoConfig } from "../hooks/useFetchSearch";
 import { useNotificationUpdate } from "../hooks/useNotificationUpdate";
+import { useFetchReqCount } from "../hooks/useChatReq";
 
 // Import necessary React Router DOM libraries to configure routes.
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
@@ -22,6 +23,7 @@ import { PrivacySettings } from "../page-components/PrivacySettings";
 import { BlockedUsers } from "../page-components/BlockedUsers";
 import { DownloadInfo } from "../page-components/DownloadInfo";
 import { RecentMessages } from "../page-components/RecentMessages";
+import { ViewChatReqs } from "../page-components/ViewChatReqs";
 import { SearchPage } from "../page-components/SearchPage";
 import { User } from "../page-components/User";
 import { Message } from "../page-components/Message";
@@ -100,6 +102,10 @@ export const RoutingSystem = () => {
         // Fetch user's current notification counter.
         const { notification_counter, notification_error, notification_pending } = useNotificationUpdate(username, connection)
         
+        // Fetch user's current request count based on the requests sent to them
+        // excluding the ones they made to others.
+        const { req_count, req_pending, req_error } = useFetchReqCount("http://localhost:4000/retrieve_request_count")
+
         // This section is executed when the user navigates another page through
         // their browser's search bar or if they are opening their browser while
         // their session is currently valid.
@@ -109,7 +115,15 @@ export const RoutingSystem = () => {
         return (
             <>
                 { (path !== "/tos" && domain_path !== "message" && domain_path !== "user") ?
-                    <Nav username={username} notificationCounter={notification_counter} error={notification_error} pending={notification_pending} />
+                    <Nav 
+                         username={username} 
+                         notificationCounter={notification_counter}
+                         chatRequestCounter={req_count} 
+                         error={notification_error} 
+                         pending={notification_pending}
+                         chat_request_error={req_error}
+                         chat_request_pending={req_pending} 
+                    />
                     :
                     <></>
                 }
@@ -166,6 +180,7 @@ export const RoutingSystem = () => {
                                     <Route path="/profile/options/privacy/view_blocked_users" element={<BlockedUsers />} />
                                     <Route path="/profile/options/privacy/download_information" element={<DownloadInfo />} />
                                     <Route path="/profile/recent_messages" element={<RecentMessages />} />
+                                    <Route path="/profile/follow_requests" element={<ViewChatReqs />} />
                                     <Route path="/profile/search" element={<SearchPage 
                                         algo_config={algo_config}
                                         use_so_filter={use_so_filter}

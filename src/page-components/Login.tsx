@@ -64,7 +64,7 @@ export const Login = () => {
                 setAuthenticated(false)
                 
                 if (error.status != 429) {
-                    setErrorMessage(error.statusText)
+                    setErrorMessage("Incorrect username and/or password.")
                 } else {
                     setErrorMessage(error.statusText)
                 }

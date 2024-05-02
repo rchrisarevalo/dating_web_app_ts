@@ -6,7 +6,11 @@ import { Loading } from '../components/Loading'
 import { MobileFooter } from '../components/MobileFooter'
 
 import { useLogVisit } from '../hooks/useLogVisit'
+import { useFetchChatReqStatus, useSendChatReq } from '../hooks/useChatReq'
 import { CurrentProfile, CurrentRequestStatus } from '../types/types.config'
+
+import { IoTrashOutline } from "react-icons/io5";
+import { Spinner } from 'react-bootstrap'
 
 interface UserProps {
     username: string
@@ -28,7 +32,13 @@ export const User = (props: UserProps) => {
         profile_pic: ""
     })
 
-    const [requestStatus, setRequestStatus] = useState<CurrentRequestStatus>(false)
+    const [request, setRequest] = useState<CurrentRequestStatus>({
+        sent: false,
+        made: false,
+        type: "",
+        approved: false,
+        is_requestor: false
+    })
 
     // State variable that stores user's block status (i.e., false = user not blocked, true = user is blocked).
     const [blocked, setBlocked] = useState(false)
@@ -41,6 +51,16 @@ export const User = (props: UserProps) => {
 
     // State variable that handles pending status.
     const [pending, setPending] = useState(true)
+
+    const { chat_req_loading, chat_req_error } = useFetchChatReqStatus(
+        retrieve_username_from_path,
+        setRequest
+    )
+    useSendChatReq(
+        retrieve_username_from_path,
+        request,
+        setRequest
+    )
 
     // useEffect hook will use the user's username to retrieve basic
     // profile information, such as their name, bio, age, etc.
@@ -114,9 +134,16 @@ export const User = (props: UserProps) => {
         })
     }, [username, retrieve_username_from_path])
 
+    console.log(request.is_requestor)
+
     return (
         <div className="profile-container">
-            <UserNav current_user_username={retrieve_username_from_path} logged_in_user_username={username} blocked={blocked} />
+            <UserNav
+                current_user_username={retrieve_username_from_path}
+                logged_in_user_username={username}
+                blocked={blocked}
+                chat_request_approved={request.approved}
+            />
             {!pending ?
                 <>
                     {!error ?
@@ -125,11 +152,56 @@ export const User = (props: UserProps) => {
                                 <img src={`data:image/png;base64,${profile.profile_pic}`} alt="profile-pic"></img>
                             </div>
                             <div className="profile-page-bio">
-                                <button style={{ background: 'rgb(30, 15, 87)', color: 'rgb(205, 44, 226)', border: 'none', borderRadius: '20px', padding: '5px 20px', fontWeight: '1000', fontSize: '18.5px' }}>Send Chat Request</button>
+                                {!chat_req_loading ?
+                                    !chat_req_error ?
+                                        <>
+                                            {(request.sent && !request.approved) &&
+                                                <>
+                                                    {request.is_requestor ?
+                                                        <span id="requestor-span">
+                                                            <button id="requestor-btn"
+                                                                disabled
+                                                            >
+                                                                Chat Request Pending
+                                                            </button>
+                                                            <IoTrashOutline
+                                                                onClick={() => setRequest({ ...request, made: true, type: "remove" })}
+                                                                style={{ cursor: 'pointer', color: 'rgb(205, 44, 226)', marginLeft: '10px' }}
+                                                                size={20}
+                                                            />
+                                                        </span>
+                                                        :
+                                                        <span id="requestee-span">
+                                                            <button id="requestee-btn">
+                                                                Approve Request
+                                                            </button>
+                                                            <button id="requestee-btn">
+                                                                Deny Request
+                                                            </button>
+                                                        </span>
+                                                    }
+                                                </>
+                                            }
+                                            {(!request.sent && !request.approved) &&
+                                                <button onClick={() => setRequest({ ...request, made: true, type: "send" })} id="request-btn">
+                                                    Send Chat Request
+                                                </button>
+                                            }
+                                            {(request.sent && request.approved) &&
+                                                <button onClick={() => setRequest({ ...request, made: true, type: "remove" })} id="unfollow-btn">
+                                                    Unfollow
+                                                </button>
+                                            }
+                                        </>
+                                        :
+                                        <p>Error! Try again!</p> 
+                                    :
+                                    <Spinner animation='border' />     
+                                }
                             </div>
                             <div className="profile-page-bio">
                                 <h1>{`${profile.name}, ${profile.age}`}</h1>
-                                {profile.interests.split("\n").map((paragraph, i) => 
+                                {profile.interests.split("\n").map((paragraph, i) =>
                                     <p key={`profile-interests-paragraph-${i}`}>
                                         {paragraph}
                                         <br></br>
@@ -158,7 +230,11 @@ export const User = (props: UserProps) => {
                 :
                 <Loading error={error} />
             }
-            <MobileFooter username={username} blocked={blocked} />
+            <MobileFooter
+                username={username}
+                blocked={blocked}
+                chat_request_approved={request.approved}
+            />
         </div>
     )
 }
