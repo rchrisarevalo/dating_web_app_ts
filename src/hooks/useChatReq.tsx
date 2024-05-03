@@ -53,7 +53,7 @@ export const useSendChatReq = (requestee: string,
 
             setRequest({...request, type: "", made: false})
         }
-    }, [request.made])
+    }, [request.made, request, requestee, setRequest])
 }
 
 export const useFetchChatReqStatus = (requestee: string, setRequest: React.Dispatch<React.SetStateAction<CurrentRequestStatus>>) => {
@@ -85,7 +85,7 @@ export const useFetchChatReqStatus = (requestee: string, setRequest: React.Dispa
         }
 
         fetchChatReq()
-    }, [])
+    }, [requestee, setRequest])
 
     return { chat_req_loading: pending, chat_req_error: error }
 }

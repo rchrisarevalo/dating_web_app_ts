@@ -1211,7 +1211,8 @@ async def block(request: Request):
     if not data["block_requested"]:
         try:
             statement = '''
-                SELECT B.blockee from Blocked B WHERE (B.blocker=%s AND B.blockee=%s) 
+                SELECT B.blockee from Blocked B WHERE 
+                (B.blocker=%s AND B.blockee=%s) 
                 OR (B.blocker=%s AND B.blockee=%s)
             '''
             params = [username, data["profile_user"], data["profile_user"], username]
@@ -1234,6 +1235,12 @@ async def block(request: Request):
                 try:
                     statement = "INSERT INTO Blocked (blocker, blockee) VALUES (%s, %s)"
                     params = [username, data["profile_user"]]
+                    cursor.execute(statement, params)
+                    db.commit()
+                    
+                    # Unfollow the user after they have been blocked.
+                    statement: str = "CALL delete_chat_request(%s, %s)"
+                    params: list = [username, data["profile_user"]]
                     cursor.execute(statement, params)
                     db.commit()
                     
