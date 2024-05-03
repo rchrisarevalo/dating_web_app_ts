@@ -56,11 +56,56 @@ export const User = (props: UserProps) => {
         retrieve_username_from_path,
         setRequest
     )
+
+    // Custom hook that sends a chat request to the user
+    // that the logged in user is visiting.
     useSendChatReq(
         retrieve_username_from_path,
         request,
         setRequest
     )
+
+    const approveChatReq = async () => {
+        const res = await fetch(`http://localhost:5000/privacy/chat_request_response?r=approve`, {
+            method: 'PUT',
+            credentials: 'include',
+            body: JSON.stringify({
+                requestor: retrieve_username_from_path
+            }),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+
+        if (res.ok) {
+            setRequest({
+                ...request,
+                approved: true,
+                sent: true
+            })
+        }
+    }
+
+    const deleteChatReq = async () => {
+        const res = await fetch(`http://localhost:5000/privacy/chat_request_response?r=deny`, {
+            method: 'PUT',
+            credentials: 'include',
+            body: JSON.stringify({
+                requestor: retrieve_username_from_path
+            }),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+
+        if (res.ok) {
+            setRequest({
+                ...request,
+                approved: false,
+                sent: false
+            })
+        }
+    }
 
     // useEffect hook will use the user's username to retrieve basic
     // profile information, such as their name, bio, age, etc.
@@ -102,6 +147,8 @@ export const User = (props: UserProps) => {
         retrieveUserProfile()
     }, [retrieve_username_from_path])
 
+    // Custom hook that increments the number of times
+    // the logged in user visits the user.
     useLogVisit(retrieve_username_from_path)
 
     // Retrieve user's blocked status.
@@ -133,8 +180,6 @@ export const User = (props: UserProps) => {
             setError(true)
         })
     }, [username, retrieve_username_from_path])
-
-    console.log(request.is_requestor)
 
     return (
         <div className="profile-container">
@@ -172,10 +217,10 @@ export const User = (props: UserProps) => {
                                                         </span>
                                                         :
                                                         <span id="requestee-span">
-                                                            <button id="requestee-btn">
+                                                            <button id="requestee-btn" onClick={approveChatReq}>
                                                                 Approve Request
                                                             </button>
-                                                            <button id="requestee-btn">
+                                                            <button id="requestee-btn" onClick={deleteChatReq}>
                                                                 Deny Request
                                                             </button>
                                                         </span>

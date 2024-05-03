@@ -21,7 +21,7 @@ export const ViewChatReqs = () => {
                 console.log("It's empty!")
             }
         }
-    }, [chat_reqs])
+    }, [chatReqs, chat_reqs, chat_reqs_error, chat_reqs_pending])
 
     const approveChatReq = async (username: string) => {
         const res = await fetch(`http://localhost:5000/privacy/chat_request_response?r=approve`, {
@@ -36,8 +36,9 @@ export const ViewChatReqs = () => {
         })
 
         if (res.ok) {
-            const data: ChatReq[] = await res.json()
+            const data = await res.json()
             setChatReqs(data)
+            window.location.reload()
         } else {
             console.log(res.status)
         }
@@ -56,8 +57,9 @@ export const ViewChatReqs = () => {
         })
 
         if (res.ok) {
-            const data: ChatReq[] = await res.json()
+            const data = await res.json()
             setChatReqs(data)
+            window.location.reload()
         } else {
             console.log(res.status)
         }
