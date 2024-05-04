@@ -78,6 +78,9 @@ export const useFetchRoutes = (endpoint: string, auth: boolean) => {
     const [profiles, setProfiles] = useState([{
         username: ""
     }])
+    const [chatRoutes, setChatRoutes] = useState([{
+        username: ""
+    }])
 
     const [pending, setPending] = useState(true)
     const [error, setError] = useState(false)
@@ -94,7 +97,8 @@ export const useFetchRoutes = (endpoint: string, auth: boolean) => {
                 if (res.ok) {
                     const data = await res.json()
                     setPending(false)
-                    setProfiles(data)
+                    setProfiles(data.user_routes)
+                    setChatRoutes(data.chat_user_routes)
                 } else {
                     setPending(false)
                     setError(true)
@@ -105,7 +109,7 @@ export const useFetchRoutes = (endpoint: string, auth: boolean) => {
         }
     }, [endpoint, auth])
 
-    return { profiles, pending, error }
+    return { profiles, chatRoutes, pending, error }
 }
 
 export const useFetchMatches = (match_endpoint: string, 

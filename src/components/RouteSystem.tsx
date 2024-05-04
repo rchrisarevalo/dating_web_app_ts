@@ -188,10 +188,10 @@ export const RoutingSystem = () => {
                                         algo_error={algo_error}
                                     />} />
                                     {profile_data.profiles.map((user: { username: string; }) => 
-                                        <>
-                                            <Route path={`/user/${user.username}`} element={<User username={user.username} />} />
-                                            <Route path={`/message/${user.username}`} element={<Message username={username} />} />
-                                        </>
+                                        <Route path={`/user/${user.username}`} element={<User username={user.username} />} />
+                                    )}
+                                    {profile_data.chatRoutes.map((user: { username: string; }) => 
+                                        <Route path={`/message/${user.username}`} element={<Message username={username} />} />
                                     )}
                                     <Route path="/tos" element={<TOS />} />
                                     <Route path="*" element={

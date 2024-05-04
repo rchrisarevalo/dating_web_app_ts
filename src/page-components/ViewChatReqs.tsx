@@ -14,14 +14,8 @@ export const ViewChatReqs = () => {
     useEffect(() => {
         if (!chat_reqs_pending && !chat_reqs_error) {
             setChatReqs(chat_reqs)
-
-            if (chatReqs) {
-                console.log("It's not empty!")
-            } else {
-                console.log("It's empty!")
-            }
         }
-    }, [chatReqs, chat_reqs, chat_reqs_error, chat_reqs_pending])
+    }, [chat_reqs, chat_reqs_error, chat_reqs_pending])
 
     const approveChatReq = async (username: string) => {
         const res = await fetch(`http://localhost:5000/privacy/chat_request_response?r=approve`, {
@@ -38,7 +32,6 @@ export const ViewChatReqs = () => {
         if (res.ok) {
             const data = await res.json()
             setChatReqs(data)
-            window.location.reload()
         } else {
             console.log(res.status)
         }
@@ -59,7 +52,6 @@ export const ViewChatReqs = () => {
         if (res.ok) {
             const data = await res.json()
             setChatReqs(data)
-            window.location.reload()
         } else {
             console.log(res.status)
         }

@@ -61,7 +61,7 @@ const createConnection = async () => {
 // Create socket server connection so that client
 // can emit messages to it.
 socket_server.on('connection', (socket) => {
-    console.log("Connected!")
+    console.log(socket.handshake.query)
 
     // Retrieve message from client (sender).
     socket.on('sender-message', (sender_msg, username) => {
@@ -194,6 +194,8 @@ protected_route.use(async (req, res, next) => {
             }
         }).catch((error) => {
             console.log(error)
+        }).finally(() => {
+            db.end()
         })
     })
 })
@@ -347,12 +349,16 @@ protected_route.get("/get_user_routes", async (req, res) => {
     const db = await createConnection()
 
     try {
-        const statement = "SELECT * FROM retrieve_users($1)"
-        const params = [username]
+        let statement = "SELECT * FROM retrieve_users($1)"
+        let params = [username]
         await db.connect()
-        const db_res = await db.query(statement, params)
+        const user_routes = await db.query(statement, params)
 
-        res.status(200).send(db_res.rows)
+        statement = "SELECT * FROM retrieve_chat_users($1)"
+        params = [username]
+        const approved_chat_user_routes = await db.query(statement, params)
+
+        res.status(200).send({"user_routes": user_routes.rows, "chat_user_routes": approved_chat_user_routes.rows})
     } catch {
         res.status(500).send({"message": "Failed to retrieve user routes! Try again!"})
     } finally {
