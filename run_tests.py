@@ -27,12 +27,12 @@ if __name__ == "__main__":
                                ''',
                               )
 
-    parser.add_argument('--t', 
+    parser.add_argument('--t', '--test', 
                         required=True, 
                         choices=["all", "server_test", "matching_algorithm_test"], 
                         help="The default argument used to run a specific test file or all tests.")
     
-    parser.add_argument("--c", 
+    parser.add_argument("--c", '--class', 
                         help="Argument used to run a series of unit tests within a unittest class in the matching_algorithm_test.py file.",
                         choices=[
                             "TestMatchingAlgorithmRunTime",
@@ -41,7 +41,7 @@ if __name__ == "__main__":
                             "TestRating"
                         ])
     
-    parser.add_argument('--f', 
+    parser.add_argument('--f', '--function', 
                         help='''
                                 The argument used to test a specific function within the test suite. 
                                 It can be combined with the --c argument when testing out the matching_algorithm_test.py file.
