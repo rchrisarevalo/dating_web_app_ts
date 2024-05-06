@@ -5,8 +5,16 @@ import os
 import psycopg2
 import jwt
 
-load_dotenv('secret.env', verbose=True)
-db = psycopg2.connect(os.getenv('DB_KEY'))
+# Edge case to change to the current working directory
+# to the "/backend" directory if it is not properly
+# set when initially running the test suite.
+if "backend" not in os.getcwd().split("\\"):
+    os.chdir("./src/backend")
+
+PATH = 'secret.env'
+load_dotenv(PATH)
+
+db = psycopg2.connect(os.environ.get("DB_KEY"))
 cursor = db.cursor()
 
 client = TestClient(server)

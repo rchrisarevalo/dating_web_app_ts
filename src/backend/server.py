@@ -40,8 +40,8 @@ sio = socketio.AsyncServer(
 load_dotenv(PATH)
 
 # Load environment variables from the .env file.
-SK_KEY=os.getenv('SK_KEY') if os.getenv("SK_KEY") else os.environ["SK_KEY"]
-DB_KEY=os.getenv('DB_KEY') if os.getenv("SK_KEY") else os.environ["SK_KEY"]
+SK_KEY=os.environ.get("SK_KEY")
+DB_KEY=os.environ.get("DB_KEY")
 
 server.add_middleware(
     CORSMiddleware,
@@ -294,7 +294,7 @@ async def check_login(request: Request):
         await terminate_connection(db)
         
 @protected_route.post("/visit")
-@limit.limit(os.environ["VISIT_LIMIT"], key_func=visit_key_func)
+@limit.limit(os.environ.get("VISIT_LIMIT"), key_func=visit_key_func)
 def visit(request: Request):
     data: dict = asyncio.run(request.json())
     db: p.extensions.connection = asyncio.run(create_connection())
@@ -545,7 +545,7 @@ async def update_bio(request: Request):
         await terminate_connection(db)
 
 @protected_route.post("/privacy/make_chat_request")
-@limit.limit(os.environ["REQUEST_LIMIT"], key_func=visit_key_func)
+@limit.limit(os.environ.get("REQUEST_LIMIT"), key_func=visit_key_func)
 def make_chat_request(request: Request):
     data: dict = asyncio.run(request.json())
     username: str = request.cookies.get("username")
