@@ -11,6 +11,7 @@ import { CurrentProfile, CurrentRequestStatus } from '../types/types.config'
 
 import { IoTrashOutline } from "react-icons/io5";
 import { Spinner } from 'react-bootstrap'
+import { socket_conn } from '../functions/SocketConn'
 
 interface UserProps {
     username: string
@@ -54,7 +55,8 @@ export const User = (props: UserProps) => {
 
     const { chat_req_loading, chat_req_error } = useFetchChatReqStatus(
         retrieve_username_from_path,
-        setRequest
+        setRequest,
+        socket_conn
     )
 
     // Custom hook that sends a chat request to the user

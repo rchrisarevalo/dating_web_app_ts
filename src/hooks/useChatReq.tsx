@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { CurrentRequestStatus, ChatReq } from '../types/types.config'
+import { socket_conn } from '../functions/SocketConn'
 
 export const useSendChatReq = (requestee: string, 
                                request: CurrentRequestStatus,
@@ -20,6 +21,7 @@ export const useSendChatReq = (requestee: string,
                 })
     
                 if (res.ok) {
+                    socket_conn.emit('chat-request', requestee)
                     setRequest({...request, made: false, is_requestor: true, sent: true})
                 } else {
                     setRequest({...request, made: false, sent: false})
@@ -39,6 +41,7 @@ export const useSendChatReq = (requestee: string,
                 })
     
                 if (res.ok) {
+                    socket_conn.emit('chat-request', requestee)
                     setRequest({...request, made: false, sent: false, approved: false})
                 } else {
                     setRequest({...request, made: false, sent: false, approved: false})
@@ -56,7 +59,9 @@ export const useSendChatReq = (requestee: string,
     }, [request.made, request, requestee, setRequest])
 }
 
-export const useFetchChatReqStatus = (requestee: string, setRequest: React.Dispatch<React.SetStateAction<CurrentRequestStatus>>) => {
+export const useFetchChatReqStatus = (requestee: string, 
+                                      setRequest: React.Dispatch<React.SetStateAction<CurrentRequestStatus>>,
+                                      connection: typeof socket_conn) => {
 
     const [pending, setPending] = useState(true)
     const [error, setError] = useState(false)
@@ -75,7 +80,7 @@ export const useFetchChatReqStatus = (requestee: string, setRequest: React.Dispa
             })
 
             if (res.ok) {
-                const data = await res.json()
+                const data: CurrentRequestStatus = await res.json()
                 setRequest(data)
                 setPending(false)
             } else {
@@ -85,12 +90,22 @@ export const useFetchChatReqStatus = (requestee: string, setRequest: React.Dispa
         }
 
         fetchChatReq()
-    }, [requestee, setRequest])
+
+        if (connection.active) {
+            connection.on('update-chat-request', () => {
+                fetchChatReq()
+            })
+        }
+
+        return () => {
+            connection.off('update-chat-request')
+        }
+    }, [requestee, setRequest, connection])
 
     return { chat_req_loading: pending, chat_req_error: error }
 }
 
-export const useFetchReqCount = (endpoint: string) => {
+export const useFetchReqCount = (endpoint: string, connection: typeof socket_conn) => {
     const [error, setError] = useState(false)
     const [pending, setPending] = useState(true)
     const [reqCount, setReqCount] = useState(0)
@@ -104,6 +119,7 @@ export const useFetchReqCount = (endpoint: string) => {
 
             if (res.ok) {
                 const data = await res.json()
+                console.log(data)
                 setReqCount(data.request_count)
                 setPending(false)
             } else {
@@ -112,12 +128,22 @@ export const useFetchReqCount = (endpoint: string) => {
             }
         }
         fetchReqCount()
-    }, [endpoint])
+
+        if (connection.active) {
+            connection.on('update-chat-request', () => {
+                fetchReqCount()
+            })
+        }
+
+        return () => {
+            connection.off('update-chat-request')
+        }
+    }, [endpoint, connection])
 
     return { req_count: reqCount, req_pending: pending, req_error: error }
 }
 
-export const useFetchChatReqs = (endpoint: string) => {
+export const useFetchChatReqs = (endpoint: string, connection: typeof socket_conn) => {
     const [error, setError] = useState(false)
     const [pending, setPending] = useState(true)
 
@@ -140,7 +166,17 @@ export const useFetchChatReqs = (endpoint: string) => {
             }
         }
         fetchChatReqs()
-    }, [endpoint])
+
+        if (connection.active) {
+            connection.on('update-chat-request', () => {
+                fetchChatReqs()
+            })
+        }
+
+        return () => {
+            connection.off('update-chat-request')
+        }
+    }, [endpoint, connection])
 
     return { chat_reqs: chatReqs, chat_reqs_pending: pending, chat_reqs_error: error }
 }

@@ -61,8 +61,6 @@ const createConnection = async () => {
 // Create socket server connection so that client
 // can emit messages to it.
 socket_server.on('connection', (socket) => {
-    console.log(socket.handshake.query)
-
     // Retrieve message from client (sender).
     socket.on('sender-message', (sender_msg, username) => {
         // Emit message to recipient.
@@ -71,6 +69,10 @@ socket_server.on('connection', (socket) => {
 
     socket.on('receive-update-profile-request', () => {
         cache.flushAll()
+    })
+
+    socket.on('chat-request', (username) => {
+        socket.to(socket_id_users[username]).emit('update-chat-request')
     })
 
     // Emit notification that user is currently typing in their message.

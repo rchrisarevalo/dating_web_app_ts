@@ -76,7 +76,6 @@ export const RoutingSystem = () => {
             })
 
             pyConn.on('connect', () => {
-                console.log("Connected!")
                 console.log("Connected to Python socket!")
             })
 
@@ -104,7 +103,7 @@ export const RoutingSystem = () => {
         
         // Fetch user's current request count based on the requests sent to them
         // excluding the ones they made to others.
-        const { req_count, req_pending, req_error } = useFetchReqCount("http://localhost:4000/retrieve_request_count")
+        const { req_count, req_pending, req_error } = useFetchReqCount("http://localhost:4000/retrieve_request_count", connection)
 
         // This section is executed when the user navigates another page through
         // their browser's search bar or if they are opening their browser while

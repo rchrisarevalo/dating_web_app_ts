@@ -4,10 +4,11 @@ import { useFetchChatReqs } from "../hooks/useChatReq"
 import { ChatReq } from "../types/types.config"
 
 import { IoCheckmark, IoCloseOutline } from "react-icons/io5";
+import { socket_conn } from '../functions/SocketConn';
 
 export const ViewChatReqs = () => {
 
-    const { chat_reqs, chat_reqs_pending, chat_reqs_error } = useFetchChatReqs("http://localhost:4000/retrieve_chat_requests")
+    const { chat_reqs, chat_reqs_pending, chat_reqs_error } = useFetchChatReqs("http://localhost:4000/retrieve_chat_requests", socket_conn)
 
     const [chatReqs, setChatReqs] = useState<ChatReq[]>([])
 
@@ -32,6 +33,7 @@ export const ViewChatReqs = () => {
         if (res.ok) {
             const data = await res.json()
             setChatReqs(data)
+            socket_conn.emit('chat-request', username)
         } else {
             console.log(res.status)
         }
@@ -52,6 +54,7 @@ export const ViewChatReqs = () => {
         if (res.ok) {
             const data = await res.json()
             setChatReqs(data)
+            socket_conn.emit('chat-request', username)
         } else {
             console.log(res.status)
         }
