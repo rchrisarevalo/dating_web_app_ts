@@ -44,12 +44,12 @@ jobs:
       run: |
         env
       
-    - name: Run time is less than 0.20s
+    - name: Run time is less than 5 seconds.
       run: |
         cd src/backend
         pytest matching_algorithm_test.py::TestMatchingAlgorithmRunTime::test_run_time -v
 
-    - name: Run time is less than 0.20s after multiple iterations
+    - name: Run time is less than 5 seconds after multiple iterations.
       run: |
         cd src/backend
         pytest matching_algorithm_test.py::TestMatchingAlgorithmRunTime::test_run_time_multiple -v

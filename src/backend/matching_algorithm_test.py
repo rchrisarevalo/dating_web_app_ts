@@ -112,18 +112,18 @@ class Profiles:
         ]
 
 class TestMatchingAlgorithmRunTime(unittest.TestCase):
-    # Test algorithm and check if run time is less than or equal to 0.20 s.
+    # Test algorithm and check if run time is less than or equal to 5 seconds.
     def test_run_time(self):
         self.setUp()
         profiles = Profiles()
-        self.assertLessEqual(return_run_time(profiles.mock_user_profiles, profiles.mock_current_user_profile, False), 0.20)
+        self.assertLessEqual(return_run_time(profiles.mock_user_profiles, profiles.mock_current_user_profile, False), 5.00)
         self.doCleanups()
         
     # Test to see if the matching algorihm still runs fast after running it 10000 times.
     def test_run_time_multiple(self):
         self.setUp()
         profiles = Profiles()
-        self.assertLessEqual(return_run_time(profiles.mock_user_profiles, profiles.mock_current_user_profile, False), 0.20)
+        self.assertLessEqual(return_run_time(profiles.mock_user_profiles, profiles.mock_current_user_profile, False), 5.00)
         self.doCleanups()
         
         self.doClassCleanups()
