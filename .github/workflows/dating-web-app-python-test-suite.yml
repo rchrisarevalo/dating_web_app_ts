@@ -7,6 +7,7 @@ env:
   DB_KEY: ${{vars.DB_KEY}}
   SK_KEY: ${{vars.SK_KEY}}
   VISIT_LIMIT: ${{vars.VISIT_LIMIT}}
+  REQUEST_LIMIT: ${{vars.REQUEST_LIMIT}}
 
 on:
   push:
