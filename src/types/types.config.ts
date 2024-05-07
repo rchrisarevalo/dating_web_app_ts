@@ -19,6 +19,22 @@ export type CurrentProfile = {
     profile_pic: string
 }
 
+export type CurrentRequestStatus = {
+    sent: boolean,
+    made: boolean,
+    type: string,
+    approved: boolean,
+    is_requestor: boolean,
+}
+
+export type ChatReq = {
+    first_name: string,
+    username: string,
+    request_made: string,
+    request_accepted: boolean,
+    uri: string
+}
+
 export type ConfirmPwd = {
     password: string,
     confirm_password: string
