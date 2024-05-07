@@ -153,7 +153,6 @@ class TestMatchingAlgorithm(unittest.TestCase):
         self.setUp()
         profiles = Profiles()
         result = run_matching_algorithm(profiles.mock_current_user_profile, profiles.mock_user_profiles, False)
-        print(result)
         
         # To accommodate the dynamic nature of this unit test when running all the tests altogether or 
         # running it individually, we will check if the first user in the array matches, as previous
@@ -213,7 +212,6 @@ class TestMatchingAlgorithm(unittest.TestCase):
         # Provide the first 5 users to the algorithm to retrieve the top 5 users based on their similarities
         # to the logged in user, as well as their current user rating.
         new_result = run_matching_algorithm(new_mock_data_user_profiles[0:5], profiles.mock_current_user_profile, False)
-        print(new_result)
         
         # Test the results to see who are the top 5 users.
         self.assertEqual(new_result[0]["username"], 'brian_jones')

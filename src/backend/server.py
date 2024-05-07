@@ -25,7 +25,10 @@ import os
 import asyncio
 import socketio
 
-PATH = 'secret.env'
+# Ternary operator applied for actual server when it is loaded, otherwise, it will
+# manually store the actual path of the .env file when running in a test
+# environment.
+PATH = 'secret.env' if "backend" in os.getcwd().split("\\") else './src/backend/secret.env'
 
 server = FastAPI(debug=True)
 
@@ -69,12 +72,12 @@ server.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 async def create_connection() -> p.extensions.connection:
     try:
-        db: p.extensions.connection = p.connect(DB_KEY)
-        
+        db: p.extensions.connection = p.connect(DB_KEY)       
         return db
     
-    except p.DatabaseError as e:
-        return "error"
+    except p.DatabaseError:
+        print(os.environ.get("DB_KEY"))
+        return p.extensions.connection(DB_KEY)
 
 async def terminate_connection(db: p.extensions.connection):
     db.close()
