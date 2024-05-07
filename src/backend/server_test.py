@@ -552,7 +552,8 @@ class TestChatRequestOps(unittest.TestCase):
         self.requestor.cookies.set('username', self.dummy_user_1["username"])
 
     def test_CR_happy(self):
-        # Get dummy user 1, the requestor, to make a chat request to dummy user 2.
+        # Get dummy user 1, the requestor, to make a chat request to dummy user 2,
+        # who is a registered user.
         requestor_sends_req = self.requestor.post('/privacy/make_chat_request', json={"requestee": self.dummy_user_2["username"]})
 
         # Verify that the request was successful.
@@ -582,7 +583,7 @@ class TestChatRequestOps(unittest.TestCase):
 
     def test_CR_sad(self):
         # Get dummy user 1, the requestor, to attempt to make a chat request to a user
-        # does not exist.
+        # who did not register for an account.
         requestor_sends_invalid_req = self.requestor.post("/privacy/make_chat_request", json={"requestee": "non_existent_user"})
 
         # Verify that the request was unsuccessful.

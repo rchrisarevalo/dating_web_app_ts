@@ -65,10 +65,7 @@ if __name__ == "__main__":
     if args.t == "all":
         run_all_tests()
 
-    elif args.t == "server_test": 
-        # Prevent class arguments from being taken in
-        # as there are no classes in the server_test.py
-        # file.
+    elif args.t == "server_test":
         if args.c and not args.f:
             run_api_test_class(args.c)
         elif args.c and args.f:
@@ -79,9 +76,7 @@ if __name__ == "__main__":
     elif args.t == "matching_algorithm_test":
         if not args.c:
             run_unit_tests()
-        
         elif args.c and not args.f:
             run_class_unit_tests(args.c)
-
         else:
             run_class_unit_test_function(args.c, args.f)

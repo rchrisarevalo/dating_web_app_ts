@@ -47,85 +47,84 @@ jobs:
       
     - name: Run time is less than 5 seconds.
       run: |
-        cd src/backend
-        pytest matching_algorithm_test.py::TestMatchingAlgorithmRunTime::test_run_time -v
+        python run_tests.py --t matching_algorithm_test --c TestMatchingAlgorithmRunTime --f test_run_time
 
     - name: Run time is less than 5 seconds after multiple iterations.
       run: |
-        cd src/backend
-        pytest matching_algorithm_test.py::TestMatchingAlgorithmRunTime::test_run_time_multiple -v
+        python run_tests.py --t matching_algorithm_test --c TestMatchingAlgorithmRunTime --f test_run_time_multiple
 
     - name: Test to see if matching algorithm returns user profiles and their estimated similarity percentages.
       run: |
-        cd src/backend
-        pytest matching_algorithm_test.py::TestMatchingAlgorithm::test_match -v
+        python run_tests.py --t matching_algorithm_test --c TestMatchingAlgorithm --f test_match
 
     - name: Retrieve the top 5 users with the highest similarity scores.
       run: |
-        cd src/backend
-        pytest matching_algorithm_test.py::TestMatchingAlgorithm::test_similarity_scores -v
+        python run_tests.py --t matching_algorithm_test --c TestMatchingAlgorithm --f test_similarity_scores
 
     - name: Retrieve the top k users with the highest similarity scores.
       run: |
-        cd src/backend
-        pytest matching_algorithm_test.py::TestMatchingAlgorithm::test_retrieve_top_k_users -v
+        python run_tests.py --t matching_algorithm_test --c TestMatchingAlgorithm --f test_retrieve_top_k_users
       
     - name: Insert a user into a heap and ensure that the heap follows all the rules and there are no violations.
       run: |
-        cd src/backend
-        pytest matching_algorithm_test.py::TestHeap::test_insert -v
+        python run_tests.py --t matching_algorithm_test --c TestHeap --f test_insert
 
     - name: Delete users from the heap and check if the top user changes through different operations.
       run: |
-        cd src/backend
-        pytest matching_algorithm_test.py::TestHeap::test_delete_and_top -v
+        python run_tests.py --t matching_algorithm_test --c TestHeap --f test_delete_and_top
 
     - name: Change the rating of the user depending on whether they are rated positively, neutrally, or negatively.
       run: |
-        cd src/backend
-        pytest matching_algorithm_test.py::TestRating::test_change_rating -v
+        python run_tests.py --t matching_algorithm_test --c TestRating --f test_change_rating
 
     - name: Check if root route is working.
       run: |
-        cd src/backend
-        pytest server_test.py::test_simple_route -v
+        python run_tests.py --t server_test --c TestBasicRoute --f test_simple_route
 
     - name: User should sign up if they are of or over the age of majority in their jurisdiction.
       run: |
-        cd src/backend
-        pytest server_test.py::test_signup -v
+        python run_tests.py --t server_test --c TestSignUpOps --f test_signup
 
     - name: User should be unable to sign up for an account if they are under the age of majority in their jurisdiction.
       run: |
-        cd src/backend
-        pytest server_test.py::test_signup_if_underage -v
+        python run_tests.py --t server_test --c TestSignUpOps --f test_signup_if_underage
     
     - name: User should be able to log in if they have an account.
       run: |
-        cd src/backend
-        pytest server_test.py::test_login -v
+        python run_tests.py --t server_test --c TestLoginOps --f test_login
     
     - name: Prevent a user from logging in if they do not have a valid token.
       run: |
-        cd src/backend
-        pytest server_test.py::test_login_with_invalid_token -v
+        python run_tests.py --t server_test --c TestLoginOps --f test_login_with_invalid_token
 
     - name: Allow a user to use protected resources with valid token.
       run: |
-        cd src/backend
-        pytest server_test.py::test_protected_route_with_valid_token -v
+        python run_tests.py --t server_test --c TestProtectedRouteOps --f test_protected_route_with_valid_token
       
     - name: Prevent a user from using protected resources with an invalid token.
       run: |
-        cd src/backend
-        pytest server_test.py::test_protected_route_with_invalid_token -v
+        python run_tests.py --t server_test --c TestProtectedRouteOps --f test_protected_route_with_invalid_token
 
     - name: Allow users to change their DOB if they registered for an account using a valid DOB. Otherwise, suspend/ban their account if they did not do so.
       run: |
-        cd src/backend
-        pytest server_test.py::test_update_profile_DOB -v
+        python run_tests.py --t server_test --c TestAppOps --f test_update_profile_DOB
     
     - name: User should search for other users based on a specific keyword they enter into the search bar.
       run: |
-        cd src/backend
-        pytest server_test.py::test_search -v
+        python run_tests.py --t server_test --c TestAppOps --f test_search
+
+    - name: Send a chat request to a user who registered for an account.
+      run: |
+        python run_tests.py --t server_test --c TestChatRequestOps --f test_CR_happy
+    
+    - name: Attempt to send a chat request to a user who did not register for an account.
+      run: |
+        python run_tests.py --t server_test --c TestChatRequestOps --f test_CR_sad
+
+    - name: Approve a chat request sent by a user.
+      run: |
+        python run_tests.py --t server_test --c TestChatRequestOps --f test_approve_CR
+    
+    - name: Deny a chat request sent by a user.
+      run: |
+        python run_tests.py --t server_test --c TestChatRequestOps --f test_deny_CR
