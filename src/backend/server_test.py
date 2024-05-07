@@ -475,7 +475,7 @@ class TestAppOps(unittest.TestCase):
         delete_dummy_user(self.dummy_user_2, self.db_inst.db, self.db_inst.cursor)
         self.db_inst.db.close()
 
-class TestChatRequest(unittest.TestCase):
+class TestChatRequestOps(unittest.TestCase):
     def setUp(self):
         # Create database instance.
         self.db_inst = Database(os.environ.get("DB_KEY"))

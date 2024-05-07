@@ -7,8 +7,15 @@ def run_all_tests():
 def run_api_tests():
     subprocess.run("pytest server_test.py -v", shell=True, cwd="./src/backend")
 
-def run_api_test_unit(arg_test_func: str):
-    subprocess.run(f"pytest server_test.py::{arg_test_func} -v", shell=True, cwd="./src/backend")
+def run_api_test_class(class_test_arg: str):
+    subprocess.run(f"pytest server_test.py::{class_test_arg} -v", 
+                   shell=True, 
+                   cwd="./src/backend")
+
+def run_class_api_test_unit(class_test_arg: str, arg_test_func: str):
+    subprocess.run(f"pytest server_test.py::{class_test_arg}::{arg_test_func} -v", 
+                   shell=True, 
+                   cwd="./src/backend")
 
 def run_unit_tests():
     subprocess.run("pytest matching_algorithm_test.py -v", shell=True, cwd="./src/backend")
@@ -32,13 +39,19 @@ if __name__ == "__main__":
                         choices=["all", "server_test", "matching_algorithm_test"], 
                         help="The default argument used to run a specific test file or all tests.")
     
-    parser.add_argument("--c", '--class', 
+    parser.add_argument("--c", '--class',
                         help="Argument used to run a series of unit tests within a unittest class in the matching_algorithm_test.py file.",
                         choices=[
                             "TestMatchingAlgorithmRunTime",
                             "TestMatchingAlgorithm",
                             "TestHeap",
-                            "TestRating"
+                            "TestRating",
+                            "TestBasicRoute",
+                            "TestSignUpOps",
+                            "TestLoginOps",
+                            "TestProtectedRouteOps",
+                            "TestAppOps",
+                            "TestChatRequestOps"
                         ])
     
     parser.add_argument('--f', '--function', 
@@ -56,14 +69,12 @@ if __name__ == "__main__":
         # Prevent class arguments from being taken in
         # as there are no classes in the server_test.py
         # file.
-        if args.c:
-            print("No class arguments will be accepted for this test suite.")
-            exit(-1)
-
-        if not args.f:
-            run_api_tests()
+        if args.c and not args.f:
+            run_api_test_class(args.c)
+        elif args.c and args.f:
+            run_class_api_test_unit(args.c, args.f)
         else:
-            run_api_test_unit(args.f)
+            run_api_tests()
 
     elif args.t == "matching_algorithm_test":
         if not args.c:
