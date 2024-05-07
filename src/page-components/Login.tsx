@@ -64,7 +64,11 @@ export const Login = () => {
                 setAuthenticated(false)
                 
                 if (error.status != 429) {
+<<<<<<< HEAD
                     setErrorMessage("You have entered the wrong username/password. Try again!")
+=======
+                    setErrorMessage("Incorrect username and/or password.")
+>>>>>>> feb6a606c014cf96948c4f0f62bdf07c10714dd7
                 } else {
                     setErrorMessage(error.statusText)
                 }

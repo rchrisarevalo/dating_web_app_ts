@@ -9,29 +9,39 @@ context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 # Verifies user age when they register for an account, or if they change their
 # date of birth in their account settings.  
 async def verify_age(age: int, state_residence: str) -> bool:
-    # If the user's state residence is in Alabama or Nebraska, and they are 19 or above
-    # return True to verify that they are of age to register for an account.
+    # If the user resides in Alabama or Nebraska, and are 19 or older,
+    # then allow them to register for an account.
     if (state_residence == 'Alabama' or state_residence == 'Nebraska') and (age >= 19):
         return True
+
+    # Otherwise, don't let them.
+    elif ((state_residence == 'Alabama' or state_residence == 'Nebraska') and (age < 19)):
+        return False
     
-    # If the user's state residence is in Nebraska, and they 21 or above,
-    # return True to verify that they are of age to register for an
-    # account.
-    elif (state_residence == 'Nebraska' and age >= 21):
+    # If the user's state residence is in Mississippi, and they 21 or above,
+    # they can register for an account.
+    elif (state_residence == 'Mississippi' and age >= 21):
         return True
     
-    # Otherwise...
-    else:
-        # If the user is in another state other than the ones mentioned above,
-        # and they are 18 years old or above, return True to verify that they
-        # are of age to register for an account.
+    # Otherwise, don't let them.
+    elif (state_residence == 'Mississippi' and age < 21):
+        return False
+
+    # If the user resides in another state other than Alabama, Nebraska, or Mississippi,
+    # and they are 18 or older, they can register for an account.
+    #
+    # Otherwise, they are not allowed to do so.  
+    elif (state_residence != 'Alabama' or state_residence != 'Nebraska' or state_residence != 'Mississippi'):
         if age >= 18:
             return True
-        
-        # Otherwise, they are under age, so return False to indicate that they
-        # are not of age to register for an account.
         else:
             return False
+
+    # In the very rare case where none of the statements above are true,
+    # return False to indicate that the user is not allowed to register
+    # for an account.
+    else:
+        return False
         
 # Determines the actual age of the user by using their account creation
 # timestamp and their date of birth to determine how old they really

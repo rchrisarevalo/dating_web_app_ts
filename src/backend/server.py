@@ -25,7 +25,10 @@ import os
 import asyncio
 import socketio
 
-PATH = 'secret.env'
+# Ternary operator applied for actual server when it is loaded, otherwise, it will
+# manually store the actual path of the .env file when running in a test
+# environment.
+PATH = 'secret.env' if "backend" in os.getcwd().split("\\") else './src/backend/secret.env'
 
 server = FastAPI(debug=True)
 
@@ -40,8 +43,8 @@ sio = socketio.AsyncServer(
 load_dotenv(PATH)
 
 # Load environment variables from the .env file.
-SK_KEY=os.getenv('SK_KEY') if os.getenv("SK_KEY") else os.environ["SK_KEY"]
-DB_KEY=os.getenv('DB_KEY') if os.getenv("SK_KEY") else os.environ["SK_KEY"]
+SK_KEY=os.environ.get("SK_KEY")
+DB_KEY=os.environ.get("DB_KEY")
 
 server.add_middleware(
     CORSMiddleware,
@@ -69,12 +72,12 @@ server.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 async def create_connection() -> p.extensions.connection:
     try:
-        db: p.extensions.connection = p.connect(DB_KEY)
-        
+        db: p.extensions.connection = p.connect(DB_KEY)       
         return db
     
-    except p.DatabaseError as e:
-        return "error"
+    except p.DatabaseError:
+        print(os.environ.get("DB_KEY"))
+        return p.extensions.connection(DB_KEY)
 
 async def terminate_connection(db: p.extensions.connection):
     db.close()
@@ -294,7 +297,7 @@ async def check_login(request: Request):
         await terminate_connection(db)
         
 @protected_route.post("/visit")
-@limit.limit(os.environ["VISIT_LIMIT"], key_func=visit_key_func)
+@limit.limit(os.environ.get("VISIT_LIMIT"), key_func=visit_key_func)
 def visit(request: Request):
     data: dict = asyncio.run(request.json())
     db: p.extensions.connection = asyncio.run(create_connection())
@@ -539,8 +542,106 @@ async def update_bio(request: Request):
         return {"message": "Successfully updated bio!"}
     
     except db.DatabaseError:
-        return {"message": "Error updating bio."}, 500
+        raise HTTPException(500, {"message": "Error updating bio."})
     
+    finally:
+        await terminate_connection(db)
+
+@protected_route.post("/privacy/make_chat_request")
+@limit.limit(os.environ.get("REQUEST_LIMIT"), key_func=visit_key_func)
+def make_chat_request(request: Request):
+    data: dict = asyncio.run(request.json())
+    username: str = request.cookies.get("username")
+    
+    db: p.extensions.connection = asyncio.run(create_connection())
+    cursor: p.extensions.cursor = db.cursor()
+
+    try:
+        make_req: str = "CALL make_chat_request(%s, %s)"
+        params: list = [username, data["requestee"]]
+        cursor.execute(make_req, params)
+        db.commit()
+
+        return {"message": "Chat request successfully made!"}
+
+    except db.DatabaseError:
+        raise HTTPException(500, {"message": "Chat request failed to be sent!"})
+    
+    except Exception:
+        raise HTTPException(500, {"message": "Error! Try again later!"})
+
+    finally:
+        asyncio.run(terminate_connection(db))
+
+@protected_route.put("/privacy/chat_request_response")
+async def chat_request_response(request: Request):
+    data: dict = await request.json()
+    username: str = request.cookies.get("username")
+    query: str = request.query_params.get("r")
+
+    db: p.extensions.connection = await create_connection()
+    cursor: p.extensions.cursor = db.cursor()
+
+    try:
+        if query == "approve":
+            statement = "CALL approve_chat_request(%s, %s)"
+            params = [data["requestor"], username]
+            cursor.execute(statement, params)
+            db.commit()
+
+        elif query == "deny":
+            statement = "CALL deny_chat_request(%s, %s)"
+            params = [data["requestor"], username]
+            cursor.execute(statement, params)
+            db.commit()
+
+        statement = "SELECT * FROM retrieve_chat_reqs(%s)"
+        params = [username]
+        cursor.execute(statement, params)
+
+        chat_reqs: list[dict[str, any]] = [{column.name: record 
+                                            for column, record 
+                                            in zip(cursor.description, records)} 
+                                            for records in cursor.fetchall()]
+        
+        for record in chat_reqs:
+            record.update({"uri": bytes(record["uri"]).decode('utf-8')})
+
+        return chat_reqs
+
+    except db.DatabaseError as d:
+        print(d)
+        raise HTTPException(500, {"message": "Chat request response failed to be processed."})
+
+    except Exception as e:
+        print(e)
+        raise HTTPException(500, {"message": "Server error. Please try again later."})
+    
+    finally:
+        await terminate_connection(db)
+
+@protected_route.put("/privacy/delete_chat_request")
+async def delete_chat_request(request: Request):
+    data: dict = await request.json()
+    username: str = request.cookies.get("username")
+
+    db: p.extensions.connection = await create_connection()
+    cursor: p.extensions.cursor = db.cursor()
+
+    try:
+        del_req: str = "CALL delete_chat_request(%s, %s)"
+        params: list = [username, data["requestee"]]
+        cursor.execute(del_req, params)
+        db.commit()
+
+        return {"message": "Chat request successfully deleted!"}
+    
+    except db.DatabaseError:
+        raise HTTPException(500, {"message": "Chat request failed to be deleted!"})
+    
+    except Exception:
+        raise HTTPException(500, {"message": "Error! Try again later!"})
+
     finally:
         await terminate_connection(db)
         
@@ -1113,7 +1214,8 @@ async def block(request: Request):
     if not data["block_requested"]:
         try:
             statement = '''
-                SELECT B.blockee from Blocked B WHERE (B.blocker=%s AND B.blockee=%s) 
+                SELECT B.blockee from Blocked B WHERE 
+                (B.blocker=%s AND B.blockee=%s) 
                 OR (B.blocker=%s AND B.blockee=%s)
             '''
             params = [username, data["profile_user"], data["profile_user"], username]
@@ -1136,6 +1238,12 @@ async def block(request: Request):
                 try:
                     statement = "INSERT INTO Blocked (blocker, blockee) VALUES (%s, %s)"
                     params = [username, data["profile_user"]]
+                    cursor.execute(statement, params)
+                    db.commit()
+                    
+                    # Unfollow the user after they have been blocked.
+                    statement: str = "CALL delete_chat_request(%s, %s)"
+                    params: list = [username, data["profile_user"]]
                     cursor.execute(statement, params)
                     db.commit()
                     

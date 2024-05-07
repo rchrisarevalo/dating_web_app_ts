@@ -34,7 +34,6 @@ hr {
   border: none;
 }
 
-
 ::-webkit-scrollbar {
   width: 10px;
 }
@@ -42,6 +41,55 @@ hr {
 ::-webkit-scrollbar-thumb {
   background: gray;
   border-radius: 10px;
+}
+
+.center-wrapper {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: left;
+  text-align: left;
+  margin-left: 10%;
+  margin-right: 10%;
+  margin-top: 5%;
+  margin-bottom: 5%;
+  color: rgb(205, 44, 226);
+}
+
+.center-wrapper h1 {
+  font-weight: 900;
+}
+
+.wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: rgb(205, 44, 226);
+  margin-top: 15vh;
+  margin-bottom: 15vh;
+  margin-left: 10%;
+  margin-right: 10%;
+}
+
+.wrapper h1 {
+  font-weight: 900;
+}
+
+.chat-req-wrapper {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.chat-req-wrapper img {
+  width: 100px;
+  height: 100px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  border-radius: 50px;
+  object-fit: cover;
+  pointer-events: none;
 }
 
 .main-footer {
@@ -53,6 +101,46 @@ hr {
   padding-bottom: 35px;
   margin-top: 20px;
   align-items: center;
+}
+
+.chat-req-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: left;
+}
+
+.chat-req-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: left;
+  margin-right: 25px;
+}
+
+.chat-req-col p {
+  align-items: center;
+}
+
+#approve-btn, #deny-btn {
+  display: flex;
+  border: none;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50px;
+  padding: 7px 8px;
+}
+
+#approve-btn {
+  background: green;
+  color: white;
+  font-size: 25px;
+}
+
+#deny-btn {
+  background: red;
+  color: white;
+  font-size: 25px;
 }
 
 .loading {
@@ -748,6 +836,42 @@ hr {
   font-size: 18px;
 }
 
+#requestor-span {
+  background: rgb(30, 15, 87, 0.605);
+  color: rgb(205, 44, 226, 0.658);
+  border: none;
+  border-radius: 20px;
+  padding: 7px 20px;
+  font-weight: 1000;
+  font-size: 18.5p;
+}
+
+#requestor-btn {
+  background: transparent;
+  color: rgb(205, 44, 226, 0.658);
+  border: none;
+  font-weight: 1000;
+  font-size: 18.5px;
+}
+
+#requestee-span {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: left;
+}
+
+#requestee-btn, #request-btn, #unfollow-btn {
+  background: rgb(30, 15, 87);
+  color: rgb(205, 44, 226);
+  border: none;
+  border-radius: 20px;
+  padding: 7px 20px;
+  font-weight: 1000;
+  margin-right: 10px;
+  font-size: 18.5px;
+}
+
 .profile-page-details{
   margin: 3.5em;
 }
@@ -1353,8 +1477,13 @@ hr {
 }
 
 .user-feedback-column button {
+<<<<<<< HEAD
   margin-left: 5px;
   margin-right: 5px;
+=======
+  margin-left: 2.5px;
+  margin-right: 2.5px;
+>>>>>>> feb6a606c014cf96948c4f0f62bdf07c10714dd7
   border-radius: 15px;
   padding: 7px 7px;
   z-index: 5;
@@ -1897,6 +2026,7 @@ hr {
     align-items: center;
     display: flex;
     justify-content: center;
+    z-index: 10;
     width: 100%;
   }
 
@@ -2003,6 +2133,16 @@ hr {
     margin: 1.5em;
   }
 
+  #requestee-span {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  #requestee-btn {
+    margin-bottom: 20px;
+  }
+
   .profile-page-details{
     margin: 1.5em;
   }
@@ -2085,6 +2225,28 @@ hr {
   .recent-messages-container h1 {
     margin-left: 5%;
     margin-right: 5%;
+  }
+
+  .center-wrapper {
+    margin-left: 5%;
+    margin-right: 5%;
+  }
+
+  .wrapper {
+    margin-top: 10vh;
+    margin-bottom: 20vh;
+  }
+
+  .chat-req-wrapper {
+    justify-content: space-evenly;
+    flex-direction: column;
+    margin-bottom: 20px;
+  }
+
+  .chat-req-wrapper img {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
   }
 
   .recent-user-sect {

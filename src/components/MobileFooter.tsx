@@ -2,20 +2,22 @@ import { Link, useLocation } from 'react-router-dom'
 import {
     IoSearchOutline,
     IoBanOutline,
-    IoSendOutline
+    IoSendOutline,
+    IoMailOutline
 } from "react-icons/io5"
 import { ProfilePicture } from './ProfilePicture'
 
 // Properties defined for MobileFooter component.
 interface MobileFooterProps {
     username: string,
-    blocked: boolean
+    blocked: boolean,
+    chat_request_approved: boolean
 }
 
 // Will be used for other profile user's pages and the
 // mobile version of the 'Settings' page.
 export const MobileFooter = (props: MobileFooterProps) => {
-    const { username, blocked } = props
+    const { username, blocked, chat_request_approved } = props
 
     const path = useLocation()
     const retrieve_username_from_path = path.pathname.split("/user/")[1]
@@ -53,7 +55,8 @@ export const MobileFooter = (props: MobileFooterProps) => {
         <>
             <footer className="mobile-footer-menu">
                 <li><Link to={`/profile/search`}><IoSearchOutline size={30} />Search</Link></li>
-                <li><Link to={`/message/${retrieve_username_from_path}`}><IoSendOutline size={30} />Message</Link></li>
+                {chat_request_approved && <li><Link to={`/message/${retrieve_username_from_path}`}><IoSendOutline size={30} />Message</Link></li>}
+                <li><Link to={`/profile/follow_requests`}><IoMailOutline size={30} />Chat Requests</Link></li>
                 <li><Link onClick={handleBlockUserMobile} to={''}><IoBanOutline size={30} />Block User</Link></li>
                 <li><Link to={`/profile/`}><ProfilePicture /></Link></li>
             </footer>
