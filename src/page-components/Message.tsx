@@ -163,6 +163,10 @@ export const Message = (props: MessageProps) => {
             // Send updated message list to server so that client can receive it.
             connection.emit('sender-message', messageLog, retrieve_receive_user_from_path)
 
+            // Clear the cache so that the current user's "Recent Messages" page can
+            // reload.
+            connection.emit('receive-update-profile-request')
+
             // Clear the message after the user has submitted it.
             setCurrentMsg("")
 
