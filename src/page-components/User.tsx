@@ -199,23 +199,6 @@ export const User = (props: UserProps) => {
                                 <img src={`data:image/png;base64,${profile.profile_pic}`} alt="profile-pic"></img>
                             </div>
                             <div className="profile-page-bio">
-<<<<<<< HEAD
-                                <div className="profile-page-details-row">
-                                    <button style={
-                                        { 
-                                            background: 'rgb(30, 15, 87)', 
-                                            color: 'rgb(205, 44, 226)', 
-                                            border: 'none', 
-                                            borderRadius: '20px', 
-                                            padding: '5px 20px', 
-                                            fontWeight: '1000', 
-                                            fontSize: '20px' 
-                                        }
-                                    }>
-                                        Send Chat Request
-                                    </button>
-                                </div>
-=======
                                 {!chat_req_loading ?
                                     !chat_req_error ?
                                         <>
@@ -262,7 +245,6 @@ export const User = (props: UserProps) => {
                                     :
                                     <Spinner animation='border' />     
                                 }
->>>>>>> feb6a606c014cf96948c4f0f62bdf07c10714dd7
                             </div>
                             <div className="profile-page-bio">
                                 <h1>{`${profile.name}, ${profile.age}`}</h1>

@@ -1477,13 +1477,8 @@ hr {
 }
 
 .user-feedback-column button {
-<<<<<<< HEAD
-  margin-left: 5px;
-  margin-right: 5px;
-=======
   margin-left: 2.5px;
   margin-right: 2.5px;
->>>>>>> feb6a606c014cf96948c4f0f62bdf07c10714dd7
   border-radius: 15px;
   padding: 7px 7px;
   z-index: 5;

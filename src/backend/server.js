@@ -182,7 +182,6 @@ protected_route.use(async (req, res, next) => {
                         // as the origin of the server request, the client, to further
                         // protect backend endpoints from being accessed through unauthorized
                         // means.
-                        console.log("Token verified!")
                         if (payload_issuer == origin) {
                             next()
                         } else {
@@ -328,8 +327,6 @@ protected_route.get('/privacy/check_recommendation_settings', async (req, res) =
 protected_route.get('/retrieve_search_history', async (req, res) => {
     const username = req.cookies.username
     const db = await createConnection()
-
-    console.log("In this endpoint!")
 
     try {
         const statement = `
