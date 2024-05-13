@@ -233,14 +233,17 @@ export const SignUp = () => {
                 <h1>Sign Up For An Account</h1>
                 <h5>
                     <i>
-                        Remember, you have to be 18 or older to register for an account. Deliberately
-                        providing false information about your identity may result in your account
+                        Remember, you have to be 18 or older to register for an account, depending
+                        on the jurisdiction you currently reside in. Deliberately providing false 
+                        information about your identity may result in your account
                         being terminated.
                     </i>
                 </h5>
                 <h5>
                     <i>
-                        If you have any questions, please feel free to refer to the <b>Terms of Service</b> or the <b>Privacy Policy</b>.
+                        If you have any questions, please feel free to refer to 
+                        the <b style={{fontWeight: '900'}}>Terms of Service</b> or 
+                        the <b style={{fontWeight: '900'}}>Privacy Policy</b>.
                     </i>
                 </h5>
                 <form onSubmit={(e) => {e.preventDefault(); handleAgreement()}}>
