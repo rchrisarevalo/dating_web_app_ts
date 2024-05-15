@@ -1149,12 +1149,12 @@ async def update_password(request: Request):
                 return {"message": "Password successfully updated!"}
             
             except db.DatabaseError:
-                return {"message": "Password failed to update!"}, 500
+                raise HTTPException(500, {"message": "Failed to update password!"})
         else:
-            return {"message": "You typed in your old password incorrectly."}, 403
+            raise HTTPException(403, {"message": "You typed in your old password incorrectly."})
     
     except db.DatabaseError:
-        return {"message": "Failed to execute query!"}, 500
+        raise HTTPException(500, {"message": "Failed to execute query!"})
     
     finally:
         await terminate_connection(db) 
