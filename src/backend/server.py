@@ -1193,10 +1193,10 @@ async def delete_account(request: Request, response: Response):
             return {"message": "Session terminated."}
 
         else:
-            return {"message": "Incorrect password!"}, 401
+            raise HTTPException(401, {"message": "Incorrect password!"})
     
     except db.DatabaseError:
-        return {"message": "Failed to delete account!"}, 500
+        raise HTTPException(500, {"message": "Failed to delete account!"})
     
     finally:
         await terminate_connection(db)
