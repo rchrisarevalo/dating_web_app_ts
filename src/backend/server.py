@@ -1412,17 +1412,15 @@ async def match(request: Request):
         db_task = asyncio.create_task(create_connection())
         request_info, db = await asyncio.gather(ri_task, db_task)
 
-        t1 = asyncio.create_task(retrieve_user_profiles(db, request.cookies.get("username")))
-        t2 = asyncio.create_task(get_logged_in_user_profile(db, request.cookies.get("username")))
-        t3 = asyncio.create_task(retrieve_visited_profiles(db, request.cookies.get("username")))
-
-        profiles, logged_in_user, visited_profiles = await asyncio.gather(t1, t2, t3)
+        cursor: p.extensions.cursor = db.cursor()
         
         if request_info["algo_config"]:
             # Run matching algorithm using the list of profiles (excluding the current user) to compare with the
             # profile of the logged in user.
-            matches = run_matching_algorithm(profiles, logged_in_user, use_so_filter=request_info["use_so_filter"])
-            matches = await include_visits(matches, visited_profiles)
+            matches = run_matching_algorithm(username=request.cookies.get("username"),
+                                             db=db,
+                                             cursor=cursor,
+                                             use_so_filter=request_info["use_so_filter"])
             
             # If the limit of the number of searches retrieved is less than the
             # actual number of matched users, then let the
@@ -1437,14 +1435,16 @@ async def match(request: Request):
             # matching profiles to request.
             else:
                 return [matches[0:request_info["initial_limit"]], False]
-        else:
-            users = await include_visits(profiles, visited_profiles)
-            return [users[0:request_info["initial_limit"]], True]
+        # else:
+        #     users = await include_visits(profiles, visited_profiles)
+        #     return [users[0:request_info["initial_limit"]], True]
         
     except KeyError as k:
+        print(k)
         raise HTTPException(500, {"message": "Failed to retrieve information from dictionary."})
     
     except Exception as e:
+        print(e)
         raise HTTPException(500, {"message": "An unknown error has occurred."})
     
 # Integrate the protected API endpoints into the FastAPI server.

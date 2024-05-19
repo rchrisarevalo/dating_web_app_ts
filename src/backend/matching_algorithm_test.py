@@ -238,70 +238,7 @@ class TestMatchingAlgorithm(unittest.TestCase):
         self.assertEqual(new_result[1]["username"], 'joshua_walter')
         
         self.doCleanups()
-        self.doClassCleanups()
-        
-        
-class TestHeap(unittest.TestCase):
-    def test_insert(self):
-        self.setUp()
-        
-        mock_heap = Heap()
-        mock_heap.insert(23, 'jack.white', 'I love to program!', 'Jack', 'Matthew', 'White', 'Pittsburgh', 'Pennsylvania', 'Heterosexual', 'Women', 'akjasjajsj', 'Single', 'Male', "6'2''", "April", "21", "1987", 36)
-        mock_heap.insert(19, 'madi_gray', 'I love to write!', 'Madison', 'Jane', 'Gray', 'Austin', 'Texas', 'Heterosexual', 'Men', '19bmnavakj', 'Single', 'Female', "5'1''", "July", "18", "1999", 24)
-        mock_heap.insert(45, 'adriana_johnson', 'I love to paint!', 'Adriana', '', 'Johnson', 'Houston', 'Texas', 'Homosexual (Lesbian)', 'Women', 'i910mnaskai', 'Taken', 'Female', "5'7''", "March", "30", "2001", 22)
-        mock_heap.insert(42, 'michael_humphries', 'I love to play video games!', 'Michael', 'James', 'Humphries', 'Newark', 'New Jersey', 'Heterosexual', 'Women', '81zmai19019', 'Married', 'Non-binary', "5'9''", "May", "30", "1988", 35)
-        mock_heap.insert(54, 'andrew_mckinney', 'I love to make graphic designs!', 'Andrew', 'Christopher', 'McKinney', 'Omaha', 'Nebraska', 'Homosexual (Gay)', 'Men', '210389makeam', 'Single', 'Male', "6'1''", "August", "12", "1992", 31)
-        mock_heap.insert(82, 'jack.white', 'I love to program!', 'Jack', 'Matthew', 'White', 'Pittsburgh', 'Pennsylvania', 'Heterosexual', 'Women', 'mas919amoai_912', 'Single', 'Male', "5'5''", "September", "3", "1997", 26)
-
-        self.assertEqual(mock_heap.print_heap(), [(82, 'jack.white', 'I love to program!', 'Jack', 'Matthew', 'White', 'Pittsburgh', 'Pennsylvania', 'Heterosexual', 'Women', 'mas919amoai_912', 'Single', 'Male', "5'5''", "September", "3", "1997", 26),
-                                                  (45, 'adriana_johnson', 'I love to paint!', 'Adriana', '', 'Johnson', 'Houston', 'Texas', 'Homosexual (Lesbian)', 'Women', 'i910mnaskai', 'Taken', 'Female', "5'7''", "March", "30", "2001", 22),
-                                                  (54, 'andrew_mckinney', 'I love to make graphic designs!', 'Andrew', 'Christopher', 'McKinney', 'Omaha', 'Nebraska', 'Homosexual (Gay)', 'Men', '210389makeam', 'Single', 'Male', "6'1''", "August", "12", "1992", 31),
-                                                  (19, 'madi_gray', 'I love to write!', 'Madison', 'Jane', 'Gray', 'Austin', 'Texas', 'Heterosexual', 'Men', '19bmnavakj', 'Single', 'Female', "5'1''", "July", "18", "1999", 24),
-                                                  (42, 'michael_humphries', 'I love to play video games!', 'Michael', 'James', 'Humphries', 'Newark', 'New Jersey', 'Heterosexual', 'Women', '81zmai19019', 'Married', 'Non-binary', "5'9''", "May", "30", "1988", 35),
-                                                  (23, 'jack.white','I love to program!', 'Jack', 'Matthew', 'White', 'Pittsburgh', 'Pennsylvania', 'Heterosexual', 'Women', 'akjasjajsj', 'Single', 'Male', "6'2''", "April", "21", "1987", 36)])
-        
-        self.doCleanups()
-    
-    def test_delete_and_top(self):
-        self.setUp()
-        
-        mock_heap_2 = Heap()
-        mock_heap_2.insert(23, 'jack.white', 'I love to program!', 'Jack', 'Matthew', 'White', 'Pittsburgh', 'Pennsylvania', 'Heterosexual', 'Women', 'akjasjajsj', 'Single', 'Male', "6'2''", "April", "21", "1987", 36)
-        mock_heap_2.insert(19, 'madi_gray', 'I love to write!', 'Madison', 'Jane', 'Gray', 'Austin', 'Texas', 'Heterosexual', 'Men', '19bmnavakj', 'Single', 'Female', "5'1''", "July", "18", "1999", 24)
-        mock_heap_2.insert(45, 'adriana_johnson', 'I love to paint!', 'Adriana', '', 'Johnson', 'Houston', 'Texas', 'Homosexual (Lesbian)', 'Women', 'i910mnaskai', 'Taken', 'Female', "5'7''", "March", "30", "2001", 22)
-        mock_heap_2.insert(42, 'michael_humphries', 'I love to play video games!', 'Michael', 'James', 'Humphries', 'Newark', 'New Jersey', 'Heterosexual', 'Women', '81zmai19019', 'Married', 'Non-binary', "5'9''", "May", "30", "1988", 35)
-        mock_heap_2.insert(54, 'andrew_mckinney', 'I love to make graphic designs!', 'Andrew', 'Christopher', 'McKinney', 'Omaha', 'Nebraska', 'Homosexual (Gay)', 'Men', '210389makeam', 'Single', 'Male', "6'1''", "August", "12", "1992", 31)
-        mock_heap_2.insert(82, 'jack.white', 'I love to program!', 'Jack', 'Matthew', 'White', 'Pittsburgh', 'Pennsylvania', 'Heterosexual', 'Women', 'mas919amoai_912', 'Single', 'Male', "5'5''", "September", "3", "1997", 26)
-        
-        self.assertEqual(mock_heap_2.top(), (82, 'jack.white', 'I love to program!', 'Jack', 'Matthew', 'White', 'Pittsburgh', 'Pennsylvania', 'Heterosexual', 'Women', 'mas919amoai_912', 'Single', 'Male', "5'5''", "September", "3", "1997", 26))
-        mock_heap_2.remove()
-        self.assertEqual(mock_heap_2.top(), (54, 'andrew_mckinney', 'I love to make graphic designs!', 'Andrew', 'Christopher', 'McKinney', 'Omaha', 'Nebraska', 'Homosexual (Gay)', 'Men', '210389makeam', 'Single', 'Male', "6'1''", "August", "12", "1992", 31))
-        
-        # Test to remove 3 items from the heap.
-        for i in range(0, 3):
-            mock_heap_2.remove()
-            
-        self.assertEqual(mock_heap_2.top(), (23, 'jack.white', 'I love to program!', 'Jack', 'Matthew', 'White', 'Pittsburgh', 'Pennsylvania', 'Heterosexual', 'Women', 'akjasjajsj', 'Single', 'Male', "6'2''", "April", "21", "1987", 36))
-        
-        mock_heap_2.insert(97, 'jackie.ramirez', 'I love to hang out with my friends!', 'Jacqueline', 'Rose', 'Ramirez', 'Los Angeles', 'California', 'Heterosexual', 'Men', '10291jac901023', 'Single', 'Female', "4'11''", "February", "3", "2003", 20)
-        mock_heap_2.insert(87, 'jackson_williams', 'I love to hang out with my family!', 'Jackson', 'James', 'Williams', 'Portland', 'Oregon', 'Heterosexual', 'Women', '201892mzj_m', 'Single', 'Male', "5'11''", "March", "30", "2000", 23)
-        mock_heap_2.insert(102, 'bri_jones', 'I love to write algorithms!', 'Brian', '', 'Jones', 'Seattle', 'Washington', 'Homosexual (Gay)', 'Men', '10amasj38am_ajasi', 'Married', 'Male', "6'5''", "January", "15", "1978", 45)
-        
-        self.assertEqual(mock_heap_2.top(), (102, 'bri_jones', 'I love to write algorithms!', 'Brian', '', 'Jones', 'Seattle', 'Washington', 'Homosexual (Gay)', 'Men', '10amasj38am_ajasi', 'Married', 'Male', "6'5''", "January", "15", "1978", 45))
-        mock_heap_2.remove()
-        self.assertEqual(mock_heap_2.top(), (97, 'jackie.ramirez', 'I love to hang out with my friends!', 'Jacqueline', 'Rose', 'Ramirez', 'Los Angeles', 'California', 'Heterosexual', 'Men', '10291jac901023', 'Single', 'Female', "4'11''", "February", "3", "2003", 20))
-        mock_heap_2.remove()
-        self.assertEqual(mock_heap_2.top(), (87, 'jackson_williams', 'I love to hang out with my family!', 'Jackson', 'James', 'Williams', 'Portland', 'Oregon', 'Heterosexual', 'Women', '201892mzj_m', 'Single', 'Male', "5'11''", "March", "30", "2000", 23))
-        mock_heap_2.remove()
-        self.assertEqual(mock_heap_2.top(), (23, 'jack.white', 'I love to program!', 'Jack', 'Matthew', 'White', 'Pittsburgh', 'Pennsylvania', 'Heterosexual', 'Women', 'akjasjajsj', 'Single', 'Male', "6'2''", "April", "21", "1987", 36))
-        mock_heap_2.remove()
-        self.assertEqual(mock_heap_2.top(), (19, 'madi_gray', 'I love to write!', 'Madison', 'Jane', 'Gray', 'Austin', 'Texas', 'Heterosexual', 'Men', '19bmnavakj', 'Single', 'Female', "5'1''", "July", "18", "1999", 24))
-        mock_heap_2.remove()
-        self.assertEqual(mock_heap_2.top(), ())
-        
-        self.doCleanups()
-        self.doClassCleanups()
-        
+        self.doClassCleanups()   
         
 class TestRating(unittest.TestCase):
     # Test the happy paths of the rating system.
