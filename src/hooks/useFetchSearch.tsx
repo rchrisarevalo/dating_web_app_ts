@@ -49,8 +49,8 @@ export const useFetchSearchHistory = (endpoint: string) => {
         search_term: ""
     }])
 
-    const [pending, setPending] = useState(true)
-    const [error, setError] = useState(false)
+    const [pending, setPending] = useState<boolean>(true)
+    const [error, setError] = useState<boolean>(false)
 
     useEffect(() => {
         const fetchSearchHistory = async () => {
@@ -82,8 +82,8 @@ export const useFetchRoutes = (endpoint: string, auth: boolean) => {
         username: ""
     }])
 
-    const [pending, setPending] = useState(true)
-    const [error, setError] = useState(false)
+    const [pending, setPending] = useState<boolean>(true)
+    const [error, setError] = useState<boolean>(false)
 
     useEffect(() => {
         if (auth)
@@ -129,8 +129,8 @@ export const useFetchMatches = (match_endpoint: string,
 
     // Status variables to keep track of request status whether it is currently
     // pending of if an error has occurred.
-    const [pending, setPending] = useState(true)
-    const [error, setError] = useState(false)
+    const [pending, setPending] = useState<boolean>(true)
+    const [error, setError] = useState<boolean>(false)
 
     useEffect(() => {
         const user_data = {
@@ -140,27 +140,26 @@ export const useFetchMatches = (match_endpoint: string,
         }
 
         // Then submit a request to the REST API to match the user profiles with the current user's profile.
-        fetch('http://localhost:5000/match', {
-            method: 'POST',
-            credentials: 'include',
-            body: JSON.stringify(user_data),
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        }).then((res) => {
+        const fetchMatches = async () => {
+            const res = await fetch(match_endpoint, {
+                method: 'POST',
+                credentials: 'include',
+                body: JSON.stringify(user_data),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+
             if (res.ok) {
-                return res.json()
+                const data = await res.json()
+                setPending(false)
+                setMatchedProfiles(data[0])
             } else {
-                throw res.status
+                setPending(false)
+                setError(true)
             }
-        }).then((data) => {
-            setPending(false)
-            setMatchedProfiles(data[0])
-        }).catch((error) => {
-            console.log(error)
-            setPending(false)
-            setError(true)
-        })
+        }
+        fetchMatches()
     }, [match_endpoint, use_so_filter])
 
     // Return the matched profiles in an array full of objects, as well as the request status.

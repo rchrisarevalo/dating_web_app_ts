@@ -37,7 +37,6 @@ export const SearchPage = (props: SearchPageProps) => {
 
     useEffect(() => {
         if (search_history.length !== 0 && !search_history, !pending && !error) {
-            console.log(search_history)
             setSearchHistory(search_history)
         }
     }, [search_history, pending, error])

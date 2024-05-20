@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Response, HTTPException, Depends, APIRouter
+from fastapi import FastAPI, Request, Response, HTTPException, Depends, APIRouter, Cookie
 from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from passlib.context import CryptContext
@@ -12,9 +12,11 @@ from rating_sys import (calculate_rating,
                         update_rating, 
                         delete_rating, 
                         insert_rating)
-from key_pref.key_prefixes import visit_key_func
+from key_pref.key_prefixes import visit_key_func, matches_key
 from helpers.helper import *
-from similarity_calculations import filter_matches
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.inmemory import InMemoryBackend
+from fastapi_cache.decorator import cache
 
 import jwt
 import datetime as dt
@@ -53,6 +55,10 @@ server.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+@server.on_event('startup')
+async def startup():
+    FastAPICache.init(InMemoryBackend(), prefix="fastapi-cache")
 
 # Mount socket into the server as an ASGI app, as the FastAPI server
 # also uses ASGI to run.
@@ -324,10 +330,6 @@ async def retrieve_pic(request: Request):
     pic = base64.b64encode(bytes(pic)).decode('utf-8')
     
     return {"pic": pic}
-
-@protected_route.get("/protected_root")
-async def protected_root():
-    return {"message": "If you see this, this means that you were able to access it!"}
 
 @protected_route.route("/update_profile_pic", methods=["POST"])
 async def update_profile_pic(request: Request):
@@ -1405,19 +1407,19 @@ async def rating(request: Request):
         await terminate_connection(db)
         
 @protected_route.post("/match")
-async def match(request: Request):
+@cache(expire=120, key_builder=matches_key)
+async def match(r: Request):
     try:
         # Stores payload information sent from the client as an object variable.
-        ri_task = asyncio.create_task(request.json())
-        db_task = asyncio.create_task(create_connection())
-        request_info, db = await asyncio.gather(ri_task, db_task)
+        request_info: dict = await r.json()
+        db: p.extensions.connection = await create_connection()
 
         cursor: p.extensions.cursor = db.cursor()
         
         if request_info["algo_config"]:
             # Run matching algorithm using the list of profiles (excluding the current user) to compare with the
             # profile of the logged in user.
-            matches = run_matching_algorithm(username=request.cookies.get("username"),
+            matches = run_matching_algorithm(username=r.cookies.get("username"),
                                              db=db,
                                              cursor=cursor,
                                              use_so_filter=request_info["use_so_filter"])
@@ -1446,6 +1448,6 @@ async def match(request: Request):
     except Exception as e:
         print(e)
         raise HTTPException(500, {"message": "An unknown error has occurred."})
-    
+
 # Integrate the protected API endpoints into the FastAPI server.
 server.include_router(protected_route)

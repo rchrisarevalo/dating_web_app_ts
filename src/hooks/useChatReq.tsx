@@ -119,7 +119,6 @@ export const useFetchReqCount = (endpoint: string, connection: typeof socket_con
 
             if (res.ok) {
                 const data = await res.json()
-                console.log(data)
                 setReqCount(data.request_count)
                 setPending(false)
             } else {

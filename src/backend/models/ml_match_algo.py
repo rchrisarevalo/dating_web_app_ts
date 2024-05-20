@@ -214,7 +214,7 @@ def generate_recommendations(df: pd.DataFrame,
     if not os.path.isfile("matching_model.h5"):
         os.chdir("./models")
 
-    model = keras.models.load_model('matching_model.h5')
+    model: keras.Model = keras.models.load_model('matching_model.h5')
     df_current_user = df.drop(columns=['similarity_score'])
     
     # Dictionary which will the store the user as its key along with their predicted similarity score
@@ -225,7 +225,7 @@ def generate_recommendations(df: pd.DataFrame,
     # provided.
     for i in range(0, num_recommendations):
         current_user = df_current_user.iloc[i]
-        predicted_score = model.predict(np.array([current_user.values]), verbose=0)[0][0]
+        predicted_score = model.predict(np.array([current_user.values]), batch_size=20, verbose=0)[0][0]
         recommended_users[user_index[i]] = round((predicted_score * 100), 2)
 
     # Sort the dictionary by first accessing the key value pairs in a tuple.
