@@ -1407,7 +1407,7 @@ async def rating(request: Request):
         await terminate_connection(db)
         
 @protected_route.post("/match")
-@cache(expire=120, key_builder=matches_key)
+@cache(expire=300, key_builder=matches_key)
 async def match(r: Request):
     try:
         # Stores payload information sent from the client as an object variable.
