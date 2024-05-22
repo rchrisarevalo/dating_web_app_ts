@@ -331,6 +331,10 @@ async def retrieve_pic(request: Request):
     
     return {"pic": pic}
 
+@protected_route.get("/protected_root")
+async def protected_root():
+    return {"message": "If you see this, this means that you were able to access it!"}
+
 @protected_route.route("/update_profile_pic", methods=["POST"])
 async def update_profile_pic(request: Request):
     db: p.extensions.connection = await create_connection()

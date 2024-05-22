@@ -1,4 +1,9 @@
-import psycopg2
+# This file is not to be confused with the actual implementation
+# in the ml_match_algo.py file, which will be used in production.
+
+# This file is used for the unit tests, and is not to be used
+# in production.
+
 import pandas as pd
 import os
 
@@ -13,45 +18,26 @@ sys.path.append("../helpers/")
 from .ml_sim_calcs import *
 from helpers.helper import retrieve_age
 
-# Dictionary to store the index of users
-# based on dataframe.
-user_index = {}
-
-# Load users from database.
-def load_data(username: str, 
-              db: psycopg2.extensions.connection, 
-              cursor: psycopg2.extensions.cursor):
+def load_mock_data(mock_profiles: list[dict[str, any]],
+                   current_mock_profile: list[dict[str, any]]):
     try:
-        statement = '''
-            SELECT username,
-            first_name,
-            middle_name,
-            last_name,
-            interests,
-            height,
-            gender,
-            sexual_orientation,
-            interested_in,
-            state_residence,
-            city_residence,
-            relationship_status 
-            FROM retrieve_possible_matches(%s)
-        '''
-        params = [username]
-        cursor.execute(statement, params)
-        
-        df = pd.DataFrame(cursor.fetchall())
+        drop_these_cols = [
+            "uri", "birth_month", "birth_date",
+            "birth_year", "age", "rating"
+        ]
+        df = pd.DataFrame(mock_profiles)
+        df = df.drop(columns=drop_these_cols)
 
-        cursor.execute('SELECT * FROM get_user_profiles(%s)', params)
+        current_df = pd.DataFrame(current_mock_profile)
+        current_df = current_df.drop(columns=drop_these_cols)
+
         user_profiles = {}
 
-        for record in cursor:
+        for profile in mock_profiles:
             if "users" not in user_profiles:
-                user_profiles["users"] = {record[0]: {key[0]: value for key, value in zip(cursor.description, record)}}
+                user_profiles["users"] = {profile.get("username"): {key: item for key, item in profile.items()}}
             else:
-                user_profiles["users"][record[0]] = {key[0]: value for key, value in zip(cursor.description, record)}
-
-            user_profiles["users"][record[0]]["uri"] = bytes(user_profiles["users"][record[0]]["uri"]).decode('utf-8')
+                user_profiles["users"][profile.get("username")] = {key: item for key, item in profile.items()}
 
         for user in user_profiles["users"].keys():
             user_profiles["users"][user]["age"] = retrieve_age(
@@ -59,46 +45,17 @@ def load_data(username: str,
                 int(user_profiles["users"][user]["birth_date"]),
                 int(user_profiles["users"][user]["birth_year"])
             )
-        
-        new_column_names = [
-                            "username", 
-                            "first_name", 
-                            "middle_name", 
-                            "last_name", 
-                            "interests", 
-                            "height", 
-                            "gender", 
-                            "sexual_orientation", 
-                            "interested_in", 
-                            "state_residence", 
-                            "city_residence", 
-                            "relationship_status"
-                          ]
-        
-        for column in df.columns.values:
-            df.rename(columns={column: new_column_names[column]}, inplace=True)
 
-        cursor.execute("SELECT * FROM get_logged_in_user(%s)", [username])
-        
-        logged_in_user_profile: dict[str, any] = [
-            {key[0]: value for key, value in zip(cursor.description, record)} 
-            for record in cursor
-        ][0]
+        return df, current_df, user_profiles
 
-        cursor.close()
-        db.close()
-        
-        return df, user_profiles, logged_in_user_profile
+    except Exception:
+        raise AssertionError
+
+def process_mock_data(df_users: pd.DataFrame,
+                      df_current_user: pd.DataFrame,
+                      user_index: dict[int, str]):
     
-    except psycopg2.DatabaseError:
-        print("There was an error connecting to the database.")
-
-def process_data(df: pd.DataFrame, current_user: str):
-    df_users = df[df["username"] != current_user]
-    df_current_user = df[df["username"] == current_user]
-    
-    for i, user in enumerate(df_users['username'].values):
-        user_index[i] = user
+    user_index = {i: user for i, user in enumerate(df_users['username'].values)}
     
     try:
         if not df_users.empty or not df_current_user.empty:
@@ -108,7 +65,7 @@ def process_data(df: pd.DataFrame, current_user: str):
                              "residence", 
                              "relationship_status", 
                              "similarity_score"]
-        
+            
             users_dictionary = {}
             
             # For each attribute (excluding the username, first name, middle name, and last name columns)
@@ -129,7 +86,7 @@ def process_data(df: pd.DataFrame, current_user: str):
             # Drop the username, first name, middle name, and last name columns.
             df_users = df_users.drop(columns=['username', 'first_name', 'middle_name', 'last_name'])
             df_current_user = df_current_user.drop(columns=['username', 'first_name', 'middle_name', 'last_name'])
-            
+
             interests_dot_prod(df_users['interests'], 
                                df_current_user['interests'], 
                                users_dictionary)
@@ -154,7 +111,7 @@ def process_data(df: pd.DataFrame, current_user: str):
             users_df = scale_data(users_df)
             users_df = calculate_similarity_score(users_df, users_dictionary)
             
-            return users_df
+            return users_df, user_index
         
         else:
             print("User does not exist.")
@@ -206,21 +163,23 @@ def filter_matches(matches: list[dict[str, any]], current_user: dict[str, any]) 
     except KeyError:
         raise KeyError
 
-def generate_recommendations(df: pd.DataFrame, 
-                             num_recommendations: int, 
-                             user_profiles: dict,
-                             logged_in_user_profile: dict[str, any],
-                             use_so_filter: bool) -> list[dict[str, any]]:
+def generate_mock_recommendations(df: pd.DataFrame,
+                                  num_recommendations: int,
+                                  user_profiles: dict,
+                                  logged_in_user_profile: dict[str, any],
+                                  use_so_filter: bool,
+                                  user_index: dict) -> list[dict[str, any]]:
     # Change directories in case the folder containing the matching
     # algorithm model is not found.
     directory_changed: bool = False
 
     if not os.path.isfile("matching_model.h5"):
-        os.chdir("./models")
+        os.chdir("./src/backend/models" if "src" not in os.getcwd().split("\\") else "./models")
+        directory_changed = True
 
     model: keras.Model = keras.models.load_model('matching_model.h5')
     df_current_user = df.drop(columns=['similarity_score'])
-    
+
     # Dictionary which will the store the user as its key along with their predicted similarity score
     # as its value.
     recommended_users = {}
@@ -228,9 +187,12 @@ def generate_recommendations(df: pd.DataFrame,
     # Predict the similarity score for each user based on the number of recommendations
     # provided.
     for i in range(0, num_recommendations):
-        current_user = df_current_user.iloc[i]
-        predicted_score = model.predict(np.array([current_user.values]), batch_size=20, verbose=0)[0][0]
-        recommended_users[user_index[i]] = round((predicted_score * 100), 2)
+        try:
+            current_user = df_current_user.iloc[i]
+            predicted_score = model.predict(np.array([current_user.values]), batch_size=20, verbose=0)[0][0]
+            recommended_users[user_index[i]] = round((predicted_score * 100), 2)
+        except IndexError:
+            break
 
     # Sort the dictionary by first accessing the key value pairs in a tuple.
     # 
@@ -247,7 +209,7 @@ def generate_recommendations(df: pd.DataFrame,
     # If the directory did change if the model file could
     # not be found, change back to the previous directory.
     if directory_changed:
-        os.chdir("..")
+        os.chdir("../../" if "src" not in os.getcwd().split("\\") else "..")
 
     final_users: list[dict[str, any]] = [user_profiles["users"][user] for user in recommended_users.keys()]
 
@@ -271,21 +233,20 @@ def generate_recommendations(df: pd.DataFrame,
 
     return final_users
 
-def run_algorithm(username: str,
-                  cursor: psycopg2.extensions.cursor,
-                  db: psycopg2.extensions.connection,
-                  use_so_filter: bool):
+def run_mock_algorithm(mock_data: list[dict[str, any]],
+                       mock_current_user: list[dict[str, any]],
+                       use_so_filter: bool):
     
-    data, user_profiles, logged_in_user_profile = load_data(username, db, cursor)
-
-    preprocessed_data = process_data(data, username)
-
-    recommendations = generate_recommendations(
+    user_index = {}
+    data, current_user_data, user_profiles = load_mock_data(mock_data, mock_current_user)
+    preprocessed_data, user_index = process_mock_data(data, current_user_data, user_index)
+    recommendations = generate_mock_recommendations(
         preprocessed_data,
-        len(preprocessed_data),
+        10,
         user_profiles,
-        logged_in_user_profile,
-        use_so_filter
+        mock_current_user[0],
+        use_so_filter,
+        user_index
     )
 
     return recommendations

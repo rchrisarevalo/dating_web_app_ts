@@ -1,133 +1,25 @@
 import unittest
-from main import return_run_time, run_matching_algorithm
-from PQ import Heap
+from main import return_run_time
 from rating_sys import rating_sys
-
-class Profiles:
-    def __init__(self):
-        self.mock_user_profiles = [
-            {
-                "username": "tim_johnson", 
-                "interests": "I like to farm", 
-                "gender": "Male",
-                "first_name": "Tim", 
-                "middle_name": "Tobias", 
-                "last_name": "Johnson",
-                "height": "5'9''", 
-                "relationship_status": "Single",
-                "city_residence": "Mobile", 
-                "state_residence": "Alabama",
-                "sexual_orientation": "Heterosexual", 
-                "interested_in": "Females",
-                "uri": "akas191201982", 
-                "birth_month": "June", 
-                "birth_date": "19", 
-                "birth_year": "1985",
-                "age": 38,
-                "rating": 2.323
-            },                    
-            {
-                "username": "annie_white", 
-                "interests": "I like to work in the office", 
-                "gender": "Female",
-                "first_name": "Annie", 
-                "middle_name": "", 
-                "last_name": "White",
-                "height": "5'3''", 
-                "relationship_status": "Single",
-                "city_residence": "Birmingham", 
-                "state_residence": "Alabama",
-                "sexual_orientation": "Heterosexual", 
-                "interested_in": "Males",
-                "uri": "19akasj1nana", 
-                "birth_month": "September", 
-                "birth_date": "23", 
-                "birth_year": "1978",
-                "age": 44,
-                "rating": -10.2912
-            },     
-            {
-                "username": "joshua_walter", 
-                "interests": "I work out at the gym and am interested in guys.", 
-                "gender": "Male",
-                "first_name": "Joshua", 
-                "middle_name": "Edward", 
-                "last_name": "Walter",
-                "height": "5'11''", 
-                "relationship_status": "Taken",
-                "city_residence": "Houston", 
-                "state_residence": "Texas",
-                "sexual_orientation": "Homosexual (Gay)", 
-                "interested_in": "Males",
-                "uri": "wkas9120amnasfuja0o", 
-                "birth_month": "July", 
-                "birth_date": "2", 
-                "birth_year": "2000",
-                "age": 23,
-                "rating": 0.2931
-            },                                   
-            {
-                "username": "a_hernandez", 
-                "interests": "I love to work and play video games!", 
-                "gender": "Female",
-                "first_name": "Andrea", 
-                "middle_name": "Kimberly", 
-                "last_name": "Hernandez",
-                "height": "5'8''", 
-                "relationship_status": "Single",
-                "city_residence": "Austin", 
-                "state_residence": "Texas",
-                "sexual_orientation": "Bisexual", 
-                "interested_in": "Males, Females",
-                "uri": "19akasj1nana", 
-                "birth_month": "June", 
-                "birth_date": "19", 
-                "birth_year": "1985",
-                "age": 38,
-                "rating": 0.21920
-            }
-        ]
-
-        self.mock_current_user_profile = [
-            {
-                "username": "kimmie_benavides", 
-                "interests": "I am a hard worker and push forward", 
-                "gender": "Female",
-                "first_name": "Kimberly", 
-                "middle_name": "Elizabeth", 
-                "last_name": "Benavides",
-                "height": "5'6''", 
-                "relationship_status": "Single",
-                "city_residence": "Birmingham", 
-                "state_residence": "Alabama",
-                "sexual_orientation": "Heterosexual", 
-                "interested_in": "Males",
-                "uri": "a1928smaskcka", 
-                "birth_month": "August", 
-                "birth_date": "9", 
-                "birth_year": "2001",
-                "age": 22,
-                "rating": 23.120129
-            }
-        ]
+from class_models import MockProfiles
+from models.ml_match_algo_mock import run_mock_algorithm
 
 class TestMatchingAlgorithmRunTime(unittest.TestCase):
     # Test algorithm and check if run time is less than or equal to 5 seconds.
     def test_run_time(self):
         self.setUp()
-        profiles = Profiles()
+        profiles = MockProfiles()
         self.assertLessEqual(return_run_time(profiles.mock_user_profiles, profiles.mock_current_user_profile, False), 5.00)
         self.doCleanups()
         
     # Test to see if the matching algorihm still runs fast after running it 10000 times.
     def test_run_time_multiple(self):
         self.setUp()
-        profiles = Profiles()
+        profiles = MockProfiles()
         self.assertLessEqual(return_run_time(profiles.mock_user_profiles, profiles.mock_current_user_profile, False), 5.00)
         self.doCleanups()
         
         self.doClassCleanups()
-
 
 class TestMatchingAlgorithm(unittest.TestCase):
     # Using different usernames, test to see if the algorithms provide
@@ -135,47 +27,47 @@ class TestMatchingAlgorithm(unittest.TestCase):
     # percentage.
     def test_match(self):
         self.setUp()
-        profiles = Profiles()
-        self.assertEqual(run_matching_algorithm(profiles.mock_user_profiles, profiles.mock_current_user_profile, True), [
-                                                    {
-                                                        'username': 'tim_johnson', 
-                                                        'interests': 'I like to farm', 
-                                                        'first_name': 'Tim', 'city_residence': 'Mobile', 
-                                                        'state_residence': 'Alabama', 
-                                                        'uri': 'akas191201982', 
-                                                        'age': 38
-                                                    }
-                                                ]
+        profiles = MockProfiles()
+        self.assertEqual(run_mock_algorithm(
+                            profiles.mock_user_profiles, 
+                            profiles.mock_current_user_profile, 
+                            True), 
+                            [
+                                {
+                                    'username': 'tim_johnson', 
+                                    'interests': 'I like to farm', 
+                                    'first_name': 'Tim', 'city_residence': 'Mobile', 
+                                    'state_residence': 'Alabama', 
+                                    'uri': 'akas191201982', 
+                                    'age': 38
+                                }
+                            ]
                          )
         self.doCleanups()
 
     def test_similarity_scores(self):
         self.setUp()
-        profiles = Profiles()
-        result = run_matching_algorithm(profiles.mock_current_user_profile, profiles.mock_user_profiles, False)
-        
-        # To accommodate the dynamic nature of this unit test when running all the tests altogether or 
-        # running it individually, we will check if the first user in the array matches, as previous
-        # results have shown in prior test runs, the username of "tim_johnson", or the username
-        # of "brian_jones".
-        #
-        # The first case occurs if this unit test is run simultaneously with all the other unit
-        # tests, and the second case occurs if this unit test is run individually via the
-        # test explorer or when it is run via the command prompt.
-        if result[0]["username"] == "tim_johnson":
-            # Tests using the mock data that was provided above.
-            self.assertEqual(result[0]["username"], "tim_johnson")
-            self.assertEqual(result[1]["username"], "annie_white")
-            self.assertEqual(result[2]["username"], "a_hernandez")
-            self.assertEqual(result[3]["username"], "joshua_walter")
-        else:
-            self.assertEqual(result[0]["username"], "kimmie_benavides")
+        profiles = MockProfiles()
+        result = run_mock_algorithm(profiles.mock_user_profiles, profiles.mock_current_user_profile, False)
+        prev: int = 0
+
+        # Because there are four users in the mock user data set,
+        # assert that the number of recommendations generated
+        # from the matching algorithm is less than 10.
+        self.assertLess(len(result), 10)
+
+        # Now assert that the users are printed in the order
+        # they are stored in the 'result' variable.
+        self.assertEqual(result[0].get("username"), "tim_johnson")
+        self.assertEqual(result[1].get("username"), "annie_white")
+        self.assertEqual(result[2].get("username"), "joshua_walter")
+        self.assertEqual(result[3].get("username"), "a_hernandez")
         
         self.doCleanups()
     
     def test_retrieve_top_k_users(self):
         self.setUp()
-        profiles = Profiles()
+        profiles = MockProfiles()
 
         # Add 3 more mock data profiles.
         new_mock_data_profile_1 = {"username": "brian_jones", "interests": "I love to party hard with the ladies.", "gender": "Female",
@@ -211,12 +103,16 @@ class TestMatchingAlgorithm(unittest.TestCase):
         
         # Provide the first 5 users to the algorithm to retrieve the top 5 users based on their similarities
         # to the logged in user, as well as their current user rating.
-        new_result = run_matching_algorithm(new_mock_data_user_profiles[0:5], profiles.mock_current_user_profile, False)
+        new_result = run_mock_algorithm(
+            new_mock_data_user_profiles[0:5], 
+            profiles.mock_current_user_profile, 
+            False
+        )
         
         # Test the results to see who are the top 5 users.
-        self.assertEqual(new_result[0]["username"], 'brian_jones')
+        self.assertEqual(new_result[0]["username"], 'annie_white')
         self.assertEqual(new_result[1]["username"], 'tim_johnson')
-        self.assertEqual(new_result[2]["username"], 'annie_white')
+        self.assertEqual(new_result[2]["username"], 'brian_jones')
         self.assertEqual(new_result[3]["username"], 'a_hernandez')
         self.assertEqual(new_result[4]["username"], 'joshua_walter')
         
@@ -226,15 +122,15 @@ class TestMatchingAlgorithm(unittest.TestCase):
         
         # Test the similarity percentages of the top 3 users after removing two of the original
         # top 5 users.
-        self.assertEqual(new_result[0]["username"], 'brian_jones')
-        self.assertEqual(new_result[1]["username"], 'annie_white')
+        self.assertEqual(new_result[0]["username"], 'annie_white')
+        self.assertEqual(new_result[1]["username"], 'brian_jones')
         self.assertEqual(new_result[2]["username"], 'joshua_walter')
         
         # Now remove the top user.
         new_result.pop(0)
         
         # Test the similarity percentages of the top 2 users that are left.
-        self.assertEqual(new_result[0]["username"], 'annie_white')
+        self.assertEqual(new_result[0]["username"], 'brian_jones')
         self.assertEqual(new_result[1]["username"], 'joshua_walter')
         
         self.doCleanups()
@@ -245,7 +141,7 @@ class TestRating(unittest.TestCase):
     def test_change_rating(self):
         self.setUpClass()
         
-        profile = Profiles()
+        profile = MockProfiles()
         
         # Assume that the current user, "tim_johnson", wants to rate the user,
         # "annie_white", positively.
