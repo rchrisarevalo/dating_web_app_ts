@@ -20,7 +20,7 @@ from helpers.helper import retrieve_age
 
 def change_to_model_dir_for_tests():
     directories = os.getcwd().split("/")
-    print("List of directories:", directories)
+
     if "src" not in directories:
         os.chdir("./src/backend/models")
     elif "src" in directories and "backend" not in directories:
@@ -184,8 +184,6 @@ def generate_mock_recommendations(df: pd.DataFrame,
     directory_changed: bool = False
     prev_changed_dir = os.getcwd()
 
-    print("Current working directory: %s" % prev_changed_dir)
-
     if not os.path.isfile("matching_model.h5"):
         change_to_model_dir_for_tests()
         directory_changed = True
@@ -219,14 +217,10 @@ def generate_mock_recommendations(df: pd.DataFrame,
     # Return only the top 10 users.
     recommended_users = dict(list(filter(lambda x: x, recommended_users.items()))[:10])
 
-    print(os.getcwd())
-
     # If the directory did change if the model file could
     # not be found, change back to the previous directory.
     if directory_changed:
         os.chdir(prev_changed_dir)
-
-    print("Changed directory: %s" % os.getcwd())
 
     final_users: list[dict[str, any]] = [user_profiles["users"][user] for user in recommended_users.keys()]
 
