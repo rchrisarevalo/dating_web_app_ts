@@ -43,27 +43,33 @@ jobs:
       
     - name: Run time is less than 5 seconds.
       run: |
-        python run_tests.py --t matching_algorithm_test --c TestMatchingAlgorithmRunTime --f test_run_time
+        cd src/backend
+        pytest matching_algorithm_test.py::TestMatchingAlgorithmRunTime::test_run_time
 
     - name: Run time is less than 5 seconds after multiple iterations.
       run: |
-        python run_tests.py --t matching_algorithm_test --c TestMatchingAlgorithmRunTime --f test_run_time_multiple
+        cd src/backend
+        pytest matching_algorithm_test.py::TestMatchingAlgorithmRunTime::test_run_time_multiple
 
     - name: Test to see if matching algorithm returns user profiles and their estimated similarity percentages.
       run: |
-        python run_tests.py --t matching_algorithm_test --c TestMatchingAlgorithm --f test_match
+        cd src/backend
+        pytest matching_algorithm_test.py::TestMatchingAlgorithm::test_match
 
     - name: Retrieve the top 5 users with the highest similarity scores.
       run: |
-        python run_tests.py --t matching_algorithm_test --c TestMatchingAlgorithm --f test_similarity_scores
+        cd src/backend
+        pytest matching_algorithm_test.py::TestMatchingAlgorithm::test_similarity_scores
 
     - name: Retrieve the top k users with the highest similarity scores.
       run: |
-        python run_tests.py --t matching_algorithm_test --c TestMatchingAlgorithm --f test_retrieve_top_k_users
+        cd src/backend
+        pytest matching_algorithm_test.py::TestMatchingAlgorithm::test_retrieve_top_k_users
 
     - name: Change the rating of the user depending on whether they are rated positively, neutrally, or negatively.
       run: |
-        python run_tests.py --t matching_algorithm_test --c TestRating --f test_change_rating
+        cd src/backend
+        pytest matching_algorithm_test.py::TestRating::test_change_rating
 
     - name: Check if root route is working.
       run: |
