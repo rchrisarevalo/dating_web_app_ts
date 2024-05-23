@@ -176,7 +176,9 @@ def generate_mock_recommendations(df: pd.DataFrame,
     print("File found:", os.path.isfile("matching_model.h5"))
 
     if not os.path.isfile("matching_model.h5"):
+        print("Not found, changing directories!")
         os.chdir("./src/backend/models" if "src" not in os.getcwd().split("\\") else "./models")
+        print("Is file found:", os.path.isfile("matching_model.h5"))
         directory_changed = True
 
     model: keras.Model = keras.models.load_model('matching_model.h5')
