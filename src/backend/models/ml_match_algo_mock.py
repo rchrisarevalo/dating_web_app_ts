@@ -19,7 +19,7 @@ from .ml_sim_calcs import *
 from helpers.helper import retrieve_age
 
 def change_to_model_dir_for_tests():
-    directories = os.getcwd().split("\\")
+    directories = os.getcwd().split("/")
     print("List of directories:", directories)
     if "src" not in directories:
         os.chdir("./src/backend/models")
@@ -218,6 +218,8 @@ def generate_mock_recommendations(df: pd.DataFrame,
     
     # Return only the top 10 users.
     recommended_users = dict(list(filter(lambda x: x, recommended_users.items()))[:10])
+
+    print(os.getcwd())
 
     # If the directory did change if the model file could
     # not be found, change back to the previous directory.
