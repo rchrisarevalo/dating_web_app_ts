@@ -175,6 +175,8 @@ def generate_mock_recommendations(df: pd.DataFrame,
     changed_dir = "./src/backend/models" if "src" not in os.getcwd().split("\\") else "./backend/models"
     prev_changed_dir = os.getcwd()
 
+    print("Current working directory: %s" % prev_changed_dir)
+
     if not os.path.isfile("matching_model.h5"):
         os.chdir(changed_dir)
         directory_changed = True
@@ -239,16 +241,20 @@ def run_mock_algorithm(mock_data: list[dict[str, any]],
                        mock_current_user: list[dict[str, any]],
                        use_so_filter: bool):
     
-    user_index = {}
-    data, current_user_data, user_profiles = load_mock_data(mock_data, mock_current_user)
-    preprocessed_data, user_index = process_mock_data(data, current_user_data, user_index)
-    recommendations = generate_mock_recommendations(
-        preprocessed_data,
-        10,
-        user_profiles,
-        mock_current_user[0],
-        use_so_filter,
-        user_index
-    )
+    try:
+        user_index = {}
+        data, current_user_data, user_profiles = load_mock_data(mock_data, mock_current_user)
+        preprocessed_data, user_index = process_mock_data(data, current_user_data, user_index)
+        recommendations = generate_mock_recommendations(
+            preprocessed_data,
+            10,
+            user_profiles,
+            mock_current_user[0],
+            use_so_filter,
+            user_index
+        )
 
-    return recommendations
+        return recommendations
+
+    except Exception:
+        raise AssertionError
