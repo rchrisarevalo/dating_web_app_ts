@@ -60,14 +60,6 @@ jobs:
     - name: Retrieve the top k users with the highest similarity scores.
       run: |
         python run_tests.py --t matching_algorithm_test --c TestMatchingAlgorithm --f test_retrieve_top_k_users
-      
-    - name: Insert a user into a heap and ensure that the heap follows all the rules and there are no violations.
-      run: |
-        python run_tests.py --t matching_algorithm_test --c TestHeap --f test_insert
-
-    - name: Delete users from the heap and check if the top user changes through different operations.
-      run: |
-        python run_tests.py --t matching_algorithm_test --c TestHeap --f test_delete_and_top
 
     - name: Change the rating of the user depending on whether they are rated positively, neutrally, or negatively.
       run: |

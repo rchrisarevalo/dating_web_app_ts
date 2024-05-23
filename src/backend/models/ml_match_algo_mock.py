@@ -237,6 +237,7 @@ def run_mock_algorithm(mock_data: list[dict[str, any]],
                        mock_current_user: list[dict[str, any]],
                        use_so_filter: bool):
     
+    print("Current working directory: %s" % os.getcwd())
     user_index = {}
     data, current_user_data, user_profiles = load_mock_data(mock_data, mock_current_user)
     preprocessed_data, user_index = process_mock_data(data, current_user_data, user_index)
