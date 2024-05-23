@@ -14,3 +14,4 @@ PyJWT==2.8.0
 pytest==8.2.1
 pandas==2.2.2
 keras==3.3.3
+tensorflow==2.16.1
