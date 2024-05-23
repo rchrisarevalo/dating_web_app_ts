@@ -18,6 +18,16 @@ sys.path.append("../helpers/")
 from .ml_sim_calcs import *
 from helpers.helper import retrieve_age
 
+def change_to_model_dir_for_tests():
+    directories = os.getcwd().split("\\")
+
+    if "src" not in directories:
+        os.chdir("./src/backend/models")
+    elif "src" in directories and "backend" not in directories:
+        os.chdir("./backend/models")
+    else:
+        os.chdir("./models")
+
 def load_mock_data(mock_profiles: list[dict[str, any]],
                    current_mock_profile: list[dict[str, any]]):
     try:
@@ -172,13 +182,12 @@ def generate_mock_recommendations(df: pd.DataFrame,
     # Change directories in case the folder containing the matching
     # algorithm model is not found.
     directory_changed: bool = False
-    changed_dir = "./src/backend/models" if "src" not in os.getcwd().split("\\") else "./models"
     prev_changed_dir = os.getcwd()
 
     print("Current working directory: %s" % prev_changed_dir)
 
     if not os.path.isfile("matching_model.h5"):
-        os.chdir(changed_dir)
+        change_to_model_dir_for_tests()
         directory_changed = True
 
     model: keras.Model = keras.models.load_model('matching_model.h5')
