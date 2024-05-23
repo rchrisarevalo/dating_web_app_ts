@@ -173,6 +173,8 @@ def generate_mock_recommendations(df: pd.DataFrame,
     # algorithm model is not found.
     directory_changed: bool = False
 
+    print("File found:", os.path.isfile("matching_model.h5"))
+
     if not os.path.isfile("matching_model.h5"):
         os.chdir("./src/backend/models" if "src" not in os.getcwd().split("\\") else "./models")
         directory_changed = True
