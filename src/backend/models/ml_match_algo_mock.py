@@ -172,7 +172,7 @@ def generate_mock_recommendations(df: pd.DataFrame,
     # Change directories in case the folder containing the matching
     # algorithm model is not found.
     directory_changed: bool = False
-    changed_dir = "./src/backend/models" if "src" not in os.getcwd().split("\\") else "./backend/models"
+    changed_dir = "./src/backend/models" if "src" not in os.getcwd().split("\\") else "./models"
     prev_changed_dir = os.getcwd()
 
     print("Current working directory: %s" % prev_changed_dir)
@@ -214,6 +214,8 @@ def generate_mock_recommendations(df: pd.DataFrame,
     # not be found, change back to the previous directory.
     if directory_changed:
         os.chdir(prev_changed_dir)
+
+    print("Changed directory: %s" % os.getcwd())
 
     final_users: list[dict[str, any]] = [user_profiles["users"][user] for user in recommended_users.keys()]
 
