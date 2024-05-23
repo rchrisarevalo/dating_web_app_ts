@@ -172,13 +172,11 @@ def generate_mock_recommendations(df: pd.DataFrame,
     # Change directories in case the folder containing the matching
     # algorithm model is not found.
     directory_changed: bool = False
-
-    print("File found:", os.path.isfile("matching_model.h5"))
+    changed_dir = "./src/backend/models" if "src" not in os.getcwd().split("\\") else "./backend/models"
+    prev_changed_dir = os.getcwd()
 
     if not os.path.isfile("matching_model.h5"):
-        print("Not found, changing directories!")
-        os.chdir("./src/backend/models" if "src" not in os.getcwd().split("\\") else "./models")
-        print("Is file found:", os.path.isfile("matching_model.h5"))
+        os.chdir(changed_dir)
         directory_changed = True
 
     model: keras.Model = keras.models.load_model('matching_model.h5')
@@ -213,7 +211,7 @@ def generate_mock_recommendations(df: pd.DataFrame,
     # If the directory did change if the model file could
     # not be found, change back to the previous directory.
     if directory_changed:
-        os.chdir("../../" if "src" not in os.getcwd().split("\\") else "..")
+        os.chdir(prev_changed_dir)
 
     final_users: list[dict[str, any]] = [user_profiles["users"][user] for user in recommended_users.keys()]
 
@@ -241,7 +239,6 @@ def run_mock_algorithm(mock_data: list[dict[str, any]],
                        mock_current_user: list[dict[str, any]],
                        use_so_filter: bool):
     
-    print("Current working directory: %s" % os.getcwd())
     user_index = {}
     data, current_user_data, user_profiles = load_mock_data(mock_data, mock_current_user)
     preprocessed_data, user_index = process_mock_data(data, current_user_data, user_index)
