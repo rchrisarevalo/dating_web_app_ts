@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Response, HTTPException, Depends, APIRouter, Cookie
+from fastapi import FastAPI, Request, Response, HTTPException, Depends, APIRouter, UploadFile, File
 from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from passlib.context import CryptContext
@@ -822,81 +822,66 @@ async def download_data(request: Request):
             json_file = open("user_info.json", "rb")
             return StreamingResponse(json_file)
         
-# @protected_route.post("/report_user")
-# async def report_user(request: Request):
-#     db: p.extensions.connection = await create_connection()
-#     cursor: p.extensions.cursor = db.cursor()
-#     try:
-#         data = await request.form()
-#         reporting_user = data['reporting-user']
-#         reported_user = data['reported-user']
-#         reason = data['reason-description']
-        
-#         # To store any files uploaded by user.
-#         files_list = []
-        
-#         # Default report status when user is making their report.
-#         status = "Pending"  
-        
-#         # To store information that will be used to insert into the database.
-#         db_info = [reporting_user, reported_user, reason, "", "", "", status]
-        
-#         try:
-#             # Section that separately handles each of the three files
-#             # provided that at least one of them was uploaded.
-#             if secure_filename(request.files['file1'].filename) != "":
-#                 file1 = request.files['file1']
-#                 secure_file1 = secure_filename(file1.filename)
-#                 file1.save("../documents/%s" % secure_file1)
-#                 files_list.append(secure_file1)
-        
-#             if secure_filename(request.files['file2'].filename) != "":
-#                 file2 = request.files['file2']
-#                 secure_file2 = secure_filename(file2.filename)
-#                 file2.save("../documents/%s" % secure_file2)
-#                 files_list.append(secure_file2)
-            
-#             if secure_filename(request.files['file3'].filename) != "":
-#                 file3 = request.files['file3']
-#                 secure_file3 = secure_filename(file3.filename)
-#                 file3.save('../documents/%s' % secure_file3)
-#                 files_list.append(secure_file3)
-            
-#             db_info_index_for_docs = 3
-            
-#             # Go through each file and store the base64 version into the db_info
-#             # array for use when inserting it into the database.      
-#             for file_doc in files_list:
-#                 if os.path.isfile('../documents/%s' % file_doc):
-#                     with open('../documents/%s' % file_doc, "rb") as f:
-#                         current_file = f.read()
-#                         base64_encoding_file = base64.b64encode(current_file).decode('utf-8')
-#                         db_info[db_info_index_for_docs] = base64_encoding_file
-#                         db_info_index_for_docs += 1
-                    
-#                     # Close and remove the file temporarily stored in the documents folder.
-#                     f.close()
-#                     os.remove("../documents/%s" % file_doc)
-            
-             
-#             query = "INSERT INTO Reports (reporting_user, reported_user, date_and_time, reason, document1, document2, document3, report_status) VALUES (%s, %s, now(), %s, %s, %s, %s, %s)"
-#             cursor.execute(query, db_info)
-            
-#             return RedirectResponse("http://localhost:5173/privacy/options/view_blocked_users")
-        
-#         except db.DatabaseError as e:
-#             return {"message": e}
-        
-#         except Exception as e:
-#             return {"message": e}
-        
-#     except Exception as e:
-#         return {"message": e}
+@protected_route.post("/report_user")
+async def report_user(request: Request, 
+                      file1: UploadFile = File(..., alias="file1"),
+                      file2: UploadFile = File(..., alias="file2"),
+                      file3: UploadFile = File(..., alias="file3")):
     
-#     finally:
-#         await terminate_connection(db)
-#         # Configure memory size back to 1 MB.
-#         server.config["MAX_CONTENT_LENGTH"] = 1 * 1000 * 1000
+    try:
+        db = await create_connection()
+        cursor = db.cursor()
+
+        data: dict = await request.form()
+        params: list = [
+            request.cookies.get("username"),
+            data.get("reported-user"),
+            "now()",
+            data.get("reason-description")
+        ]
+
+        if file1.filename:
+            params.append(bytes(base64.b64encode(await file1.read())).decode('utf-8'))
+        else:
+            params.append(None)
+        
+        if file2.filename:
+            params.append(bytes(base64.b64encode(await file2.read())).decode('utf-8'))
+        else:
+            params.append(None)
+
+        if file3.filename:
+            params.append(bytes(base64.b64encode(await file3.read())).decode('utf-8'))
+        else:
+            params.append(None)
+
+        params.append("Pending")
+        
+        statement = '''
+            INSERT INTO Reports (reporting_user, reported_user, date_and_time, 
+            reason, document1, document2, document3, report_status) VALUES
+            (%s, %s, %s, %s, %s, %s, %s, %s)
+        '''
+
+        cursor.execute(statement, params)
+        db.commit()
+
+        return RedirectResponse(
+            "http://localhost:5173/profile/options/privacy/view_blocked_users", 
+            status_code=302
+        )
+    
+    except db.DataError:
+        raise HTTPException(500, {"message": "One of the data types is not compatible."})
+    
+    except db.DatabaseError:
+        raise HTTPException(500, {"message": "There was an error performing a database operation."})
+    
+    except Exception:
+        raise HTTPException(500, {"message": "Server error. Please try again."})
+    
+    finally:
+        await terminate_connection(db)
 
 @protected_route.post("/search")
 async def search(request: Request):
