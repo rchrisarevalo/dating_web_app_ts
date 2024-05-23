@@ -20,7 +20,7 @@ from helpers.helper import retrieve_age
 
 def change_to_model_dir_for_tests():
     directories = os.getcwd().split("\\")
-
+    print("List of directories:", directories)
     if "src" not in directories:
         os.chdir("./src/backend/models")
     elif "src" in directories and "backend" not in directories:
