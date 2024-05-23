@@ -13,3 +13,4 @@ uvicorn==0.29.0
 PyJWT==2.8.0
 pytest==8.2.0
 pandas==2.2.2
+keras==3.3.3
