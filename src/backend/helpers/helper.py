@@ -316,7 +316,7 @@ async def include_visits(matches: list[dict[str, any]], visited_profiles: list[d
     return final_matches_output
 
 # Function that calculates the age of the user.
-async def retrieve_age(p: dict, month: str, date: int, year: int) -> int:
+def retrieve_age(month: str, date: int, year: int) -> int:
     month_index: dict = {
         "January": 1,
         "February": 2,
@@ -438,7 +438,7 @@ async def get_logged_in_user_profile(db: p.extensions.connection, username: str)
     ]
 
     for pr in profile:
-        pr["age"] = await retrieve_age(pr, pr["birth_month"], int(pr["birth_date"]), int(pr["birth_year"]))
+        pr["age"] = retrieve_age(pr["birth_month"], int(pr["birth_date"]), int(pr["birth_year"]))
     
     return profile
 
