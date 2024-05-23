@@ -6,6 +6,7 @@ import { socket_conn, py_conn } from "../functions/SocketConn";
 import { NotificationCounter } from "./NotificationCounter";
 
 import MediaQuery from "react-responsive";
+import { Modal } from "react-bootstrap";
 
 // Interface containing navigation bar props.
 interface NavProps {
@@ -34,10 +35,14 @@ export const Nav = (props: NavProps) => {
     const [connection] = useState(socket_conn)
     const [pyConn] = useState(py_conn)
 
+    const [displayModal, setDisplayModal] = useState(false)
+
     const handleLogout = () => {
         connection.emit('remove-user-socket-id', username)
         connection.disconnect()
         pyConn.disconnect()
+
+        setDisplayModal(true)
 
         fetch("http://localhost:5000/logout", {
             method: 'POST',
@@ -52,8 +57,9 @@ export const Nav = (props: NavProps) => {
         }).then(() => {
             sessionStorage.removeItem("username")
             sessionStorage.removeItem("profile_pic")
-            window.location.href = "http://localhost:5173"
+            window.location.reload()
         }).catch((error) => {
+            setDisplayModal(false)
             console.log(error)
         })
     }
@@ -72,7 +78,7 @@ export const Nav = (props: NavProps) => {
                         <Link to={`/profile/search`}><IoSearchOutline size={20} style={{ marginBottom: 2 }} /></Link>
                     </div>
                     <div id="profile-nav-col">
-                        <Link onClick={handleLogout} to={""}><IoLogOutOutline size={20} style={{ marginRight: 10, marginBottom: 2 }} />Sign Out</Link>
+                        <button onClick={handleLogout}><IoLogOutOutline size={20} style={{ marginRight: 10, marginBottom: 2 }} />Sign Out</button>
                     </div>
                 </nav>
             </MediaQuery>
@@ -91,10 +97,18 @@ export const Nav = (props: NavProps) => {
                     {((path.pathname !== '/profile') && (path.pathname !== '/profile/')) ?
                         <li><Link to={`/profile`}><ProfilePicture /></Link></li>
                         :
-                        <li><Link onClick={handleLogout} to={""}><IoLogOutOutline size={30} />Sign Out</Link></li>
+                        <li><button onClick={handleLogout}><IoLogOutOutline size={30} />Sign Out</button></li>
                     }
                 </footer>
             </MediaQuery>
+            <Modal show={displayModal} keyboard={false} backdrop='static' centered>
+                <Modal.Header>
+                    <Modal.Title>Logging out</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    Signing out of your account...
+                </Modal.Body>
+            </Modal>
         </>
     )
 }

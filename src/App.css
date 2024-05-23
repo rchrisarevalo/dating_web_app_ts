@@ -748,8 +748,10 @@ hr {
   align-items: center;
 }
 
-#profile-nav-col a {
+#profile-nav-col a, #profile-nav-col button {
   text-decoration: none;
+  background: transparent;
+  border: none;
   color: rgb(205, 44, 226);
   padding: 7px 15px;
   border-radius: 30px;
@@ -760,7 +762,7 @@ hr {
   transition: .5s;
 }
 
-#profile-nav-col a:hover {
+#profile-nav-col a:hover, #profile-nav-col button:hover {
   background: white;
   color: black;
   font-weight: 900;
@@ -2048,6 +2050,11 @@ hr {
     background: transparent;
     border: none;
     color: white;
+    display: flex;
+    flex-direction: column;
+    font-size: 10px;
+    text-decoration: none;
+    letter-spacing: 0.3px;
   }
 
   .menu {

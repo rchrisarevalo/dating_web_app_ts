@@ -6,6 +6,7 @@
 import threading as t
 import subprocess
 import sys
+import time
 
 sys.path.append('./src/backend')
 
@@ -31,5 +32,7 @@ if __name__ == "__main__":
     # Join the threads so that they continue to run until
     # the user terminates the script.
     dev_t.join()
+    time.sleep(1.0)
     js_t.join()
+    time.sleep(1.0)
     f_api_t.join()
