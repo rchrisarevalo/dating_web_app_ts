@@ -124,12 +124,10 @@ def process_mock_data(df_users: pd.DataFrame,
             return users_df, user_index
         
         else:
-            print("User does not exist.")
-            exit(0)
+            raise AssertionError
     
     except ValueError:
-        print("User is not found!")
-        exit(0)
+        raise AssertionError
 
 def filter_matches(matches: list[dict[str, any]], current_user: dict[str, any]) -> list[dict[str, any]]:
     try:
@@ -171,7 +169,7 @@ def filter_matches(matches: list[dict[str, any]], current_user: dict[str, any]) 
             return filter_matches
     
     except KeyError:
-        raise KeyError
+        raise AssertionError
 
 def generate_mock_recommendations(df: pd.DataFrame,
                                   num_recommendations: int,
