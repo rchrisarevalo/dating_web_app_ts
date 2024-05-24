@@ -5,13 +5,14 @@ import os
 # Turn off oneDNN optimizations.
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
-import keras
 import sys
 
 sys.path.append("../helpers/")
+sys.path.append("..")
 
 from .ml_sim_calcs import *
 from helpers.helper import retrieve_age
+from class_models import ColabFilteringModel
 
 # Dictionary to store the index of users
 # based on dataframe.
@@ -211,15 +212,12 @@ def generate_recommendations(df: pd.DataFrame,
                              user_profiles: dict,
                              logged_in_user_profile: dict[str, any],
                              use_so_filter: bool) -> list[dict[str, any]]:
-    # Change directories in case the folder containing the matching
-    # algorithm model is not found.
-    directory_changed: bool = False
-
-    if not os.path.isfile("matching_model.h5"):
-        os.chdir("./models")
-
-    model: keras.Model = keras.models.load_model('matching_model.h5')
+    
+    # Drop the similarity score column for the current user.
     df_current_user = df.drop(columns=['similarity_score'])
+
+    # Retrieve the model from the ColabFilteringModel class.
+    model = ColabFilteringModel().model
     
     # Dictionary which will the store the user as its key along with their predicted similarity score
     # as its value.
@@ -228,9 +226,12 @@ def generate_recommendations(df: pd.DataFrame,
     # Predict the similarity score for each user based on the number of recommendations
     # provided.
     for i in range(0, num_recommendations):
-        current_user = df_current_user.iloc[i]
-        predicted_score = model.predict(np.array([current_user.values]), batch_size=20, verbose=0)[0][0]
-        recommended_users[user_index[i]] = round((predicted_score * 100), 2)
+        try:
+            current_user = df_current_user.iloc[i]
+            predicted_score = model.predict(np.array([current_user.values]), batch_size=20, verbose=0)[0][0]
+            recommended_users[user_index[i]] = round((predicted_score * 100), 2)
+        except IndexError:
+            break
 
     # Sort the dictionary by first accessing the key value pairs in a tuple.
     # 
@@ -244,13 +245,13 @@ def generate_recommendations(df: pd.DataFrame,
     # Return only the top 10 users.
     recommended_users = dict(list(filter(lambda x: x, recommended_users.items()))[:10])
 
-    # If the directory did change if the model file could
-    # not be found, change back to the previous directory.
-    if directory_changed:
-        os.chdir("..")
-
+    # Store the profiles of users in a list of dictionaries using
+    # the recommended_users list which lists them from most to
+    # least similar.
     final_users: list[dict[str, any]] = [user_profiles["users"][user] for user in recommended_users.keys()]
 
+    # If the current user decided to use a sexual orientation filter,
+    # filter the list of users that do not align with their interests.
     if use_so_filter:
         final_users = filter_matches(final_users, logged_in_user_profile)
 
@@ -267,6 +268,7 @@ def generate_recommendations(df: pd.DataFrame,
         'relationship_status',
         'sexual_orientation'
     ]
+
     final_users = pd.DataFrame(final_users).drop(columns=cols_to_drop).to_dict('records')
 
     return final_users
