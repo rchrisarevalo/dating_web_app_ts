@@ -29,3 +29,4 @@ dist-ssr
 /src/backend/node_modules
 /src/backend/text_sim.py
 /src/backend/user_info.json
+script.py
