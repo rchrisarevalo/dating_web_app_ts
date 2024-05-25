@@ -79,6 +79,15 @@ def load_data(username: str,
         for column in df.columns.values:
             df.rename(columns={column: new_column_names[column]}, inplace=True)
 
+        # Make a separate dataframe, but for the current user.
+        current_user_df = pd.DataFrame(df[df["username"] == username])
+
+        # Now exclude the current user from the main dataframe,
+        # randomize it, and return the first 10 users from
+        # the shuffled dataframe.
+        df = df[df["username"] != username]
+        df = df.sample(frac=1).reset_index(drop=True).head(n=10)
+
         cursor.execute("SELECT * FROM get_logged_in_user(%s)", [username])
         
         logged_in_user_profile: dict[str, any] = [
@@ -89,14 +98,13 @@ def load_data(username: str,
         cursor.close()
         db.close()
         
-        return df, user_profiles, logged_in_user_profile
+        return df, current_user_df, user_profiles, logged_in_user_profile
     
     except psycopg2.DatabaseError:
         print("There was an error connecting to the database.")
 
-def process_data(df: pd.DataFrame, current_user: str):
+def process_data(df: pd.DataFrame, df_current_user: pd.DataFrame, current_user: str):
     df_users = df[df["username"] != current_user]
-    df_current_user = df[df["username"] == current_user]
     
     for i, user in enumerate(df_users['username'].values):
         user_index[i] = user
@@ -278,9 +286,9 @@ def run_algorithm(username: str,
                   db: psycopg2.extensions.connection,
                   use_so_filter: bool):
     
-    data, user_profiles, logged_in_user_profile = load_data(username, db, cursor)
+    data, current_user_data, user_profiles, logged_in_user_profile = load_data(username, db, cursor)
 
-    preprocessed_data = process_data(data, username)
+    preprocessed_data = process_data(data, current_user_data, username)
 
     recommendations = generate_recommendations(
         preprocessed_data,
