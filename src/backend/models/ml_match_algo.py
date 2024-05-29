@@ -79,14 +79,11 @@ def load_data(username: str,
         for column in df.columns.values:
             df.rename(columns={column: new_column_names[column]}, inplace=True)
 
-        # Make a separate dataframe, but for the current user.
-        current_user_df = pd.DataFrame(df[df["username"] == username])
-
         # Now exclude the current user from the main dataframe,
         # randomize it, and return the first 10 users from
         # the shuffled dataframe.
         df = df[df["username"] != username]
-        df = df.sample(frac=1).reset_index(drop=True).head(n=10)
+        # df = df.sample(frac=1).reset_index(drop=True).head(n=10)
 
         cursor.execute("SELECT * FROM get_logged_in_user(%s)", [username])
         
@@ -94,6 +91,19 @@ def load_data(username: str,
             {key[0]: value for key, value in zip(cursor.description, record)} 
             for record in cursor
         ][0]
+
+        cursor.execute('''
+            SELECT username, first_name, middle_name, last_name, 
+            interests, height, gender, sexual_orientation,
+            interested_in, state_residence, city_residence,
+            relationship_status FROM get_logged_in_user(%s)
+        ''', [username])
+
+        # Make a separate dataframe, but for the current user.
+        current_user_df = pd.DataFrame(cursor.fetchall())
+
+        for column in current_user_df.columns.values:
+            current_user_df.rename(columns={column: new_column_names[column]}, inplace=True)
 
         cursor.close()
         db.close()
