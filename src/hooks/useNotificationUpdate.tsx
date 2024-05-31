@@ -76,8 +76,6 @@ export const useNotificationUpdate = (currentUser: string, connection: typeof so
                         })
                     }
                     retrieveNotificationCount()
-
-                    console.log("Here!")
                 }
     
                 // If the user happens to be in their recent messages page,

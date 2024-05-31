@@ -58,9 +58,6 @@ export const RecentMessages = () => {
     }, [])
 
     const handleRatingSubmission = (user_rating_details: RatingSubmission) => {
-
-        console.log(user_rating_details.rating_type, user_rating_details.original_rating_type)
-
         setRecentMessagedUsers((prev) => {
             const updatedRecentMessages = [...prev]
 

@@ -19,6 +19,11 @@ type SendingMessage = {
     sending_error: boolean
 }
 
+type Log = {
+    message_from: "",
+    message: ""
+}
+
 export const Message = (props: MessageProps) => {
     const currentRoute = useLocation()
     const [currentMsg, setCurrentMsg] = useState("")
@@ -66,7 +71,21 @@ export const Message = (props: MessageProps) => {
         if (connection.active) {
             // After the server emits the updated list, then
             // update it on the recipient's end.
-            connection.on('recipient-message', () => {
+            connection.on('recipient-message', (sender_msg: Log) => {
+                // Store the original copy of message logs in a temp list
+                // in case the message fails to send.
+                const oldMessages = [...messageLog]
+
+                // Simulate an optimistic state change to immediately display
+                // the sent message on the current user's (the sender's) 
+                // side.
+                setMessageLog([...messageLog, {
+                    message_from: sender_msg.message_from, 
+                    message: sender_msg.message
+                }])
+
+                // Change the submit state variable to true to trigger
+                // a re-rendering of the new messages being retrieved.
                 setSubmit(true)
 
                 // If the recipient happens to be in the same browser
@@ -88,6 +107,9 @@ export const Message = (props: MessageProps) => {
                     }).then((data) => {
                         console.log(data)
                     }).catch((error) => {
+                        // Set optimistic state back to the original state,
+                        // which is the old message log.
+                        setMessageLog(oldMessages)
                         console.log(error)
                     }).finally(() => {
                         setTimeout(() => {
@@ -134,6 +156,27 @@ export const Message = (props: MessageProps) => {
             message: input_msg
         }
 
+        // Store the original copy of message logs in a temp list
+        // in case the message fails to send.
+        const oldMessages = [...messageLog]
+
+        // Clear the message after the user has submitted it.
+        setCurrentMsg("")
+
+        // Simulate an optimistic state change to immediately display
+        // the sent message on the current user's (the sender's) 
+        // side.
+        setMessageLog([...messageLog, {
+            message_from: username, 
+            message: information.message
+        }])
+
+        // Smoothly scroll to the bottom of the page
+        // as soon as the message log is updated.
+        setTimeout(() => {
+            window.scrollTo(0, document.body.scrollHeight)
+        }, 100)
+
         fetch("http://localhost:5000/post_message", {
             method: 'POST',
             credentials: 'include',
@@ -154,7 +197,7 @@ export const Message = (props: MessageProps) => {
             // Set pending and error status to false.
             setMsgSent({sending: false, sending_error: false})
 
-            // Tell the hook that the message has been sent.
+            // Tell the fetch message hook that the message has been sent.
             setSubmit(true)
 
             // Update messaged user's notification counter.
@@ -173,6 +216,11 @@ export const Message = (props: MessageProps) => {
         }).catch((error) => {
             // Set pending status to false but error status to true.
             setMsgSent({sending: false, sending_error: true})
+            
+            // Reset the simulated optimistic state to the old messages 
+            // after the operation has failed.
+            setMessageLog(oldMessages)
+            
             console.log(error)
         }).finally(() => {
             setTimeout(() => {
