@@ -559,7 +559,7 @@ export const Update = (props: UpdateProps) => {
                                 <br></br>
                                 <b>Date of Birth</b>
                                 <p>{`${profile_page.birth_month} ${profile_page.birth_date}, ${profile_page.birth_year}`}</p>
-                                {DOBChange ?
+                                {change ?
                                     <div className="change-inputs">
                                         <input type="date" id="date-of-birth" onChange={handle_dob} value={handleDOB} />
                                         <br></br>
