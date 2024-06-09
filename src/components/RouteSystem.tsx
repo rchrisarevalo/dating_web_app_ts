@@ -32,7 +32,7 @@ import { UserNotExist } from "./UserNotExist";
 // Import socket connection.
 import { socket_conn, py_conn } from "../functions/SocketConn";
 import { Nav } from "./Nav";
-import { CurrentUserProfileProvider } from "../functions/Contexts";
+import { CurrentUserProfileProvider } from "./Contexts";
 
 // Interface for protected routes props.
 interface RoutesProps {

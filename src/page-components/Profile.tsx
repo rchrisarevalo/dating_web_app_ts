@@ -1,6 +1,6 @@
 import { useContext } from 'react';
 import { Loading } from '../components/Loading'
-import { CurrentUserProfileContext } from '../functions/Contexts';
+import { CurrentUserProfileContext } from '../components/Contexts';
 
 
 export const Profile = () => {

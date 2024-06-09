@@ -4,7 +4,7 @@ import { socket_conn, py_conn } from '../functions/SocketConn';
 import { MonthToNum, NumToMonth } from '../functions/Calendar';
 import { Link } from 'react-router-dom';
 import { IoArrowBackCircleSharp } from 'react-icons/io5';
-import { CurrentUserProfileContext } from '../functions/Contexts';
+import { CurrentUserProfileContext } from '../components/Contexts';
 
 interface UpdateProps {
     username: string
@@ -528,7 +528,7 @@ export const Update = (props: UpdateProps) => {
                                 {change ?
                                     <div className="change-inputs">
                                         <form encType='multipart/form-data' method='POST' action='http://localhost:5000/update_profile_pic'>
-                                            <input type="file" accept='image/*' name="new-profile-pic" max={4} />
+                                            <input type="file" accept='image/*' name="new-profile-pic" max={4} required />
                                             <br></br>
                                             <button value="change-profile-pic" id="change-profile-pic" onClick={display_change}>Cancel</button>
                                             <br></br>
