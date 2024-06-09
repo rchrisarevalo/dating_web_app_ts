@@ -14,8 +14,12 @@ export type CurrentProfile = {
     age: number,
     height: string,
     interests: string,
+    gender: string,
     sexual_orientation: string,
     relationship_status: string,
+    birth_date: string,
+    birth_month: string,
+    birth_year: string,
     profile_pic: string
 }
 
