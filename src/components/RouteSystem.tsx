@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { useFetchLogin } from "../hooks/useFetchLogin";
 import { useFetchRoutes } from "../hooks/useFetchSearch";
 import { useFetchAlgoConfig } from "../hooks/useFetchSearch";
-import { useNotificationUpdate } from "../hooks/useNotificationUpdate";
 import { useFetchReqCount } from "../hooks/useChatReq";
 
 // Import necessary React Router DOM libraries to configure routes.
@@ -46,59 +45,56 @@ export const RoutingSystem = () => {
     const path = useLocation().pathname
     const domain_path = path.split("/")[1]
 
+    const [connection] = useState(socket_conn)
+    const [pyConn] = useState(py_conn)
+
+    // Connect socket connection if user is authenticated.
+    useEffect(() => {
+        // Connect the authenticated user to the socket if
+        // their login has been verified.
+        if (!pending && !error && auth) {
+            connection.connect()
+            pyConn.connect()
+        } 
+        
+        // Otherwise, disconnect them from the socket.
+        else {
+            connection.disconnect()
+            pyConn.disconnect()
+        }
+
+        // Connect the user to the socket to allow them to send real-time
+        // messages to other users.
+        connection.on('connect', () => {
+            console.log("Connected!")
+            connection.emit('store-user-socket-id', username, connection.id)
+        })
+
+        pyConn.on('connect', () => {
+            console.log("Connected to Python socket!")
+        })
+
+        // Disconnect the user from the socket once they have logged out
+        // or if their session.
+        connection.on('disconnect', () => {
+            console.log("Disconnected!")
+            connection.emit('remove-user-socket-id', username)
+        })
+
+
+        pyConn.on('disconnect', () => {
+            console.log("Disconnected!")
+        })
+        // Cleanup function to prevent the socket connection
+        // from running more than once.
+        return () => {
+            connection.off('connect')
+            pyConn.off('connect')
+        }
+    }, [connection, auth])
+
     const ProtectedRoutes = (props: RoutesProps) => {
         const { children } = props
-
-        const [connection] = useState(socket_conn)
-        const [pyConn] = useState(py_conn)
-
-        // Connect socket connection if user is authenticated.
-        useEffect(() => {
-            // Connect the authenticated user to the socket if
-            // their login has been verified.
-            if (!pending && !error && auth) {
-                connection.connect()
-                pyConn.connect()
-            } 
-            
-            // Otherwise, disconnect them from the socket.
-            else {
-                connection.disconnect()
-                pyConn.disconnect()
-            }
-
-            // Connect the user to the socket to allow them to send real-time
-            // messages to other users.
-            connection.on('connect', () => {
-                console.log("Connected!")
-                connection.emit('store-user-socket-id', username, connection.id)
-            })
-
-            pyConn.on('connect', () => {
-                console.log("Connected to Python socket!")
-            })
-
-            // Disconnect the user from the socket once they have logged out
-            // or if their session.
-            connection.on('disconnect', () => {
-                console.log("Disconnected!")
-                connection.emit('remove-user-socket-id', username)
-            })
-
-
-            pyConn.on('disconnect', () => {
-                console.log("Disconnected!")
-            })
-            // Cleanup function to prevent the socket connection
-            // from running more than once.
-            return () => {
-                connection.off('connect')
-                pyConn.off('connect')
-            }
-        }, [connection])
-
-        // Fetch user's current notification counter.
-        const { notification_counter, notification_error, notification_pending } = useNotificationUpdate(username, connection)
         
         // Fetch user's current request count based on the requests sent to them
         // excluding the ones they made to others.
@@ -115,10 +111,7 @@ export const RoutingSystem = () => {
                 { (path !== "/tos" && domain_path !== "message" && domain_path !== "user") ?
                     <Nav 
                          username={username} 
-                         notificationCounter={notification_counter}
                          chatRequestCounter={req_count} 
-                         error={notification_error} 
-                         pending={notification_pending}
                          chat_request_error={req_error}
                          chat_request_pending={req_pending} 
                     />
@@ -162,7 +155,7 @@ export const RoutingSystem = () => {
                         :
                         !profile_data.pending ?
                             !profile_data.error ?
-                                <CurrentUserProfileProvider auth={auth} username={username}>
+                                <CurrentUserProfileProvider auth={auth} username={username} connection={connection}>
                                     <ProtectedRoutes>
                                         <Route index path="/profile" element={
                                             <Profile />

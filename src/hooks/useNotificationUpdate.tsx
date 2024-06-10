@@ -10,9 +10,11 @@ export const useNotificationUpdate = (currentUser: string, connection: typeof so
 
     const path = useLocation()
 
-    // Load current user's notification count in initial load.
+    // Load current user's notification count as long as
+    // they are not currently in their recent messages 
+    // feed.
     useEffect(() => {
-        if (currentUser) {
+        if (currentUser && path.pathname !== "/profile/recent_messages") {
             const retrieveNotificationCount = async () => {
                 await fetch(`http://localhost:4000/retrieve_notification_count?username=${currentUser}`, {
                     method: 'GET',
@@ -52,13 +54,24 @@ export const useNotificationUpdate = (currentUser: string, connection: typeof so
     
         // Update recipient user's notification counter if they are not in the recent messages page
         // or clear it if they are currently in it.
-    
         if (connection.active) {
             connection.on('get-updated-notification-counter', (retrieve_username_from_path) => {
                 // If the user is not in their recent messages page,
                 // then update their notification counter.
                 if (path.pathname !== "/profile/recent_messages") {
                     const retrieveNotificationCount = async () => {
+                        const oldNotifCount = notificationCounter
+
+                        // Logic to handle NaN values in the event that
+                        // one is found when a user does not have any
+                        // unread notifications.
+                        // ###############################################
+                        if (isNaN(oldNotifCount))
+                            setNotificationCounter(notificationCounter + 1)
+                        else
+                            setNotificationCounter(prev => prev + 1)
+                        // ###############################################
+                        
                         await fetch(`http://localhost:4000/retrieve_notification_count?username=${retrieve_username_from_path}`, {
                             method: 'GET',
                             credentials: 'include',
@@ -72,6 +85,7 @@ export const useNotificationUpdate = (currentUser: string, connection: typeof so
                         }).then((data) => {
                             setNotificationCounter(data.notification_counter)
                         }).catch((error) => {
+                            setNotificationCounter(oldNotifCount)
                             console.log(error)
                         })
                     }
@@ -81,6 +95,11 @@ export const useNotificationUpdate = (currentUser: string, connection: typeof so
                 // If the user happens to be in their recent messages page,
                 // then clear their notification counter.
                 else if (path.pathname === "/profile/recent_messages") {
+                    const oldNotifCount = notificationCounter
+
+                    // Clear counter.
+                    setNotificationCounter(0)
+
                     fetch(`http://localhost:5000/clear_notification_count?username=${retrieve_username_from_path}`, {
                         method: 'PUT',
                         credentials: 'include',
@@ -96,6 +115,7 @@ export const useNotificationUpdate = (currentUser: string, connection: typeof so
                     }).then((data) => {
                         setNotificationCounter(data.notification_counter)
                     }).catch((error) => {
+                        setNotificationCounter(oldNotifCount)
                         console.log(error)
                     })
                 }
@@ -105,6 +125,11 @@ export const useNotificationUpdate = (currentUser: string, connection: typeof so
         // Clear the notification counter if the logged in user enters the
         // recent messages page.
         if (path.pathname === "/profile/recent_messages") {
+            const oldNotifCount = notificationCounter
+
+            // Clear counter.
+            setNotificationCounter(0)
+            
             fetch(`http://localhost:5000/clear_notification_count?username=${currentUser}`, {
                 method: 'PUT',
                 credentials: 'include',
@@ -120,6 +145,7 @@ export const useNotificationUpdate = (currentUser: string, connection: typeof so
             }).then((data) => {
                 setNotificationCounter(data.notification_counter)
             }).catch((error) => {
+                setNotificationCounter(oldNotifCount)
                 console.log(error)
             })
         }
@@ -131,5 +157,9 @@ export const useNotificationUpdate = (currentUser: string, connection: typeof so
         }
     }, [connection, path, currentUser])
 
-    return { notification_counter: notificationCounter, notification_error: error, notification_pending: pending }
+    return { 
+        notification_counter: notificationCounter, 
+        notification_error: error, 
+        notification_pending: pending,
+    }
 }

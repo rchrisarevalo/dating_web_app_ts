@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { Link, useLocation } from 'react-router-dom';
 import { IoChatboxEllipsesOutline, IoSettingsOutline, IoSearchOutline, IoLogOutOutline, IoSendOutline, IoMailOutline } from "react-icons/io5"
 import { ProfilePicture } from "./ProfilePicture";
@@ -7,14 +7,12 @@ import { NotificationCounter } from "./NotificationCounter";
 
 import MediaQuery from "react-responsive";
 import { Modal } from "react-bootstrap";
+import { CurrentUserProfileContext } from "./Contexts";
 
 // Interface containing navigation bar props.
 interface NavProps {
     username: string,
-    notificationCounter: number,
     chatRequestCounter: number,
-    error: boolean,
-    pending: boolean
     chat_request_error: boolean,
     chat_request_pending: boolean
 }
@@ -27,7 +25,15 @@ interface UserNavProps {
 }
 
 export const Nav = (props: NavProps) => {
-    const { username, notificationCounter, chatRequestCounter, error, pending, chat_request_error, chat_request_pending } = props
+    const profileContext = useContext(CurrentUserProfileContext)
+
+    if (!profileContext) {
+        throw new Error("The context failed to be recognized!")
+    }
+
+    const { notification_counter, notification_error, notification_pending } = profileContext
+
+    const { username, chatRequestCounter, chat_request_error, chat_request_pending } = props
 
     const path = useLocation()
 
@@ -73,7 +79,7 @@ export const Nav = (props: NavProps) => {
                     </div>
                     <div id="profile-nav-col">
                         <Link to={`/profile/options/`} rel="noreferrer"><IoSettingsOutline size={20} style={{ marginBottom: 2 }} /></Link>
-                        <Link to={`/profile/recent_messages`}><NotificationCounter counter={notificationCounter} pending={pending} error={error} /><IoChatboxEllipsesOutline size={20} /></Link>
+                        <Link to={`/profile/recent_messages`}><NotificationCounter counter={notification_counter} pending={notification_pending} error={notification_error} /><IoChatboxEllipsesOutline size={20} /></Link>
                         <Link to={`/profile/follow_requests`}><NotificationCounter counter={chatRequestCounter} pending={chat_request_pending} error={chat_request_error} /><IoMailOutline size={20} /></Link>
                         <Link to={`/profile/search`}><IoSearchOutline size={20} style={{ marginBottom: 2 }} /></Link>
                     </div>
@@ -91,7 +97,7 @@ export const Nav = (props: NavProps) => {
                         */
                     }
                     <li><Link to={`/profile/options`}><IoSettingsOutline size={30} />Settings</Link></li>
-                    <li><Link to={"/profile/recent_messages"}><NotificationCounter counter={notificationCounter} error={error} pending={pending} /><IoChatboxEllipsesOutline size={30} />Messages</Link></li>
+                    <li><Link to={"/profile/recent_messages"}><NotificationCounter counter={notification_counter} error={notification_error} pending={notification_pending} /><IoChatboxEllipsesOutline size={30} />Messages</Link></li>
                     <li><Link to={`/profile/follow_requests`}><NotificationCounter counter={chatRequestCounter} pending={chat_request_pending} error={chat_request_error} /><IoMailOutline size={30} />Chat Requests</Link></li>
                     <li><Link to={`/profile/search`}><IoSearchOutline size={30} />Search</Link></li>
                     {((path.pathname !== '/profile') && (path.pathname !== '/profile/')) ?
