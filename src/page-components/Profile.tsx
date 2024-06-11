@@ -1,31 +1,31 @@
+import { useContext } from 'react';
 import { Loading } from '../components/Loading'
-import { CurrentProfile } from '../types/types.config'
+import { CurrentUserProfileContext } from '../components/Contexts';
 
-interface ProfileProps
-{
-    profile: CurrentProfile,
-    pending: boolean,
-    error: boolean
-}
 
-export const Profile = (props: ProfileProps) => {
+export const Profile = () => {
+    const profileContext = useContext(CurrentUserProfileContext)
 
-    const { profile, pending, error } = props;
+    if (!profileContext) {
+        throw new Error("The context failed to be recognized!")
+    }
+
+    const { profile_page, profile_page_error, profile_page_pending } = profileContext
 
     return (
         <div className="profile-container">
-            {!pending ?
+            {!profile_page_pending ?
                 <>
-                    {!error ? 
+                    {!profile_page_error ? 
                         <div className="profile-page-section">
                             <div className="profile-page-pic">
-                                <img src={`data:image/png;base64,${profile.profile_pic}`} alt="profile-pic"></img>
+                                <img src={`data:image/png;base64,${profile_page.profile_pic}`} alt="profile-pic"></img>
                             </div>
                             <div className="profile-page-bio">
-                                <h1>{`${profile.name}, ${profile.age}`}</h1>
+                                <h1>{`${profile_page.name}, ${profile_page.age}`}</h1>
                                 <p>
                                     {/* Split the interests section into paragraphs if the user has entered it that way. */}
-                                    {profile.interests.split("\n").map((paragraph, i) => 
+                                    {profile_page.interests.split("\n").map((paragraph, i) => 
                                         <p key={`profile-interests-paragraph-${i}`}>
                                             {paragraph}
                                             <br></br>
@@ -37,19 +37,19 @@ export const Profile = (props: ProfileProps) => {
                                 <div className="profile-page-details-row">
                                     <div className="profile-page-details-col">
                                         <h4>Height</h4>
-                                        <h5>{`${profile.height}`}</h5>
+                                        <h5>{`${profile_page.height}`}</h5>
                                         <h4>Sexual Orientation</h4>
-                                        <h5>{`${profile.sexual_orientation}`}</h5>
+                                        <h5>{`${profile_page.sexual_orientation}`}</h5>
                                     </div>
                                     <div className="profile-page-details-col">
                                         <h4>Relationship Status</h4>
-                                        <h5>{`${profile.relationship_status}`}</h5>
+                                        <h5>{`${profile_page.relationship_status}`}</h5>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         :
-                        <Loading error={error}/>
+                        <Loading error={profile_page_error}/>
                     }
                 </>
                 :

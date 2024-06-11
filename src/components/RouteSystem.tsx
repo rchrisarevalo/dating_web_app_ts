@@ -1,11 +1,7 @@
 // Import hooks from 'react' library and custom hooks.
 import { useEffect, useState } from "react";
 import { useFetchLogin } from "../hooks/useFetchLogin";
-import { useFetchProfile } from "../hooks/useFetchProfile";
 import { useFetchRoutes } from "../hooks/useFetchSearch";
-import { useFetchAlgoConfig } from "../hooks/useFetchSearch";
-import { useNotificationUpdate } from "../hooks/useNotificationUpdate";
-import { useFetchReqCount } from "../hooks/useChatReq";
 
 // Import necessary React Router DOM libraries to configure routes.
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
@@ -33,6 +29,7 @@ import { UserNotExist } from "./UserNotExist";
 // Import socket connection.
 import { socket_conn, py_conn } from "../functions/SocketConn";
 import { Nav } from "./Nav";
+import { CurrentUserProfileProvider } from "./Contexts";
 
 // Interface for protected routes props.
 interface RoutesProps {
@@ -41,69 +38,60 @@ interface RoutesProps {
 
 export const RoutingSystem = () => {
     const { auth, pending, error, username, profile_pic, status_code } = useFetchLogin()
-    const { profile_page, profile_page_pending, profile_page_error } = useFetchProfile(auth, username)
-    const { algo_config, use_so_filter, algo_pending, algo_error } = useFetchAlgoConfig("http://localhost:4000/privacy/check_recommendation_settings", auth)
     const profile_data = useFetchRoutes("http://localhost:4000/get_user_routes", auth)
     const path = useLocation().pathname
     const domain_path = path.split("/")[1]
 
+    const [connection] = useState(socket_conn)
+    const [pyConn] = useState(py_conn)
+
+    // Connect socket connection if user is authenticated.
+    useEffect(() => {
+        // Connect the authenticated user to the socket if
+        // their login has been verified.
+        if (!pending && !error && auth) {
+            connection.connect()
+            pyConn.connect()
+        } 
+        
+        // Otherwise, disconnect them from the socket.
+        else {
+            connection.disconnect()
+            pyConn.disconnect()
+        }
+
+        // Connect the user to the socket to allow them to send real-time
+        // messages to other users.
+        connection.on('connect', () => {
+            console.log("Connected!")
+            connection.emit('store-user-socket-id', username, connection.id)
+        })
+
+        pyConn.on('connect', () => {
+            console.log("Connected to Python socket!")
+        })
+
+        // Disconnect the user from the socket once they have logged out
+        // or if their session.
+        connection.on('disconnect', () => {
+            console.log("Disconnected!")
+            connection.emit('remove-user-socket-id', username)
+        })
+
+
+        pyConn.on('disconnect', () => {
+            console.log("Disconnected!")
+        })
+        // Cleanup function to prevent the socket connection
+        // from running more than once.
+        return () => {
+            connection.off('connect')
+            pyConn.off('connect')
+        }
+    }, [connection, auth])
+
     const ProtectedRoutes = (props: RoutesProps) => {
         const { children } = props
-
-        const [connection] = useState(socket_conn)
-        const [pyConn] = useState(py_conn)
-
-        // Connect socket connection if user is authenticated.
-        useEffect(() => {
-            // Connect the authenticated user to the socket if
-            // their login has been verified.
-            if (!pending && !error && auth) {
-                connection.connect()
-                pyConn.connect()
-            } 
-            
-            // Otherwise, disconnect them from the socket.
-            else {
-                connection.disconnect()
-                pyConn.disconnect()
-            }
-
-            // Connect the user to the socket to allow them to send real-time
-            // messages to other users.
-            connection.on('connect', () => {
-                console.log("Connected!")
-                connection.emit('store-user-socket-id', username, connection.id)
-            })
-
-            pyConn.on('connect', () => {
-                console.log("Connected to Python socket!")
-            })
-
-            // Disconnect the user from the socket once they have logged out
-            // or if their session.
-            connection.on('disconnect', () => {
-                console.log("Disconnected!")
-                connection.emit('remove-user-socket-id', username)
-            })
-
-
-            pyConn.on('disconnect', () => {
-                console.log("Disconnected!")
-            })
-            // Cleanup function to prevent the socket connection
-            // from running more than once.
-            return () => {
-                connection.off('connect')
-                pyConn.off('connect')
-            }
-        }, [connection])
-
-        // Fetch user's current notification counter.
-        const { notification_counter, notification_error, notification_pending } = useNotificationUpdate(username, connection)
-        
-        // Fetch user's current request count based on the requests sent to them
-        // excluding the ones they made to others.
-        const { req_count, req_pending, req_error } = useFetchReqCount("http://localhost:4000/retrieve_request_count", connection)
 
         // This section is executed when the user navigates another page through
         // their browser's search bar or if they are opening their browser while
@@ -114,15 +102,7 @@ export const RoutingSystem = () => {
         return (
             <>
                 { (path !== "/tos" && domain_path !== "message" && domain_path !== "user") ?
-                    <Nav 
-                         username={username} 
-                         notificationCounter={notification_counter}
-                         chatRequestCounter={req_count} 
-                         error={notification_error} 
-                         pending={notification_pending}
-                         chat_request_error={req_error}
-                         chat_request_pending={req_pending} 
-                    />
+                    <Nav username={username}/>
                     :
                     <></>
                 }
@@ -163,43 +143,37 @@ export const RoutingSystem = () => {
                         :
                         !profile_data.pending ?
                             !profile_data.error ?
-                                <ProtectedRoutes>
-                                    <Route index path="/profile" element={<Profile 
-                                        profile={profile_page}
-                                        pending={profile_page_pending}
-                                        error={profile_page_error}
-                                    />} />
-                                    <Route path="/profile/options" element={<Options />} />
-                                    <Route path="/profile/options/update" element={<Update username={username} />} />
-                                    <Route path="/profile/options/settings" element={<AccountSettings username={username} /> } />
-                                    <Route path="/profile/options/privacy" element={<PrivacySettings 
-                                        username={username}
-                                        auth={auth}
-                                    />} />
-                                    <Route path="/profile/options/privacy/view_blocked_users" element={<BlockedUsers />} />
-                                    <Route path="/profile/options/privacy/download_information" element={<DownloadInfo />} />
-                                    <Route path="/profile/recent_messages" element={<RecentMessages />} />
-                                    <Route path="/profile/follow_requests" element={<ViewChatReqs />} />
-                                    <Route path="/profile/search" element={<SearchPage 
-                                        algo_config={algo_config}
-                                        use_so_filter={use_so_filter}
-                                        algo_pending={algo_pending}
-                                        algo_error={algo_error}
-                                    />} />
-                                    {profile_data.profiles.map((user: { username: string; }) => 
-                                        <Route path={`/user/${user.username}`} element={<User username={user.username} />} />
-                                    )}
-                                    {profile_data.chatRoutes.map((user: { username: string; }) => 
-                                        <Route path={`/message/${user.username}`} element={<Message username={username} />} />
-                                    )}
-                                    <Route path="/tos" element={<TOS />} />
-                                    <Route path="*" element={
-                                        (path === "/" || path === "/signup" || path === `/profile/${username}`) ?
-                                            <Navigate to="/profile" />
-                                            :
-                                            <UserNotExist />
-                                    } />
-                                </ProtectedRoutes>
+                                <CurrentUserProfileProvider auth={auth} username={username} connection={connection}>
+                                    <ProtectedRoutes>
+                                        <Route index path="/profile" element={
+                                            <Profile />
+                                        } />
+                                        <Route path="/profile/options" element={<Options />} />
+                                        <Route path="/profile/options/update" element={<Update username={username} />} />
+                                        <Route path="/profile/options/settings" element={<AccountSettings username={username} /> } />
+                                        <Route path="/profile/options/privacy" element={<PrivacySettings 
+                                            username={username}
+                                        />} />
+                                        <Route path="/profile/options/privacy/view_blocked_users" element={<BlockedUsers />} />
+                                        <Route path="/profile/options/privacy/download_information" element={<DownloadInfo />} />
+                                        <Route path="/profile/recent_messages" element={<RecentMessages />} />
+                                        <Route path="/profile/follow_requests" element={<ViewChatReqs />} />
+                                        <Route path="/profile/search" element={<SearchPage />} />
+                                        {profile_data.profiles.map((user: { username: string; }) => 
+                                            <Route path={`/user/${user.username}`} element={<User username={user.username} />} />
+                                        )}
+                                        {profile_data.chatRoutes.map((user: { username: string; }) => 
+                                            <Route path={`/message/${user.username}`} element={<Message username={username} />} />
+                                        )}
+                                        <Route path="/tos" element={<TOS />} />
+                                        <Route path="*" element={
+                                            (path === "/" || path === "/signup" || path === `/profile/${username}`) ?
+                                                <Navigate to="/profile" />
+                                                :
+                                                <UserNotExist />
+                                        } />
+                                    </ProtectedRoutes>
+                                </CurrentUserProfileProvider>
                                 :
                                 <Loading error={true} />
                             :

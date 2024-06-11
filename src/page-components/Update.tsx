@@ -1,31 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { CalculateBirthday } from '../functions/CalculateBirthday';
 import { socket_conn, py_conn } from '../functions/SocketConn';
 import { MonthToNum, NumToMonth } from '../functions/Calendar';
 import { Link } from 'react-router-dom';
 import { IoArrowBackCircleSharp } from 'react-icons/io5';
+import { CurrentUserProfileContext } from '../components/Contexts';
 
 interface UpdateProps {
     username: string
 }
 
 export const Update = (props: UpdateProps) => {
-    const { username } = props
+    const profileContext = useContext(CurrentUserProfileContext)
 
-    const [profile, setProfile] = useState({
-        profile_pic: "",
-        name: "",
-        bio: "",
-        height: "",
-        gender: "",
-        sexual_orientation: "",
-        relationship_status: "",
-        birth_month: "",
-        birth_date: "",
-        birth_year: ""
-    })
+    if (!profileContext) {
+        throw new Error("This context is undefined.")
+    }
 
-    const [DOBChange, setDOBChange] = useState(false)
+    const { username } = props;
+
+    const { profile_page, profile_page_error, profile_page_pending, setProfile } = profileContext
 
     const [change, setChange] = useState(false)
 
@@ -59,78 +53,30 @@ export const Update = (props: UpdateProps) => {
     // eslint-disable-next-line no-unused-vars
     const [connection] = useState(socket_conn)
     const [pyConn] = useState(py_conn)
-
-    // State variable that stores error status.
-    const [error, setError] = useState(false)
-
-    // State variable that stores pending request status.
-    const [pending, setPending] = useState(true)
-
+    
     // State variable that stores current character count
     // of bio.
     const [curBioCharCount, setCurBioCharCount] = useState(0)
 
     useEffect(() => {
-        const retrieveProfile = async () => {
-            const res = await fetch(`http://localhost:4000/profile/${username}`, {
-                method: 'POST',
-                credentials: 'include',
-                body: JSON.stringify({})
-            })
-
-            if (res.ok) {
-                const data = await res.json()
-                setProfile({
-                    profile_pic: data.uri,
-                    name: `${data.first_name} ${data.middle_name} ${data.last_name}`,
-                    bio: data.interests,
-                    height: data.height,
-                    gender: data.gender,
-                    sexual_orientation: data.sexual_orientation,
-                    relationship_status: data.relationship_status,
-                    birth_month: data.birth_month,
-                    birth_date: data.birth_date,
-                    birth_year: data.birth_year
-                })
-                setPending(false)
-            } else {
-                setPending(false)
-                setError(true)
-            }
+        setHandleBioText(profile_page.interests)
+        setCurBioCharCount(profile_page.interests.length)
+        if (profile_page.name !== "") {
+            setHandleFirstName(profile_page.name.split(" ")[0])
+            setHandleMiddleName(profile_page.name.split(" ")[1])
+            setHandleLastName(profile_page.name.split(" ")[2])
         }
-        retrieveProfile()
-    }, [username])
-
-    useEffect(() => {
-        setHandleBioText(profile.bio)
-        setCurBioCharCount(profile.bio.length)
-        if (profile.name !== "") {
-            setHandleFirstName(profile.name.split(" ")[0])
-            setHandleMiddleName(profile.name.split(" ")[1])
-            setHandleLastName(profile.name.split(" ")[2])
-        }
-        setHandleDOB(`${profile.birth_year}-${MonthToNum(profile.birth_month)}-${profile.birth_date}`)
-        setHandleBirthDate(profile.birth_date)
-        setHandleBirthMonth(profile.birth_month)
-        setHandleBirthYear(profile.birth_year)
-    }, [profile.bio, profile.name, profile.birth_date, profile.birth_month, profile.birth_year])
+        setHandleDOB(`${profile_page.birth_year}-${MonthToNum(profile_page.birth_month)}-${profile_page.birth_date}`)
+        setHandleBirthDate(profile_page.birth_date)
+        setHandleBirthMonth(profile_page.birth_month)
+        setHandleBirthYear(profile_page.birth_year)
+    }, [profile_page.interests, profile_page.name])
 
     useEffect(() => {
         pyConn.on('notify-of-update-profile-request', () => {
             connection.emit('receive-update-profile-request')
         })
     }, [pyConn])
-
-    const display_dob_change = () => {
-        if (DOBChange === false) {
-            setDOBChange(true)
-        } else {
-            if (warning) {
-                setWarning(false)
-            }
-            setDOBChange(false)
-        }
-    }
 
     const display_change = () => {
         if (!change) {
@@ -155,7 +101,15 @@ export const Update = (props: UpdateProps) => {
         const middle_name = (document.getElementById("middle_name") as HTMLInputElement).value
         const last_name = (document.getElementById("last_name") as HTMLInputElement).value
 
+        const old_f_name = profile_page.name.split(" ")[0]
+        const old_m_name = profile_page.name.split(" ")[1]
+        const old_l_name = profile_page.name.split(" ")[2]
+
         if (first_name.length !== 0 || middle_name.length !== 0 || last_name.length !== 0) {
+            setProfile({
+                ...profile_page, 
+                name: `${first_name} ${middle_name} ${last_name}`
+            })
             fetch("http://localhost:5000/update_profile/name", {
                 method: 'PUT',
                 credentials: 'include',
@@ -176,10 +130,18 @@ export const Update = (props: UpdateProps) => {
                 }
             }).then((data) => {
                 console.log(data)
-                window.location.reload()
+                
+                setProfile({
+                    ...profile_page, 
+                    name: `${first_name} ${middle_name} ${last_name}`
+                })
             }).catch((error) => {
                 console.log(error)
-                setError(true)
+
+                setProfile({
+                    ...profile_page, 
+                    name: `${old_f_name} ${old_m_name} ${old_l_name}`
+                })
             })
             setChange(false)
         }
@@ -189,6 +151,10 @@ export const Update = (props: UpdateProps) => {
         const birth_month = handleBirthMonth
         const birth_date = handleBirthDate
         const birth_year = handleBirthYear
+
+        const old_birth_month = profile_page.birth_month
+        const old_birth_date = profile_page.birth_date
+        const old_birth_year = profile_page.birth_year
 
         const age = CalculateBirthday(birth_month, parseInt(birth_date), parseInt(birth_year))
 
@@ -203,6 +169,14 @@ export const Update = (props: UpdateProps) => {
             if (warning) {
                 setWarning(true)
             }
+
+            setProfile({
+                ...profile_page, 
+                birth_month: birth_month, 
+                birth_date: birth_date, 
+                birth_year: birth_year,
+                age: age
+            })
 
             fetch("http://localhost:5000/update_profile/DOB", {
                 method: 'PUT',
@@ -219,13 +193,23 @@ export const Update = (props: UpdateProps) => {
                 }
             }).then((data) => {
                 console.log(data)
-                window.location.reload()
+                setProfile({
+                    ...profile_page, 
+                    birth_month: birth_month, 
+                    birth_date: birth_date, 
+                    birth_year: birth_year
+                })
             }).catch((error) => {
                 console.log(error)
-                setError(true)
+                setProfile({
+                    ...profile_page, 
+                    birth_month: old_birth_month, 
+                    birth_date: old_birth_date, 
+                    birth_year: old_birth_year
+                })
                 window.location.reload()
             })
-            setDOBChange(false)
+            setChange(false)
         } else {
             setWarning(true)
         }
@@ -233,6 +217,9 @@ export const Update = (props: UpdateProps) => {
 
     const submit_username_change = () => {
         const new_username = (document.getElementById("new_username") as HTMLInputElement).value
+        const old_username = profile_page.username
+
+        setProfile({...profile_page, username: new_username})
 
         if (new_username.length > 0) {
             fetch("http://localhost:5000/update_profile/username", {
@@ -253,14 +240,16 @@ export const Update = (props: UpdateProps) => {
                 }
             }).then((data) => {
                 // Update user's socket ID username key to accommodate username change.
+                setProfile({...profile_page, username: new_username})
                 sessionStorage.setItem("username", new_username)
                 connection.emit('update-user-socket-id', username, new_username, connection.id)
                 pyConn.emit('request_update_profile')
                 console.log(data)
                 window.location.reload()
+                
             }).catch((error) => {
+                setProfile({...profile_page, username: old_username})
                 console.log(error)
-                setError(true)
             })
 
             setChange(false)
@@ -271,7 +260,12 @@ export const Update = (props: UpdateProps) => {
         const new_height_feet = (document.getElementById("new_height_feet") as HTMLInputElement).value
         const new_height_inches = (document.getElementById("new_height_inches") as HTMLInputElement).value
 
+        const old_height_feet = profile_page.height.split("'")[0]
+        const old_height_inches = profile_page.height.split("'")[1]
+
         if (new_height_feet.length > 0 && new_height_inches.length > 0) {
+            setProfile({...profile_page, height: `${new_height_feet}'${new_height_inches}''`})
+
             fetch("http://localhost:5000/update_profile/height", {
                 method: 'PUT',
                 credentials: 'include',
@@ -292,10 +286,10 @@ export const Update = (props: UpdateProps) => {
             }).then((data) => {
                 console.log(data)
                 pyConn.emit('request_update_profile')
-                window.location.reload()
+                setProfile({...profile_page, height: `${new_height_feet}'${new_height_inches}''`})
             }).catch((error) => {
                 console.log(error)
-                setError(true)
+                setProfile({...profile_page, height: `${old_height_feet}'${old_height_inches}''`})
             })
             setChange(false)
         }
@@ -303,69 +297,75 @@ export const Update = (props: UpdateProps) => {
 
     const submit_gender_change = () => {
         const new_gender = (document.getElementById("gender-select") as HTMLInputElement).value
+        const old_gender = profile_page.gender
 
-        if (new_gender !== profile.gender) {
-            if (new_gender === "Other") {
-                const other_gender = (document.getElementById("other_gender") as HTMLInputElement).value
+        if (new_gender === "Other") {
+            const other_gender = (document.getElementById("other_gender") as HTMLInputElement).value
 
-                fetch("http://localhost:5000/update_profile/gender", {
-                    method: 'PUT',
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        new_gender: other_gender,
-                        username: username
-                    }),
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                }).then((res) => {
-                    if (res.ok) {
-                        return res.json()
-                    } else {
-                        throw res.status
-                    }
-                }).then((data) => {
-                    console.log(data)
-                    pyConn.emit('request_update_profile')
-                    window.location.reload()
-                }).catch((error) => {
-                    console.log(error)
-                    setError(true)
-                })
-            } else {
-                fetch("http://localhost:5000/update_profile/gender", {
-                    method: 'PUT',
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        new_gender: new_gender,
-                        username: username
-                    }),
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                }).then((res) => {
-                    if (res.ok) {
-                        return res.json()
-                    } else {
-                        throw res.status
-                    }
-                }).then((data) => {
-                    console.log(data)
-                    pyConn.emit('request_update_profile')
-                    window.location.reload()
-                }).catch((error) => {
-                    console.log(error)
-                    setError(true)
-                })
-            }
-            setChange(false)
+            setProfile({...profile_page, gender: other_gender})
+
+            fetch("http://localhost:5000/update_profile/gender", {
+                method: 'PUT',
+                credentials: 'include',
+                body: JSON.stringify({
+                    new_gender: other_gender,
+                    username: username
+                }),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then((res) => {
+                if (res.ok) {
+                    return res.json()
+                } else {
+                    throw res.status
+                }
+            }).then((data) => {
+                console.log(data)
+                pyConn.emit('request_update_profile')
+                setProfile({...profile_page, gender: other_gender})
+            }).catch((error) => {
+                setProfile({...profile_page, gender: old_gender})
+                console.log(error)
+            })
+        } else {
+            setProfile({...profile_page, gender: new_gender})
+
+            fetch("http://localhost:5000/update_profile/gender", {
+                method: 'PUT',
+                credentials: 'include',
+                body: JSON.stringify({
+                    new_gender: new_gender,
+                    username: username
+                }),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then((res) => {
+                if (res.ok) {
+                    return res.json()
+                } else {
+                    throw res.status
+                }
+            }).then((data) => {
+                console.log(data)
+                pyConn.emit('request_update_profile')
+                setProfile({...profile_page, gender: new_gender})
+            }).catch((error) => {
+                console.log(error)
+                setProfile({...profile_page, gender: old_gender})
+            })
         }
+        setChange(false)
     }
 
     const submit_sexual_orientation_change = () => {
         const new_sexual_orientation = (document.getElementById("sexual-orientation-select") as HTMLInputElement).value
+        const old_sexual_orientation = profile_page.sexual_orientation
 
-        if (new_sexual_orientation !== profile.sexual_orientation) {
+        setProfile({...profile_page, sexual_orientation: new_sexual_orientation})
+
+        if (new_sexual_orientation !== profile_page.sexual_orientation) {
             fetch("http://localhost:5000/update_profile/sexual_orientation", {
                 method: 'PUT',
                 credentials: 'include',
@@ -385,10 +385,10 @@ export const Update = (props: UpdateProps) => {
             }).then((data) => {
                 console.log(data)
                 pyConn.emit('request_update_profile')
-                window.location.reload()
+                setProfile({...profile_page, sexual_orientation: new_sexual_orientation})
             }).catch((error) => {
+                setProfile({...profile_page, sexual_orientation: old_sexual_orientation})
                 console.log(error)
-                setError(true)
             })
             setChange(false)
         }
@@ -396,8 +396,11 @@ export const Update = (props: UpdateProps) => {
 
     const submit_relationship_status_change = () => {
         const new_relationship_status = (document.getElementById("relationship-status-select") as HTMLInputElement).value
+        const old_relationship_status = profile_page.relationship_status
 
-        if (new_relationship_status !== profile.relationship_status) {
+        setProfile({...profile_page, relationship_status: new_relationship_status})
+
+        if (new_relationship_status !== profile_page.relationship_status) {
             fetch("http://localhost:5000/update_profile/relationship_status", {
                 method: 'PUT',
                 credentials: 'include',
@@ -417,10 +420,10 @@ export const Update = (props: UpdateProps) => {
             }).then((data) => {
                 console.log(data)
                 pyConn.emit('request_update_profile')
-                window.location.reload()
+                setProfile({...profile_page, relationship_status: new_relationship_status})
             }).catch((error) => {
                 console.log(error)
-                setError(true)
+                setProfile({...profile_page, relationship_status: old_relationship_status})
             })
             setChange(false)
         }
@@ -428,8 +431,11 @@ export const Update = (props: UpdateProps) => {
 
     const submit_bio_change = () => {
         const new_bio = (document.getElementById("bio-change") as HTMLInputElement).value
+        const old_bio = profile_page.interests
 
-        if (new_bio.length > 0 && new_bio !== profile.bio) {
+        setProfile({...profile_page, interests: new_bio})
+
+        if (new_bio.length > 0 && new_bio !== profile_page.interests) {
             fetch("http://localhost:5000/update_profile/bio", {
                 method: 'PUT',
                 credentials: 'include',
@@ -449,10 +455,10 @@ export const Update = (props: UpdateProps) => {
             }).then((data) => {
                 console.log(data)
                 pyConn.emit('request_update_profile')
-                window.location.reload()
+                setProfile({...profile_page, interests: new_bio})
             }).catch((error) => {
                 console.log(error)
-                setError(true)
+                setProfile({...profile_page, interests: old_bio})
             })
             setChange(false)
         }
@@ -485,15 +491,22 @@ export const Update = (props: UpdateProps) => {
 
     return (
         <div className="update-profile-container">
-            {!pending ?
+            {!profile_page_pending ?
                 <>
-                    {!error ?
+                    {!profile_page_error ?
                         <div className="update-profile-options">
                             <Link to="/profile/options"><IoArrowBackCircleSharp size={50} color='white' style={{ marginBottom: '10px', marginTop: '10px', cursor: 'pointer' }} /></Link>
                             <div className="update-profile-header">
                                 <h1>Update Profile</h1>
                             </div>
                             <div className="update-profile-option">
+                                {!change ?
+                                    <button id="change-profile-pic" onClick={display_change}>Edit</button>
+                                    :
+                                    <button id="change-profile-pic" onClick={display_change}>Close</button>
+                                }
+                                <br></br>
+                                <br></br>
                                 <b>Profile Picture</b>
                                 <br></br>
                                 <br></br>
@@ -503,88 +516,72 @@ export const Update = (props: UpdateProps) => {
                                 {change ?
                                     <div className="change-inputs">
                                         <form encType='multipart/form-data' method='POST' action='http://localhost:5000/update_profile_pic'>
-                                            <input type="file" accept='image/*' name="new-profile-pic" max={4} />
-                                            <br></br>
-                                            <button value="change-profile-pic" id="change-profile-pic" onClick={display_change}>Cancel</button>
+                                            <input type="file" accept='image/*' name="new-profile-pic" max={4} required />
                                             <br></br>
                                             <button value="change-profile-pic" id="change-profile-pic" type="submit">Submit</button>
                                             <br></br>
                                         </form>
                                     </div>
                                     :
-                                    <button value="change-profile-pic" id="change-profile-pic" onClick={display_change}>Change</button>
+                                    <></>
                                 }
                                 <br></br>
-                                <br></br>
-                                <br></br>
                                 <b>Name</b>
-                                <p>{`${profile.name}`}</p>
+                                <p>{`${profile_page.name}`}</p>
                                 {change ?
                                     <div className="change-inputs">
                                         <input placeholder="First name" id="first_name" value={handleFirstName} onChange={handle_name}></input>
                                         <input placeholder="Middle name" id="middle_name" value={handleMiddleName} onChange={handle_name}></input>
                                         <input placeholder="Last name" id="last_name" value={handleLastName} onChange={handle_name}></input>
                                         <br></br>
-                                        <button value="change-name" id="change-name" onClick={display_change}>Cancel</button>
-                                        <br></br>
                                         <button value="change-name" id="change-name" onClick={submit_name_change}>Submit</button>
                                         <br></br>
                                     </div>
                                     :
-                                    <button value="change-name" id="change-name" onClick={display_change}>Change</button>}
-                                <br></br>
-                                <br></br>
+                                    <></>
+                                }
                                 <br></br>
                                 <b>Date of Birth</b>
-                                <p>{`${profile.birth_month} ${profile.birth_date}, ${profile.birth_year}`}</p>
-                                {DOBChange ?
+                                <p>{`${profile_page.birth_month} ${profile_page.birth_date}, ${profile_page.birth_year}`}</p>
+                                {change ?
                                     <div className="change-inputs">
                                         <input type="date" id="date-of-birth" onChange={handle_dob} value={handleDOB} />
-                                        <br></br>
-                                        <button value="change-DOB" id="change-DOB" onClick={display_dob_change}>Cancel</button>
                                         <br></br>
                                         <button value="change-DOB" id="change-DOB" onClick={submit_dob_change}>Submit</button>
                                         <br></br>
                                         {warning ? <p style={{ paddingTop: 50 }}><b>You have to be 18 years old to use this service.</b></p> : <></>}
                                     </div>
                                     :
-                                    <button value="change-DOB" id="change-DOB" onClick={display_dob_change}>Change</button>}
-                                <br></br>
-                                <br></br>
+                                    <></>
+                                }
                                 <br></br>
                                 <b>Username</b>
-                                <p>{`${username}`}</p>
+                                <p>{`${profile_page.username}`}</p>
                                 {change ?
                                     <div className="change-inputs">
                                         <input placeholder="Enter your new username" id="new_username"></input>
                                         <br></br>
-                                        <button value="change-username" id="change-username" onClick={display_change}>Cancel</button>
-                                        <br></br>
                                         <button value="change-username" id="change-username" onClick={submit_username_change}>Submit</button>
                                     </div>
                                     :
-                                    <button value="change-username" id="change-username" onClick={display_change}>Change</button>}
-                                <br></br>
-                                <br></br>
+                                    <></>
+                                }
                                 <br></br>
                                 <b>Height</b>
-                                <p>{`${profile.height}`}</p>
+                                <p>{`${profile_page.height}`}</p>
                                 {change ?
                                     <div className="change-inputs">
                                         <input placeholder="Feet" size={7} maxLength={6} id="new_height_feet"></input>
                                         <input placeholder="Height" size={7} maxLength={6} id="new_height_inches"></input>
                                         <br></br>
-                                        <button value="change-height" id="change-height" onClick={display_change}>Cancel</button>
-                                        <br></br>
                                         <button value="change-height" id="change-height" onClick={submit_height_change}>Submit</button>
                                     </div>
                                     :
-                                    <button value="change-height" id="change-height" onClick={display_change}>Change</button>}
-                                <br></br>
-                                <br></br>
+                                    <></>
+                                }
                                 <br></br>
                                 <b>Gender</b>
-                                <p>{`${profile.gender}`}</p>
+                                <p>{profile_page.gender}</p>
                                 {change ?
                                     <div className="change-inputs">
                                         <select id="gender-select" onChange={display_other_gender}>
@@ -598,24 +595,20 @@ export const Update = (props: UpdateProps) => {
                                         </select>
                                         <br></br>
                                         {handleOtherGender === true && <input placeholder="How do you identify as?" id="other_gender"></input>}
-                                        <br></br>
-                                        <button value="change-gender" id="change-gender" onClick={display_change}>Cancel</button>
-                                        <br></br>
                                         <button value="change-gender" id="change-gender" onClick={submit_gender_change}>Submit</button>
                                     </div>
                                     :
-                                    <button value="change-gender" id="change-gender" onClick={display_change}>Change</button>}
-                                <br></br>
-                                <br></br>
+                                    <></>
+                                }
                                 <br></br>
                                 <b>Sexual Orientation</b>
-                                <p>{`${profile.sexual_orientation}`}</p>
+                                <p>{`${profile_page.sexual_orientation}`}</p>
                                 {change ?
                                     <div className="change-inputs">
                                         <select id="sexual-orientation-select">
                                             <option value="Heterosexual">Heterosexual</option>
-                                            {(profile.gender === "Female" || profile.gender === "Non-binary" || profile.gender !== "Male") && <option value="Homosexual (Lesbian)">Homosexual (Lesbian)</option>}
-                                            {(profile.gender === "Male" || profile.gender === "Non-binary" || profile.gender !== "Female") && <option value="Homosexual (Gay)">Homosexual (Gay)</option>}
+                                            {(profile_page.gender === "Female" || profile_page.gender === "Non-binary" || profile_page.gender !== "Male") && <option value="Homosexual (Lesbian)">Homosexual (Lesbian)</option>}
+                                            {(profile_page.gender === "Male" || profile_page.gender === "Non-binary" || profile_page.gender !== "Female") && <option value="Homosexual (Gay)">Homosexual (Gay)</option>}
                                             <option value="Bisexual">Bisexual</option>
                                             <option value="Pansexual">Pansexual</option>
                                             <option value="Queer">Queer</option>
@@ -624,17 +617,14 @@ export const Update = (props: UpdateProps) => {
                                             <option value="I'd prefer not to say">I'd prefer not to say</option>
                                         </select>
                                         <br></br>
-                                        <button value="change-sexual-orientation" id="change-sexual-orientation" onClick={display_change}>Cancel</button>
-                                        <br></br>
                                         <button value="change-sexual-orientation" id="change-sexual-orientation" onClick={submit_sexual_orientation_change}>Submit</button>
                                     </div>
                                     :
-                                    <button value="change-sexual-orientation" id="change-sexual-orientation" onClick={display_change}>Change</button>}
-                                <br></br>
-                                <br></br>
+                                    <></>
+                                }
                                 <br></br>
                                 <b>Relationship Status</b>
-                                <p>{`${profile.relationship_status}`}</p>
+                                <p>{`${profile_page.relationship_status}`}</p>
                                 {change ?
                                     <div className="change-inputs">
                                         <select id="relationship-status-select">
@@ -648,18 +638,15 @@ export const Update = (props: UpdateProps) => {
                                             <option value="It's a secret!">It's a secret!</option>
                                         </select>
                                         <br></br>
-                                        <button value="change-relationship-status" id="change-relationship-status" onClick={display_change}>Cancel</button>
-                                        <br></br>
                                         <button value="change-relationship-status" id="change-relationship-status" onClick={submit_relationship_status_change}>Submit</button>
                                     </div>
                                     :
-                                    <button value="change-relationship-status" id="change-relationship-status" onClick={display_change}>Change</button>}
-                                <br></br>
-                                <br></br>
+                                    <></>
+                                }
                                 <br></br>
                                 <b>Bio</b>
                                 {/* Split the bio into paragraphs in case the user decided to write it in that manner. */}
-                                {profile.bio.split("\n").map((b, par_i) =>
+                                {profile_page.interests.split("\n").map((b, par_i) =>
                                     <p key={`paragraph-${par_i}`}>{`${b}`}</p>
                                 )}
                                 {change ?
@@ -668,12 +655,11 @@ export const Update = (props: UpdateProps) => {
                                         <br></br>
                                         <span>{curBioCharCount}/300</span>
                                         <br></br>
-                                        <button value="change-bio" id="change-bio" onClick={display_change}>Cancel</button>
-                                        <br></br>
                                         <button value="change-bio" id="change-bio" onClick={submit_bio_change}>Submit</button>
                                     </div>
                                     :
-                                    <button value="change-bio" id="change-bio" onClick={display_change}>Change</button>}
+                                    <></>
+                                }
                             </div>
                         </div>
                         :

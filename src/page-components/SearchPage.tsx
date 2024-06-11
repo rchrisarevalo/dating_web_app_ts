@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useContext } from 'react'
 import { Link } from 'react-router-dom'
 import { IoFunnelOutline, IoHelpOutline, IoSearchOutline, IoTrashBinOutline } from 'react-icons/io5'
 
@@ -7,16 +7,16 @@ import { useFetchSearchHistory, useFetchMatches } from "../hooks/useFetchSearch"
 import { clearSearchTerm, insertSearchTerm } from '../functions/searchHistoryFunctions'
 
 import Spinner from 'react-bootstrap/Spinner'
+import { CurrentUserProfileContext } from '../components/Contexts'
 
-interface SearchPageProps {
-    algo_config: boolean,
-    use_so_filter: boolean,
-    algo_pending: boolean,
-    algo_error: boolean
-}
+export const SearchPage = () => {
+    const profileContext = useContext(CurrentUserProfileContext)
 
-export const SearchPage = (props: SearchPageProps) => {
-    const { algo_config, use_so_filter, algo_pending, algo_error } = props
+    if (!profileContext) {
+        throw new Error("This context cannot be loaded.")
+    }
+
+    const { algo_config, use_so_filter, algo_pending, algo_error } = profileContext
     const { search_history, pending, error } = useFetchSearchHistory("http://localhost:4000/retrieve_search_history")
 
     const matched_profiles = useFetchMatches("http://localhost:5000/match", use_so_filter, algo_config)

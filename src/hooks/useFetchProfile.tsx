@@ -9,8 +9,12 @@ export const useFetchProfile = (auth: boolean, username: string) => {
         age: 0,
         height: "",
         interests: "",
+        gender: "",
         sexual_orientation: "",
         relationship_status: "",
+        birth_date: "",
+        birth_month: "",
+        birth_year: "",
         profile_pic: ""
     })
 
@@ -37,15 +41,19 @@ export const useFetchProfile = (auth: boolean, username: string) => {
 
                 if (res.ok) {
                     const data = await res.json()
-
+                    
                     setProfile({
                         username: data.username,
                         name: `${data.first_name} ${data.middle_name} ${data.last_name}`,
                         age: CalculateBirthday(data.birth_month, parseInt(data.birth_date), parseInt(data.birth_year)),
                         height: data.height,
                         interests: data.interests,
+                        gender: data.gender,
                         sexual_orientation: data.sexual_orientation,
                         relationship_status: data.relationship_status,
+                        birth_date: data.birth_date,
+                        birth_month: data.birth_month,
+                        birth_year: data.birth_year,
                         profile_pic: data.uri
                     })
                     sessionStorage.setItem("profile_pic", data.uri)
@@ -60,8 +68,9 @@ export const useFetchProfile = (auth: boolean, username: string) => {
     }, [auth])
 
     return { 
-        profile_page: profile, 
+        profile_page: profile,
         profile_page_pending: pending, 
-        profile_page_error: error 
+        profile_page_error: error,
+        setProfile 
     }
 }
