@@ -9,4 +9,13 @@ export type CurrentUserProfile = {
     notification_counter: number,
     notification_error: boolean,
     notification_pending: boolean,
+    req_count: number,
+    req_pending: boolean,
+    req_error: boolean,
+    algo_config: boolean,
+    use_so_filter: boolean,
+    algo_pending: boolean,
+    algo_error: boolean,
+    setAlgoConfig: React.Dispatch<React.SetStateAction<boolean>>,
+    setSOFilterUsed: React.Dispatch<React.SetStateAction<boolean>>
 }

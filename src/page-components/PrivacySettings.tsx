@@ -1,20 +1,27 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useContext } from 'react'
 import { Link } from 'react-router-dom'
 import Modal from 'react-bootstrap/Modal'
 
-import { useFetchAlgoConfig } from '../hooks/useFetchSearch'
-
 import { IoArrowBackCircleSharp } from 'react-icons/io5'
 import { Spinner } from 'react-bootstrap'
+import { CurrentUserProfileContext } from '../components/Contexts'
 
 interface PrivacySettingsProps {
     username: string
-    auth: boolean
 }
 
 export const PrivacySettings = (props: PrivacySettingsProps) => {
-    const { username, auth } = props
-    const { algo_config, use_so_filter, algo_pending, algo_error } = useFetchAlgoConfig("http://localhost:4000/privacy/check_recommendation_settings", auth)
+    const profileContext = useContext(CurrentUserProfileContext)
+
+    if (!profileContext) {
+        throw new Error("This context cannot be loaded.")
+    }
+
+    const { algo_config, use_so_filter, algo_pending, algo_error, setAlgoConfig, setSOFilterUsed } = profileContext;
+
+    const { username } = props
+    // const { algo_config, use_so_filter, algo_pending, algo_error } = useFetchAlgoConfig("http://localhost:4000/privacy/check_recommendation_settings", auth)
+
 
     const [displayModal, setDisplayModal] = useState(false)
     const [displaySOFilterModal, setDisplaySOFilterModal] = useState(false)
@@ -54,8 +61,10 @@ export const PrivacySettings = (props: PrivacySettingsProps) => {
         let check_variable = ""
 
         if (check_box.checked) {
+            setAlgoConfig(true)
             check_variable = "true"
         } else {
+            setAlgoConfig(false)
             check_variable = "false"
         }
 
@@ -78,13 +87,13 @@ export const PrivacySettings = (props: PrivacySettingsProps) => {
         }).then((data) => {
             if (data.message === 'true') {
                 setCheck(true)
+                setAlgoConfig(true)
             } else {
                 setCheck(false)
+                setAlgoConfig(false)
             }
         }).catch((error) => {
             console.log(error)
-        }).finally(() => {
-            window.location.reload()
         })
 
         setDisplayModal(false)
@@ -96,8 +105,10 @@ export const PrivacySettings = (props: PrivacySettingsProps) => {
 
         if (so_filter_check_box.checked) {
             check_value = "true"
+            setSOFilterUsed(true)
         } else {
             check_value = "false"
+            setSOFilterUsed(false)
         }
 
         fetch('http://localhost:5000/privacy/change_recommendation_settings?rs=so_filter', {
@@ -119,10 +130,11 @@ export const PrivacySettings = (props: PrivacySettingsProps) => {
         }).then((data) => {
             if (data.message === 'true') {
                 setSOCheck(true)
+                setSOFilterUsed(true)
             } else {
                 setSOCheck(false)
+                setSOFilterUsed(false)
             }
-            window.location.reload()
         }).catch((error) => {
             console.log(error)
         })

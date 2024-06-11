@@ -21,8 +21,6 @@ export const Update = (props: UpdateProps) => {
 
     const { profile_page, profile_page_error, profile_page_pending, setProfile } = profileContext
 
-    const [DOBChange, setDOBChange] = useState(false)
-
     const [change, setChange] = useState(false)
 
     // State variable that will determine whether to display an input form for people
@@ -79,17 +77,6 @@ export const Update = (props: UpdateProps) => {
             connection.emit('receive-update-profile-request')
         })
     }, [pyConn])
-
-    const display_dob_change = () => {
-        if (DOBChange === false) {
-            setDOBChange(true)
-        } else {
-            if (warning) {
-                setWarning(false)
-            }
-            setDOBChange(false)
-        }
-    }
 
     const display_change = () => {
         if (!change) {
@@ -185,9 +172,10 @@ export const Update = (props: UpdateProps) => {
 
             setProfile({
                 ...profile_page, 
-                birth_month: profile_page.birth_month, 
-                birth_date: profile_page.birth_date, 
-                birth_year: profile_page.birth_year
+                birth_month: birth_month, 
+                birth_date: birth_date, 
+                birth_year: birth_year,
+                age: age
             })
 
             fetch("http://localhost:5000/update_profile/DOB", {
@@ -207,9 +195,9 @@ export const Update = (props: UpdateProps) => {
                 console.log(data)
                 setProfile({
                     ...profile_page, 
-                    birth_month: profile_page.birth_month, 
-                    birth_date: profile_page.birth_date, 
-                    birth_year: profile_page.birth_year
+                    birth_month: birth_month, 
+                    birth_date: birth_date, 
+                    birth_year: birth_year
                 })
             }).catch((error) => {
                 console.log(error)
@@ -221,7 +209,7 @@ export const Update = (props: UpdateProps) => {
                 })
                 window.location.reload()
             })
-            setDOBChange(false)
+            setChange(false)
         } else {
             setWarning(true)
         }
@@ -530,8 +518,6 @@ export const Update = (props: UpdateProps) => {
                                         <form encType='multipart/form-data' method='POST' action='http://localhost:5000/update_profile_pic'>
                                             <input type="file" accept='image/*' name="new-profile-pic" max={4} required />
                                             <br></br>
-                                            <button value="change-profile-pic" id="change-profile-pic" onClick={display_change}>Cancel</button>
-                                            <br></br>
                                             <button value="change-profile-pic" id="change-profile-pic" type="submit">Submit</button>
                                             <br></br>
                                         </form>
@@ -548,8 +534,6 @@ export const Update = (props: UpdateProps) => {
                                         <input placeholder="Middle name" id="middle_name" value={handleMiddleName} onChange={handle_name}></input>
                                         <input placeholder="Last name" id="last_name" value={handleLastName} onChange={handle_name}></input>
                                         <br></br>
-                                        <button value="change-name" id="change-name" onClick={display_change}>Cancel</button>
-                                        <br></br>
                                         <button value="change-name" id="change-name" onClick={submit_name_change}>Submit</button>
                                         <br></br>
                                     </div>
@@ -562,8 +546,6 @@ export const Update = (props: UpdateProps) => {
                                 {change ?
                                     <div className="change-inputs">
                                         <input type="date" id="date-of-birth" onChange={handle_dob} value={handleDOB} />
-                                        <br></br>
-                                        <button value="change-DOB" id="change-DOB" onClick={display_dob_change}>Cancel</button>
                                         <br></br>
                                         <button value="change-DOB" id="change-DOB" onClick={submit_dob_change}>Submit</button>
                                         <br></br>
@@ -579,8 +561,6 @@ export const Update = (props: UpdateProps) => {
                                     <div className="change-inputs">
                                         <input placeholder="Enter your new username" id="new_username"></input>
                                         <br></br>
-                                        <button value="change-username" id="change-username" onClick={display_change}>Cancel</button>
-                                        <br></br>
                                         <button value="change-username" id="change-username" onClick={submit_username_change}>Submit</button>
                                     </div>
                                     :
@@ -593,8 +573,6 @@ export const Update = (props: UpdateProps) => {
                                     <div className="change-inputs">
                                         <input placeholder="Feet" size={7} maxLength={6} id="new_height_feet"></input>
                                         <input placeholder="Height" size={7} maxLength={6} id="new_height_inches"></input>
-                                        <br></br>
-                                        <button value="change-height" id="change-height" onClick={display_change}>Cancel</button>
                                         <br></br>
                                         <button value="change-height" id="change-height" onClick={submit_height_change}>Submit</button>
                                     </div>
@@ -617,9 +595,6 @@ export const Update = (props: UpdateProps) => {
                                         </select>
                                         <br></br>
                                         {handleOtherGender === true && <input placeholder="How do you identify as?" id="other_gender"></input>}
-                                        <br></br>
-                                        <button value="change-gender" id="change-gender" onClick={display_change}>Cancel</button>
-                                        <br></br>
                                         <button value="change-gender" id="change-gender" onClick={submit_gender_change}>Submit</button>
                                     </div>
                                     :
@@ -642,8 +617,6 @@ export const Update = (props: UpdateProps) => {
                                             <option value="I'd prefer not to say">I'd prefer not to say</option>
                                         </select>
                                         <br></br>
-                                        <button value="change-sexual-orientation" id="change-sexual-orientation" onClick={display_change}>Cancel</button>
-                                        <br></br>
                                         <button value="change-sexual-orientation" id="change-sexual-orientation" onClick={submit_sexual_orientation_change}>Submit</button>
                                     </div>
                                     :
@@ -665,8 +638,6 @@ export const Update = (props: UpdateProps) => {
                                             <option value="It's a secret!">It's a secret!</option>
                                         </select>
                                         <br></br>
-                                        <button value="change-relationship-status" id="change-relationship-status" onClick={display_change}>Cancel</button>
-                                        <br></br>
                                         <button value="change-relationship-status" id="change-relationship-status" onClick={submit_relationship_status_change}>Submit</button>
                                     </div>
                                     :
@@ -683,8 +654,6 @@ export const Update = (props: UpdateProps) => {
                                         <textarea id="bio-change" rows={10} cols={30} value={handleBioText} onChange={(e) => {handle_bio_text(); setCurBioCharCount(e.target.value.length)}} maxLength={300}></textarea>
                                         <br></br>
                                         <span>{curBioCharCount}/300</span>
-                                        <br></br>
-                                        <button value="change-bio" id="change-bio" onClick={display_change}>Cancel</button>
                                         <br></br>
                                         <button value="change-bio" id="change-bio" onClick={submit_bio_change}>Submit</button>
                                     </div>

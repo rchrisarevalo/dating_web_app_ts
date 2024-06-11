@@ -2,8 +2,6 @@
 import { useEffect, useState } from "react";
 import { useFetchLogin } from "../hooks/useFetchLogin";
 import { useFetchRoutes } from "../hooks/useFetchSearch";
-import { useFetchAlgoConfig } from "../hooks/useFetchSearch";
-import { useFetchReqCount } from "../hooks/useChatReq";
 
 // Import necessary React Router DOM libraries to configure routes.
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
@@ -40,7 +38,6 @@ interface RoutesProps {
 
 export const RoutingSystem = () => {
     const { auth, pending, error, username, profile_pic, status_code } = useFetchLogin()
-    const { algo_config, use_so_filter, algo_pending, algo_error } = useFetchAlgoConfig("http://localhost:4000/privacy/check_recommendation_settings", auth)
     const profile_data = useFetchRoutes("http://localhost:4000/get_user_routes", auth)
     const path = useLocation().pathname
     const domain_path = path.split("/")[1]
@@ -95,10 +92,6 @@ export const RoutingSystem = () => {
 
     const ProtectedRoutes = (props: RoutesProps) => {
         const { children } = props
-        
-        // Fetch user's current request count based on the requests sent to them
-        // excluding the ones they made to others.
-        const { req_count, req_pending, req_error } = useFetchReqCount("http://localhost:4000/retrieve_request_count", connection)
 
         // This section is executed when the user navigates another page through
         // their browser's search bar or if they are opening their browser while
@@ -109,12 +102,7 @@ export const RoutingSystem = () => {
         return (
             <>
                 { (path !== "/tos" && domain_path !== "message" && domain_path !== "user") ?
-                    <Nav 
-                         username={username} 
-                         chatRequestCounter={req_count} 
-                         chat_request_error={req_error}
-                         chat_request_pending={req_pending} 
-                    />
+                    <Nav username={username}/>
                     :
                     <></>
                 }
@@ -165,18 +153,12 @@ export const RoutingSystem = () => {
                                         <Route path="/profile/options/settings" element={<AccountSettings username={username} /> } />
                                         <Route path="/profile/options/privacy" element={<PrivacySettings 
                                             username={username}
-                                            auth={auth}
                                         />} />
                                         <Route path="/profile/options/privacy/view_blocked_users" element={<BlockedUsers />} />
                                         <Route path="/profile/options/privacy/download_information" element={<DownloadInfo />} />
                                         <Route path="/profile/recent_messages" element={<RecentMessages />} />
                                         <Route path="/profile/follow_requests" element={<ViewChatReqs />} />
-                                        <Route path="/profile/search" element={<SearchPage 
-                                            algo_config={algo_config}
-                                            use_so_filter={use_so_filter}
-                                            algo_pending={algo_pending}
-                                            algo_error={algo_error}
-                                        />} />
+                                        <Route path="/profile/search" element={<SearchPage />} />
                                         {profile_data.profiles.map((user: { username: string; }) => 
                                             <Route path={`/user/${user.username}`} element={<User username={user.username} />} />
                                         )}

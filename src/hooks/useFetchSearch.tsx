@@ -41,7 +41,14 @@ export const useFetchAlgoConfig = (endpoint: string, auth: boolean) => {
         }
     }, [endpoint, auth])
 
-    return { algo_config: algoConfig, use_so_filter: soFilterUsed, algo_pending: pending, algo_error: error }
+    return { 
+        algo_config: algoConfig, 
+        use_so_filter: soFilterUsed, 
+        algo_pending: pending, 
+        algo_error: error,
+        setAlgoConfig,
+        setSOFilterUsed 
+    }
 }
 
 export const useFetchSearchHistory = (endpoint: string) => {

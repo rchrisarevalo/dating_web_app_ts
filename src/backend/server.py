@@ -180,7 +180,6 @@ async def login(request: Request, response: Response):
     
     # Handle exceptions with JWT token should they occur.   
     except jwt.InvalidKeyError:
-        print("Invalid key!")
         raise HTTPException(401, {"error": "You provided an invalid key"})
 
     except jwt.InvalidSignatureError:
