@@ -219,7 +219,7 @@ def filter_matches(matches: list[dict[str, any]], current_user: dict[str, any]) 
                     # profile to the list.
                     if match["gender"] in current_user["interested_in"]:
                         filter_matches.append(match)
-            
+
             return filter_matches
     
     except KeyError:
@@ -268,11 +268,7 @@ def generate_recommendations(df: pd.DataFrame,
     # least similar.
     final_users: list[dict[str, any]] = [user_profiles["users"][user] for user in recommended_users.keys()]
 
-    # If the current user decided to use a sexual orientation filter,
-    # filter the list of users that do not align with their interests.
-    if use_so_filter:
-        final_users = filter_matches(final_users, logged_in_user_profile)
-
+    # List of columns to drop.
     cols_to_drop = [
         'birth_date',
         'birth_month',
@@ -287,9 +283,53 @@ def generate_recommendations(df: pd.DataFrame,
         'sexual_orientation'
     ]
 
-    final_users = pd.DataFrame(final_users).drop(columns=cols_to_drop).to_dict('records')
+    # If the current user decided to use a sexual orientation filter,
+    # filter the list of users that do not align with their interests.
+    if use_so_filter:
+        filtered_users = filter_matches(final_users, logged_in_user_profile)
 
+        # If there are any matches in the filtered_users list of dictionaries,
+        # then drop the following columns from each recommended match in 
+        # the list.
+        if filtered_users:
+            filtered_users = drop_cols(filtered_users, cols_to_drop)
+            return filtered_users
+        
+        # Otherwise, return the non-filtered users until more users
+        # with a similar sexual orientation and/or gender interest(s)
+        # sign up.
+        else:
+            final_users = drop_cols(final_users, cols_to_drop)
+            return final_users
+        
+    # Otherwise, simply drop the columns listed in the cols_to_drop
+    # list.
+    else:
+        final_users = drop_cols(final_users, cols_to_drop)
+
+    # Return the list of non-filtered users if they decided not to use
+    # the SO filter.
     return final_users
+
+# Function to drop columns with sensitive information.
+def drop_cols(recommended_users: list[dict[str, any]], cols_to_drop: list[str]):
+    cols_to_drop = [
+        'birth_date',
+        'birth_month',
+        'birth_year',
+        'gender',
+        'height',
+        'interested_in',
+        'middle_name',
+        'last_name',
+        'rating',
+        'relationship_status',
+        'sexual_orientation'
+    ]
+
+    recommended_users = pd.DataFrame(recommended_users).drop(columns=cols_to_drop).to_dict('records')
+
+    return recommended_users
 
 def run_algorithm(username: str,
                   cursor: psycopg2.extensions.cursor,

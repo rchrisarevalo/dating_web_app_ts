@@ -36,7 +36,8 @@ class TestMatchingAlgorithm(unittest.TestCase):
                                 {
                                     'username': 'tim_johnson', 
                                     'interests': 'I like to farm', 
-                                    'first_name': 'Tim', 'city_residence': 'Mobile', 
+                                    'first_name': 'Tim', 
+                                    'city_residence': 'Mobile', 
                                     'state_residence': 'Alabama', 
                                     'uri': 'akas191201982', 
                                     'age': 38

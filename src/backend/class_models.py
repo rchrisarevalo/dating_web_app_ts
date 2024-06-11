@@ -111,3 +111,26 @@ class MockProfiles:
                 "rating": 23.120129
             }
         ]
+
+        self.mock_another_cur_user_profile = [
+            {
+                "username": "naomi_lewis_01", 
+                "interests": "I am an influencer", 
+                "gender": "Female",
+                "first_name": "Naomi", 
+                "middle_name": "Ann", 
+                "last_name": "Lewis",
+                "height": "5'3''", 
+                "relationship_status": "Single",
+                "city_residence": "Seattle", 
+                "state_residence": "Washington",
+                "sexual_orientation": "Queer", 
+                "interested_in": "Females",
+                "uri": "a1928smaskcka", 
+                "birth_month": "June", 
+                "birth_date": "9", 
+                "birth_year": "2001",
+                "age": 23,
+                "rating": 1.71820
+            }
+        ]
