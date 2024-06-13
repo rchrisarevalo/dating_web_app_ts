@@ -30,7 +30,11 @@ export const User = (props: UserProps) => {
         interests: "",
         sexual_orientation: "",
         relationship_status: "",
-        profile_pic: ""
+        profile_pic: "",
+        gender: "",
+        birth_date: "",
+        birth_month: "",
+        birth_year: ""
     })
 
     const [request, setRequest] = useState<CurrentRequestStatus>({
