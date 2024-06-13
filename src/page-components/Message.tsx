@@ -9,6 +9,7 @@ import { useFetchUserTyping } from '../hooks/useFetchUserTyping'
 
 import { Spinner } from 'react-bootstrap'
 import { useFetchMessages } from '../hooks/useFetchMessages'
+import { useLogVisit } from '../hooks/useLogVisit'
 
 interface MessageProps {
     username: string
@@ -47,6 +48,10 @@ export const Message = (props: MessageProps) => {
     const { messages, receiver_profile_pic, receiver_name, pending, error } = useFetchMessages(retrieve_receive_user_from_path, submit)
 
     const { username } = props
+
+    // Custom hook that increments the number of times
+    // the logged in user visits the user.
+    useLogVisit(retrieve_receive_user_from_path)
 
     // Scroll to bottom of page after messages have loaded.
     useEffect(() => {
