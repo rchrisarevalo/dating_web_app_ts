@@ -3,8 +3,9 @@ import { CalculateBirthday } from '../functions/CalculateBirthday';
 import { socket_conn, py_conn } from '../functions/SocketConn';
 import { MonthToNum, NumToMonth } from '../functions/Calendar';
 import { Link } from 'react-router-dom';
-import { IoArrowBackCircleSharp } from 'react-icons/io5';
+import { IoArrowBackCircleSharp, IoPencilSharp, IoCloseOutline } from 'react-icons/io5';
 import { CurrentUserProfileContext } from '../components/Contexts';
+import MediaQuery from 'react-responsive';
 
 interface UpdateProps {
     username: string
@@ -500,13 +501,6 @@ export const Update = (props: UpdateProps) => {
                                 <h1>Update Profile</h1>
                             </div>
                             <div className="update-profile-option">
-                                {!change ?
-                                    <button id="change-profile-pic" onClick={display_change}>Edit</button>
-                                    :
-                                    <button id="change-profile-pic" onClick={display_change}>Close</button>
-                                }
-                                <br></br>
-                                <br></br>
                                 <b>Profile Picture</b>
                                 <br></br>
                                 <br></br>
@@ -661,6 +655,37 @@ export const Update = (props: UpdateProps) => {
                                     <></>
                                 }
                             </div>
+                            <MediaQuery minWidth={1024}>
+                                <footer className="main-footer" style={{position: 'fixed', bottom: 0, justifyContent: 'flex-end'}}>
+                                    <div></div>
+                                    <div>
+                                        {!change ?
+                                            <button id="change-profile-pic" onClick={display_change} style={{marginRight: '5rem', marginLeft: '5rem'}}><IoPencilSharp color='black' /></button>
+                                            :
+                                            <button id="change-profile-pic" onClick={display_change} style={{marginRight: '5rem', marginLeft: '5rem'}}><IoCloseOutline color='black' size={20} /></button>
+                                        }
+                                    </div>
+                                </footer>
+                            </MediaQuery>
+                            <MediaQuery maxWidth={1024}>
+                                <footer className="main-footer" style={
+                                    {
+                                        position: 'fixed', 
+                                        bottom: 0,
+                                        alignItems: 'flex-end',
+                                        paddingBottom: '5rem'
+                                    }
+                                }>
+                                    <div></div>
+                                    <div>
+                                        {!change ?
+                                            <button id="change-profile-pic" onClick={display_change} style={{padding: '5px 10px', marginRight: '1rem'}}><IoPencilSharp color='black' /></button>
+                                            :
+                                            <button id="change-profile-pic" onClick={display_change} style={{padding: '5px 10px', marginRight: '1rem'}}><IoCloseOutline color='black' size={20} /></button>
+                                        }
+                                    </div>
+                                </footer>
+                            </MediaQuery>
                         </div>
                         :
                         <h3>Error retrieving information.</h3>
