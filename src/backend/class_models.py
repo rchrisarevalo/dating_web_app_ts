@@ -2,7 +2,7 @@ import keras
 
 class ColabFilteringModel:
     def __init__(self):
-        self.model: keras.Model = keras.models.load_model('./models/matching_model.h5')
+        self.model: keras.Model = keras.models.load_model('./models/matching_model.h5', compile=True)
 
 class MockProfiles:
     def __init__(self):

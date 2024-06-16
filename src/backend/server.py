@@ -1425,9 +1425,6 @@ async def match(r: Request):
             # matching profiles to request.
             else:
                 return [matches[0:request_info["initial_limit"]], False]
-        # else:
-        #     users = await include_visits(profiles, visited_profiles)
-        #     return [users[0:request_info["initial_limit"]], True]
         
     except KeyError as k:
         print(k)

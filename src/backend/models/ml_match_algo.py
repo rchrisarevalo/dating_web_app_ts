@@ -35,7 +35,8 @@ def load_data(username: str,
             interested_in,
             state_residence,
             city_residence,
-            relationship_status 
+            relationship_status,
+            visits 
             FROM retrieve_possible_matches(%s)
         '''
         params = [username]
@@ -62,19 +63,20 @@ def load_data(username: str,
             )
         
         new_column_names = [
-                            "username", 
-                            "first_name", 
-                            "middle_name", 
-                            "last_name", 
-                            "interests", 
-                            "height", 
-                            "gender", 
-                            "sexual_orientation", 
-                            "interested_in", 
-                            "state_residence", 
-                            "city_residence", 
-                            "relationship_status"
-                          ]
+            "username", 
+            "first_name", 
+            "middle_name", 
+            "last_name", 
+            "interests", 
+            "height", 
+            "gender", 
+            "sexual_orientation", 
+            "interested_in", 
+            "state_residence", 
+            "city_residence", 
+            "relationship_status",
+            "visits"
+        ]
         
         for column in df.columns.values:
             df.rename(columns={column: new_column_names[column]}, inplace=True)
@@ -125,7 +127,8 @@ def process_data(df: pd.DataFrame, df_current_user: pd.DataFrame, current_user: 
                              "height", 
                              "sexual_orientation", 
                              "residence", 
-                             "relationship_status", 
+                             "relationship_status",
+                             "visits", 
                              "similarity_score"]
         
             users_dictionary = {}
@@ -171,6 +174,8 @@ def process_data(df: pd.DataFrame, df_current_user: pd.DataFrame, current_user: 
             
             users_df = pd.DataFrame.from_dict(users_dictionary)
             users_df = scale_data(users_df)
+            visit_booster(df_users['visits'], users_dictionary)
+            users_df["visits"] = df_users["visits"]
             users_df = calculate_similarity_score(users_df, users_dictionary)
             
             return users_df
@@ -263,6 +268,8 @@ def generate_recommendations(df: pd.DataFrame,
     # Return only the top 10 users.
     recommended_users = dict(list(filter(lambda x: x, recommended_users.items()))[:10])
 
+    print(recommended_users)
+
     # Store the profiles of users in a list of dictionaries using
     # the recommended_users list which lists them from most to
     # least similar.
@@ -313,22 +320,7 @@ def generate_recommendations(df: pd.DataFrame,
 
 # Function to drop columns with sensitive information.
 def drop_cols(recommended_users: list[dict[str, any]], cols_to_drop: list[str]):
-    cols_to_drop = [
-        'birth_date',
-        'birth_month',
-        'birth_year',
-        'gender',
-        'height',
-        'interested_in',
-        'middle_name',
-        'last_name',
-        'rating',
-        'relationship_status',
-        'sexual_orientation'
-    ]
-
     recommended_users = pd.DataFrame(recommended_users).drop(columns=cols_to_drop).to_dict('records')
-
     return recommended_users
 
 def run_algorithm(username: str,
