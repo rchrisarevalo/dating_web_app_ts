@@ -268,8 +268,6 @@ def generate_recommendations(df: pd.DataFrame,
     # Return only the top 10 users.
     recommended_users = dict(list(filter(lambda x: x, recommended_users.items()))[:10])
 
-    print(recommended_users)
-
     # Store the profiles of users in a list of dictionaries using
     # the recommended_users list which lists them from most to
     # least similar.
