@@ -15,7 +15,10 @@ def initialize_min_max_scaler():
 
 def update_user_numbers(dot_prod: np.array, user_dict: dict, attr_index: str):
     for percentage, user in zip(dot_prod, user_dict[attr_index].keys()):
-        user_dict[attr_index][user] = round(percentage.item(), 2)
+        if attr_index != "visits":
+            user_dict[attr_index][user] = round(percentage.item(), 2)
+        else:
+            user_dict[attr_index][user] = percentage
 
 def interests_dot_prod(df1: pd.DataFrame, df2: pd.DataFrame, user_dict: dict):
     # TODO: Calculate the dot product of interests between df1 and df2
@@ -107,6 +110,9 @@ def relationship_status_dot_prod(df1: pd.DataFrame, df2: pd.DataFrame, user_dict
     relationship_status_dot_prod = np.dot(np_df1, np_df2)
 
     update_user_numbers(relationship_status_dot_prod, user_dict, "relationship_status")
+
+def visit_booster(df: pd.DataFrame, user_dict: dict):
+    update_user_numbers(df.values.tolist(), user_dict, "visits")
     
 def calculate_similarity_score(df: pd.DataFrame, user_dict: dict):
     df = df.drop(columns=['similarity_score'])

@@ -2,7 +2,7 @@ import keras
 
 class ColabFilteringModel:
     def __init__(self):
-        self.model: keras.Model = keras.models.load_model('./models/matching_model.h5')
+        self.model: keras.Model = keras.models.load_model('./models/matching_model.h5', compile=True)
 
 class MockProfiles:
     def __init__(self):
@@ -24,8 +24,9 @@ class MockProfiles:
                 "birth_month": "June", 
                 "birth_date": "19", 
                 "birth_year": "1985",
-                "age": 38,
-                "rating": 2.323
+                "age": 39,
+                "rating": 2.323,
+                "visits": 7
             },                    
             {
                 "username": "annie_white", 
@@ -45,7 +46,8 @@ class MockProfiles:
                 "birth_date": "23", 
                 "birth_year": "1978",
                 "age": 44,
-                "rating": -10.2912
+                "rating": -10.2912,
+                "visits": 1
             },     
             {
                 "username": "joshua_walter", 
@@ -65,7 +67,8 @@ class MockProfiles:
                 "birth_date": "2", 
                 "birth_year": "2000",
                 "age": 23,
-                "rating": 0.2931
+                "rating": 0.2931,
+                "visits": 2
             },                                   
             {
                 "username": "a_hernandez", 
@@ -84,8 +87,9 @@ class MockProfiles:
                 "birth_month": "June", 
                 "birth_date": "19", 
                 "birth_year": "1985",
-                "age": 38,
-                "rating": 0.21920
+                "age": 39,
+                "rating": 0.21920,
+                "visits": 4
             }
         ]
 

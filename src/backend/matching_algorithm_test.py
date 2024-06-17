@@ -61,8 +61,8 @@ class TestMatchingAlgorithm(unittest.TestCase):
         # they are stored in the 'result' variable.
         self.assertEqual(result[0].get("username"), "tim_johnson")
         self.assertEqual(result[1].get("username"), "annie_white")
-        self.assertEqual(result[2].get("username"), "joshua_walter")
-        self.assertEqual(result[3].get("username"), "a_hernandez")
+        self.assertEqual(result[2].get("username"), "a_hernandez")
+        self.assertEqual(result[3].get("username"), "joshua_walter")
         
         self.doCleanups()
     
@@ -77,7 +77,7 @@ class TestMatchingAlgorithm(unittest.TestCase):
                                    "city_residence": "Pittsburgh", "state_residence": "Pennsylvania",
                                    "sexual_orientation": "Heterosexual", "interested_in": "Females",
                                    "uri": "a#10kasm109#@lkas!-2_3", "birth_month": "August", "birth_date": "4", "birth_year": "1990",
-                                   "age": 33, "rating": 50.01923}
+                                   "age": 33, "rating": 50.01923, "visits": 15}
 
         new_mock_data_profile_2 = {"username": "annie_garza", "interests": "I love to run and write code!", "gender": "Female",
                                    "first_name": "Annie", "middle_name": "", "last_name": "Garza",
@@ -85,7 +85,7 @@ class TestMatchingAlgorithm(unittest.TestCase):
                                    "city_residence": "McAllen", "state_residence": "Texas",
                                    "sexual_orientation": "Heterosexual", "interested_in": "Males",
                                    "uri": "aaas12lasmcmakl", "birth_month": "June", "birth_date": "2", "birth_year": "2003",
-                                   "age": 20, "rating": 12.192301}
+                                   "age": 20, "rating": 12.192301, "visits": 0}
         
         new_mock_data_profile_3 = {"username": "katherine_jackson", "interests": "I love to play video games", "gender": "Transgender Woman",
                                    "first_name": "Katherine", "middle_name": "Emily", "last_name": "Jackson",
@@ -93,7 +93,7 @@ class TestMatchingAlgorithm(unittest.TestCase):
                                    "city_residence": "San Diego", "state_residence": "California",
                                    "sexual_orientation": "Heterosexual", "interested_in": "Males",
                                    "uri": "tyhakask19329810@!kwg89", "birth_month": "November", "birth_date": "23", "birth_year": "1987",
-                                   "age": 35, "rating": 23.12082}
+                                   "age": 35, "rating": 23.12082, "visits": 1}
 
         new_mock_data_user_profiles = profiles.mock_user_profiles
         
@@ -111,9 +111,9 @@ class TestMatchingAlgorithm(unittest.TestCase):
         )
         
         # Test the results to see who are the top 5 users.
-        self.assertEqual(new_result[0]["username"], 'annie_white')
+        self.assertEqual(new_result[0]["username"], 'brian_jones')
         self.assertEqual(new_result[1]["username"], 'tim_johnson')
-        self.assertEqual(new_result[2]["username"], 'brian_jones')
+        self.assertEqual(new_result[2]["username"], 'annie_white')
         self.assertEqual(new_result[3]["username"], 'a_hernandez')
         self.assertEqual(new_result[4]["username"], 'joshua_walter')
         
@@ -123,15 +123,15 @@ class TestMatchingAlgorithm(unittest.TestCase):
         
         # Test the similarity percentages of the top 3 users after removing two of the original
         # top 5 users.
-        self.assertEqual(new_result[0]["username"], 'annie_white')
-        self.assertEqual(new_result[1]["username"], 'brian_jones')
+        self.assertEqual(new_result[0]["username"], 'brian_jones')
+        self.assertEqual(new_result[1]["username"], 'annie_white')
         self.assertEqual(new_result[2]["username"], 'joshua_walter')
         
         # Now remove the top user.
         new_result.pop(0)
         
         # Test the similarity percentages of the top 2 users that are left.
-        self.assertEqual(new_result[0]["username"], 'brian_jones')
+        self.assertEqual(new_result[0]["username"], 'annie_white')
         self.assertEqual(new_result[1]["username"], 'joshua_walter')
         
         self.doCleanups()

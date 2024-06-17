@@ -73,7 +73,8 @@ def process_mock_data(df_users: pd.DataFrame,
                              "height", 
                              "sexual_orientation", 
                              "residence", 
-                             "relationship_status", 
+                             "relationship_status",
+                             "visits", 
                              "similarity_score"]
             
             users_dictionary = {}
@@ -119,6 +120,8 @@ def process_mock_data(df_users: pd.DataFrame,
             
             users_df = pd.DataFrame.from_dict(users_dictionary)
             users_df = scale_data(users_df)
+            visit_booster(df_users['visits'], users_dictionary)
+            users_df['visits'] = df_users['visits']
             users_df = calculate_similarity_score(users_df, users_dictionary)
             
             return users_df, user_index
@@ -234,7 +237,8 @@ def generate_mock_recommendations(df: pd.DataFrame,
         'last_name',
         'rating',
         'relationship_status',
-        'sexual_orientation'
+        'sexual_orientation',
+        'visits'
     ]
 
     # If the current user decided to use a sexual orientation filter,
@@ -267,22 +271,7 @@ def generate_mock_recommendations(df: pd.DataFrame,
 
 # Function to drop columns with sensitive information.
 def drop_cols(recommended_users: list[dict[str, any]], cols_to_drop: list[str]):
-    cols_to_drop = [
-        'birth_date',
-        'birth_month',
-        'birth_year',
-        'gender',
-        'height',
-        'interested_in',
-        'middle_name',
-        'last_name',
-        'rating',
-        'relationship_status',
-        'sexual_orientation'
-    ]
-
     recommended_users = pd.DataFrame(recommended_users).drop(columns=cols_to_drop).to_dict('records')
-
     return recommended_users
 
 def run_mock_algorithm(mock_data: list[dict[str, any]],
