@@ -265,8 +265,8 @@ def generate_recommendations(df: pd.DataFrame,
     # a dictionary from the most recommended user to the least recommended user.
     recommended_users = dict(sorted(recommended_users.items(), key=lambda x: x[1], reverse=True))
     
-    # Return only the top 10 users.
-    recommended_users = dict(list(filter(lambda x: x, recommended_users.items()))[:10])
+    # Store the most recommended users in a dictionary from most similar to least similar.
+    recommended_users = dict(list(filter(lambda x: x, recommended_users.items())))
 
     # Store the profiles of users in a list of dictionaries using
     # the recommended_users list which lists them from most to
@@ -298,14 +298,14 @@ def generate_recommendations(df: pd.DataFrame,
         # the list.
         if filtered_users:
             filtered_users = drop_cols(filtered_users, cols_to_drop)
-            return filtered_users
+            return filtered_users[:10]
         
         # Otherwise, return the non-filtered users until more users
         # with a similar sexual orientation and/or gender interest(s)
         # sign up.
         else:
             final_users = drop_cols(final_users, cols_to_drop)
-            return final_users
+            return final_users[:10]
         
     # Otherwise, simply drop the columns listed in the cols_to_drop
     # list.
@@ -314,7 +314,7 @@ def generate_recommendations(df: pd.DataFrame,
 
     # Return the list of non-filtered users if they decided not to use
     # the SO filter.
-    return final_users
+    return final_users[:10]
 
 # Function to drop columns with sensitive information.
 def drop_cols(recommended_users: list[dict[str, any]], cols_to_drop: list[str]):
@@ -326,10 +326,15 @@ def run_algorithm(username: str,
                   db: psycopg2.extensions.connection,
                   use_so_filter: bool):
     
+    # Load the data from the database to be used for the recommendation
+    # algorithm.
     data, current_user_data, user_profiles, logged_in_user_profile = load_data(username, db, cursor)
 
+    # Preprocess the data to serve it to the recommendation algorithm.
     preprocessed_data = process_data(data, current_user_data, username)
 
+    # Generate a list of top 10 users ranked from most similar
+    # to least similar using the recommendation algorithm.
     recommendations = generate_recommendations(
         preprocessed_data,
         len(preprocessed_data),
@@ -338,4 +343,5 @@ def run_algorithm(username: str,
         use_so_filter
     )
 
+    # Return the list of recommended users.
     return recommendations
