@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request, Response, HTTPException, Depends, APIRouter, UploadFile, File
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.responses import RedirectResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from passlib.context import CryptContext
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -686,7 +686,7 @@ async def change_recommendation_settings(request: Request):
     finally:
         await terminate_connection(db)
         
-@protected_route.route("/privacy/download_data", methods=["POST", "GET"])
+@protected_route.post("/privacy/download_data")
 async def download_data(request: Request):
     if request.method == "POST":
         # Retrieve payload information.
@@ -706,15 +706,8 @@ async def download_data(request: Request):
             db: p.extensions.connection = await create_connection()
             cursor: p.extensions.cursor = db.cursor()
 
-            # Compare the confirmed password entered by the user after they have clicked the button
-            # to download their data with their password stored in the database.
-            cursor.execute("SELECT password FROM Users WHERE username=%s", [request.cookies.get("username")])
-            
-            # Retrieve the password.
-            password = [p[0] for p in cursor][0]
-            
-            # Verify the entered password with the hash of the retrieved password.
-            password_verified = await user_verified(request.cookies.get("username"), password, cursor)
+            # Verify the entered password with password of the current user stored in the database.
+            password_verified = await user_verified(request.cookies.get("username"), requested_info["confirmed_password"], cursor)
             
             # If their password was successfully verified, then proceed.
             if password_verified:
@@ -795,31 +788,30 @@ async def download_data(request: Request):
                 if user_requested_data:
                     with open("user_info.json", "w") as f:
                         json.dump(json_user_info, f)
-                        
-                    return {"message": "Successfully downloaded data!"}
+                        return FileResponse(path="./user_info.json", filename="downloaded_info.json", media_type="application/json")
                 
                 # Otherwise, cancel their request if they did not select any of the
                 # following options.
                 else:
-                    return {"message": "User did not request data. Cancelling request..."}, 400
+                    raise HTTPException(400, {"message": "User did not request data. Cancelling request..."})
                 
             # If not, return an error message telling the user that they entered the wrong password.
             else:
-                return {"message": "Failed to verify password. Please try again."}, 403
+                raise HTTPException(403, {"message": "Failed to verify password. Please try again."})
         
         except db.DatabaseError:
-            return {"message": "Failed to connect to database."}, 500
-        
-        except Exception as e:
-            return {"message": "Exception was thrown"}, 500
+            raise HTTPException(500, {"message": "Failed to connect to database."})
         
         finally:
             await terminate_connection(db)
+
+@protected_route.get("/user_data_download")
+async def user_data_download():
+    try:
+        return FileResponse(path="./user_info.json", filename="downloaded_info.json", media_type="application/json")
     
-    elif request.method == "GET":
-        if os.path.isfile("user_info.json"):
-            json_file = open("user_info.json", "rb")
-            return StreamingResponse(json_file)
+    except Exception:
+        raise HTTPException(406, {"message": "File failed to download. Try requesting your data once more."})
         
 @protected_route.post("/report_user")
 async def report_user(request: Request, 
