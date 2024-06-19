@@ -24,7 +24,7 @@ class MockProfiles:
                 "birth_month": "June", 
                 "birth_date": "19", 
                 "birth_year": "1985",
-                "age": 39,
+                "age": 38,
                 "rating": 2.323,
                 "visits": 7
             },                    
@@ -87,7 +87,7 @@ class MockProfiles:
                 "birth_month": "June", 
                 "birth_date": "19", 
                 "birth_year": "1985",
-                "age": 39,
+                "age": 38,
                 "rating": 0.21920,
                 "visits": 4
             }
