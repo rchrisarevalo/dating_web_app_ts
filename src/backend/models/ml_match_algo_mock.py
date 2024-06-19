@@ -49,13 +49,6 @@ def load_mock_data(mock_profiles: list[dict[str, any]],
             else:
                 user_profiles["users"][profile.get("username")] = {key: item for key, item in profile.items()}
 
-        for user in user_profiles["users"].keys():
-            user_profiles["users"][user]["age"] = retrieve_age(
-                user_profiles["users"][user]["birth_month"],
-                int(user_profiles["users"][user]["birth_date"]),
-                int(user_profiles["users"][user]["birth_year"])
-            )
-
         return df, current_df, user_profiles
 
     except Exception:
