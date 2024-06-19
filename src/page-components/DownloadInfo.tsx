@@ -37,11 +37,23 @@ export const DownloadInfo = () => {
                 throw res.status
             }
         }).then(() => {
+            // Display a success message.
             setDownloadMsg("Successfully downloaded data!")
-            setDisplayModal(false)
-            window.location.href = "http://localhost:5000/privacy/download_data"
+            
+            // Link to route that triggers download of JSON file that contains
+            // requested information from the current user.
+            window.location.href = "http://localhost:5000/user_data_download"
         }).catch((error) => {
+            // Display an error message.
+            setDownloadMsg("There was a problem downloading your requested information. Please try again.")
             console.log(error)
+        }).finally(() => {
+            // Clear info, regardless of whether download was successful.
+            clearInfoAfterClose()
+
+            setTimeout(() => {
+                setDownloadMsg("")
+            }, 3000)
         })
     }
 
