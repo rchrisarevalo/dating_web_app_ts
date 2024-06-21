@@ -54,9 +54,9 @@ export const MobileFooter = (props: MobileFooterProps) => {
     return (
         <>
             <footer className="mobile-footer-menu">
-                <li><Link to={`/profile/search`}><IoSearchOutline size={30} />Search</Link></li>
                 {chat_request_approved && <li><Link to={`/message/${retrieve_username_from_path}`}><IoSendOutline size={30} />Message</Link></li>}
                 <li><Link to={`/profile/follow_requests`}><IoMailOutline size={30} />Chat Requests</Link></li>
+                <li><Link to={`/profile/search`}><IoSearchOutline size={30} />Search</Link></li>
                 <li><Link onClick={handleBlockUserMobile} to={''}><IoBanOutline size={30} />Block User</Link></li>
                 <li><Link to={`/profile/`}><ProfilePicture /></Link></li>
             </footer>

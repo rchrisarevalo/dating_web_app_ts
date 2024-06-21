@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Wrapper } from "../components/Wrapper"
+import { Wrapper } from "../components/Wrappers"
 import { useFetchChatReqs } from "../hooks/useChatReq"
 import { ChatReq } from "../types/types.config"
 
