@@ -61,6 +61,21 @@ hr {
   font-weight: 900;
 }
 
+.side-scroll-wrapper {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  width: 100%;
+  overflow-x: scroll;
+  overflow-y: hidden;
+}
+
+.side-scroll-inner-wrapper {
+  margin-left: 2.5%;
+  margin-right: 2.5%;
+  display: flex;
+}
+
 .wrapper {
   height: 100%;
   display: flex;
@@ -910,16 +925,6 @@ hr {
   margin-right: 100px;
 }
 
-.profile-details-container,
-.user-profile-container {
-  display: flex;
-  justify-content: space-evenly;
-  font-family: 'Nunito Sans', sans-serif;
-  color: rgb(205, 44, 226);
-  height: 100%;
-  padding-bottom: 50px;
-}
-
 #uploaded-pic {
   width: 300px;
   height: 300px;
@@ -1655,28 +1660,27 @@ hr {
   text-align: center;
 }
 
-#new-card {
-  width: 500px;
+#profile-card {
   text-align: left;
   background: rgb(30, 15, 87);
-  border-radius: 20px;
-  padding-bottom: 30px;
-  margin: auto;
+  width: 500px;
+  height: 850px;
+  object-fit: cover;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
+  margin-left: 1rem;
+  margin-right: 1rem;
 }
 
-#new-card p {
+#profile-card p {
   font-weight: 300;
 }
 
-#new-card h3 {
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-#new-card img {
-  width: 100%;
+#profile-card img {
   height: 500px;
+  width: 500px;
   border-top-left-radius: 20px;
   border-top-right-radius: 20px;
   object-fit: cover;
@@ -1708,6 +1712,13 @@ hr {
   transition: .5s;
 }
 
+#user-profile-figure-container h3 {
+  font-weight: 1000;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  text-transform: uppercase;
+}
+
 #user-profile-details {
   margin-top: 30px;
   margin-bottom: 30px;
@@ -1715,6 +1726,9 @@ hr {
   font-size: 18px;
 }
 
+#user-profile-details i {
+  font-weight: 400;
+}
 
 #filter-button {
   border: none;
@@ -2166,15 +2180,6 @@ hr {
     font-size: 17px;
   }
 
-  .profile-details-container {
-    display: block;
-    margin: none;
-    margin-left: 5%;
-    margin-right: 5%;
-    height: 100%;
-    padding-bottom: 100px;
-  }
-
   #uploaded-pic {
     width: 250px;
     height: 250px;
@@ -2360,14 +2365,14 @@ hr {
     padding-bottom: 10vh;
   }
 
-  #new-card {
+  #profile-card {
     width: 350px;
-    margin: auto;
+    height: 700px;
     padding-bottom: 30px;
   }
 
-  #new-card img {
-    width: 100%;
+  #profile-card img {
+    width: 350px;
     height: 350px;
     object-fit: cover;
   }
@@ -2387,6 +2392,11 @@ hr {
 
   #user-profile-figure-container p {
     font-weight: 400;
+  }
+
+  #user-profile-figure-container i {
+    font-weight: 400;
+    font-size: 16px;
   }
 
   #user-profile-figure-container a {
