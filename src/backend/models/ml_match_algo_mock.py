@@ -16,7 +16,6 @@ import sys
 sys.path.append("../helpers/")
 
 from .ml_sim_calcs import *
-from helpers.helper import retrieve_age
 
 def change_to_model_dir_for_tests():
     directories = os.getcwd().split("/")
