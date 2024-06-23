@@ -232,50 +232,19 @@ async def retrieve_profile_pic(username: str, db: p.extensions.connection) -> st
     
     return photo
     
-# Function that checks if a record already exists in the database
-# of the current user visiting the specific profile they are
-# searching.
-async def retrieve_visitor_record(username: str, visiting_user_username: str, cursor: p.extensions.cursor) -> bool:
-    # Retrieve the record containing the current user's username 
-    # and the username of the user the former is visiting.
-    statement = "SELECT visitor, visitee FROM Visits WHERE visitor=%s AND visitee=%s"
-    params = [username, visiting_user_username]
-    cursor.execute(statement, params)
-    
-    # Store the record in a list.
-    record = [record[0] for record in cursor.fetchall()]
-    
-    # If the visitor/visitee record is not empty, then log the visit
-    # with the existing record.
-    if record:
-        return True
-    
-    # Otherwise, create a new log.
-    else:
-        return False
-    
 # Function that updates the visit count of the current user to a specific profile,
 # regardless of whether they have visited it or not.
 async def log_visit(username: str, 
                     visiting_user_username: str, 
                     db: p.extensions.connection, 
                     cursor: p.extensions.cursor) -> None:  
-    # If a record already exists, then update the count of the number of times
-    # the current user has visited that specific profile.
-    if await retrieve_visitor_record(username, visiting_user_username, cursor):
-        statement = "CALL update_profile_visit(%s, %s, %s)"
-        params = [username, visiting_user_username, "now()"]
-        cursor.execute(statement, params)
-        db.commit()
-        
-    # Otherwise, create a log so that the visit count can be updated
-    # in the future each time the current user visits the same
-    # profile.
-    else:
-        statement = "CALL create_visitor_log(%s, %s, %s)"
-        params = [username, visiting_user_username, "now()"]
-        cursor.execute(statement, params)
-        db.commit()
+    
+    # Create a log to keep track of the times that a user has
+    # visited a specific profile.
+    statement = "CALL create_visitor_log(%s, %s, %s)"
+    params = [username, visiting_user_username, "now()"]
+    cursor.execute(statement, params)
+    db.commit()
 
 # Function that calculates the age of the user.
 def retrieve_age(month: str, date: int, year: int) -> int:
