@@ -801,11 +801,10 @@ hr {
 }
 
 #user-profile-pic {
-  width: 30px; 
-  height: 30px;
+  width: 35px; 
+  height: 35px;
   object-fit: cover; 
   border-radius: 20px; 
-  margin-right: 10px;
   pointer-events: none;
 }
 

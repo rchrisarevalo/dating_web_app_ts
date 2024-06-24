@@ -72,7 +72,7 @@ export const Nav = (props: NavProps) => {
             <MediaQuery minWidth={1024}>
                 <nav className="profile-nav">
                     <div id="profile-nav-col">
-                        <Link to={`/profile`}><ProfilePicture />{`\t\t ${username}`}</Link>
+                        <Link to={`/profile`}><ProfilePicture /></Link>
                     </div>
                     <div id="profile-nav-col">
                         <Link to={`/profile/options/`} rel="noreferrer"><IoSettingsOutline size={20} style={{ marginBottom: 2 }} /></Link>
@@ -148,7 +148,7 @@ export const UserNav = (props: UserNavProps) => {
     return (
         <nav className="profile-nav">
             <div id="profile-nav-col">
-                <Link to={`/profile/`}><ProfilePicture />{`\t\t ${sessionStorage.getItem("username")}`}</Link>
+                <Link to={`/profile/`}><ProfilePicture /></Link>
             </div>
             <div id="profile-nav-col">
                 {(chat_request_approved) && <Link to={`/message/${current_user_username}`}><IoSendOutline size={20} style={{ marginBottom: 0.5 }} /></Link>}
