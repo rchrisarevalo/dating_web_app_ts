@@ -10,6 +10,9 @@ import { useFetchUserTyping } from '../hooks/useFetchUserTyping'
 import { Spinner } from 'react-bootstrap'
 import { useFetchMessages } from '../hooks/useFetchMessages'
 import { useLogVisit } from '../hooks/useLogVisit'
+import { MessageLog } from '../types/types.config'
+import { Message } from '../components/Message'
+import { useFetchChatDates } from '../hooks/useFetchChatDates'
 
 interface MessageProps {
     username: string
@@ -20,22 +23,14 @@ type SendingMessage = {
     sending_error: boolean
 }
 
-type Log = {
-    message_from: "",
-    message: ""
-}
-
-export const Message = (props: MessageProps) => {
+export const MessageUser = (props: MessageProps) => {
     const currentRoute = useLocation()
     const [currentMsg, setCurrentMsg] = useState("")
     const [displayCharLimit, setDisplayCharLimit] = useState(false)
     const [submit, setSubmit] = useState(false)
     const [charLimit, setCharLimit] = useState(0)
     const [connection] = useState(socket_conn)
-    const [messageLog, setMessageLog] = useState([{
-        message_from: "",
-        message: ""
-    }])
+    const [messageLog, setMessageLog] = useState<MessageLog[]>([])
 
     const [msgSent, setMsgSent] = useState<SendingMessage>({
         sending: false,
@@ -46,6 +41,7 @@ export const Message = (props: MessageProps) => {
 
     const { sender_is_typing } = useFetchUserTyping(retrieve_receive_user_from_path, currentMsg, connection)
     const { messages, receiver_profile_pic, receiver_name, pending, error } = useFetchMessages(retrieve_receive_user_from_path, submit)
+    const { chat_dates } = useFetchChatDates(messages, error, pending, msgSent.sending)
 
     const { username } = props
 
@@ -76,7 +72,7 @@ export const Message = (props: MessageProps) => {
         if (connection.active) {
             // After the server emits the updated list, then
             // update it on the recipient's end.
-            connection.on('recipient-message', (sender_msg: Log) => {
+            connection.on('recipient-message', (sender_msg: MessageLog[]) => {
                 // Store the original copy of message logs in a temp list
                 // in case the message fails to send.
                 const oldMessages = [...messageLog]
@@ -84,10 +80,7 @@ export const Message = (props: MessageProps) => {
                 // Simulate an optimistic state change to immediately display
                 // the sent message on the current user's (the sender's) 
                 // side.
-                setMessageLog([...messageLog, {
-                    message_from: sender_msg.message_from, 
-                    message: sender_msg.message
-                }])
+                setMessageLog(sender_msg)
 
                 // Change the submit state variable to true to trigger
                 // a re-rendering of the new messages being retrieved.
@@ -109,8 +102,6 @@ export const Message = (props: MessageProps) => {
                         } else {
                             throw res.status
                         }
-                    }).then((data) => {
-                        console.log(data)
                     }).catch((error) => {
                         // Set optimistic state back to the original state,
                         // which is the old message log.
@@ -173,7 +164,8 @@ export const Message = (props: MessageProps) => {
         // side.
         setMessageLog([...messageLog, {
             message_from: username, 
-            message: information.message
+            message: information.message,
+            date_sent: `${new Date().toLocaleString('default', {month: 'long'})} ${new Date().getDate()}, ${new Date().getFullYear()}`
         }])
 
         // Smoothly scroll to the bottom of the page
@@ -289,25 +281,16 @@ export const Message = (props: MessageProps) => {
                                             <>
                                                 {(messageLog.length !== 0) ?
                                                     <>
-                                                        {messageLog.map(msg =>
-                                                            <div className="chat-message">
-                                                                {msg.message_from === username &&
-                                                                    <div className="chat-box">
-                                                                        <p id="sender-username">{`You`}</p>
-                                                                        <div className="sender-text">
-                                                                            <p>{msg.message}</p>
-                                                                        </div>
-                                                                    </div>
-                                                                }
-                                                                {msg.message_from === retrieve_receive_user_from_path &&
-                                                                    <div className="chat-box">
-                                                                        <p id="recipient-username">{`${receiver_name}`}</p>
-                                                                        <div className="recipient-text">
-                                                                            <p>{msg.message}</p>
-                                                                        </div>
-                                                                    </div>
-                                                                }
-                                                            </div>
+                                                        {messageLog.map((msg, i) =>     
+                                                            <Message 
+                                                                message={msg}
+                                                                username={username}
+                                                                retrieve_receive_user_from_path={retrieve_receive_user_from_path}
+                                                                receiver_name={receiver_name}
+                                                                curDate={msg.date_sent}
+                                                                dateSet={chat_dates}
+                                                                index={i}
+                                                            />
                                                         )}
                                                         {sender_is_typing &&
                                                             <div className="chat-message" style={{ position: 'relative' }}>
@@ -401,25 +384,16 @@ export const Message = (props: MessageProps) => {
                                             <>
                                                 {(!pending && messageLog.length !== 0) ?
                                                     <>
-                                                        {messageLog.map(msg =>
-                                                            <div className="chat-message">
-                                                                {msg.message_from === username &&
-                                                                    <div className="chat-box">
-                                                                        <p id="sender-username">{'You'}</p>
-                                                                        <div className="sender-text">
-                                                                            <p>{msg.message}</p>
-                                                                        </div>
-                                                                    </div>
-                                                                }
-                                                                {msg.message_from === retrieve_receive_user_from_path &&
-                                                                    <div className="chat-box">
-                                                                        <p id="recipient-username">{`${receiver_name}`}</p>
-                                                                        <div className="recipient-text">
-                                                                            <p>{msg.message}</p>
-                                                                        </div>
-                                                                    </div>
-                                                                }
-                                                            </div>
+                                                        {messageLog.map((msg, i) =>
+                                                            <Message 
+                                                                message={msg}
+                                                                username={username}
+                                                                retrieve_receive_user_from_path={retrieve_receive_user_from_path}
+                                                                receiver_name={receiver_name}
+                                                                curDate={msg.date_sent}
+                                                                dateSet={chat_dates}
+                                                                index={i}
+                                                            />
                                                         )}
                                                         {sender_is_typing &&
                                                             <div className="chat-message" style={{ position: 'relative' }}>

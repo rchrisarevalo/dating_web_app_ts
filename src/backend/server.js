@@ -398,17 +398,15 @@ protected_route.post('/retrieve_messages', async (req, res) => {
     const db = await createConnection()
 
     try {
-        const statement = `
-            SELECT message, message_from FROM Messages WHERE (message_from=$1 AND message_to=$2) 
-            OR (message_from=$3 AND message_to=$4) ORDER BY date_and_time ASC
-        `
-        const params = [sender, data.receiver, data.receiver, sender]
+        const statement = "SELECT * FROM retrieve_messages($1, $2)"
+        const params = [sender, data.receiver]
         await db.connect()
 
         const db_res = await db.query(statement, params)
 
         res.status(200).send(db_res.rows)
-    } catch {
+    } catch (error) {
+        console.log(error)
         res.status(500).send({"message": "Failed to retrieve messages."})
     } finally {
         setTimeout(async () => {

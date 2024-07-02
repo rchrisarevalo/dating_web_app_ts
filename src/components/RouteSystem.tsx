@@ -22,7 +22,7 @@ import { RecentMessages } from "../page-components/RecentMessages";
 import { ViewChatReqs } from "../page-components/ViewChatReqs";
 import { SearchPage } from "../page-components/SearchPage";
 import { User } from "../page-components/User";
-import { Message } from "../page-components/Message";
+import { MessageUser } from "../page-components/MessageUser";
 import { TOS } from "../page-components/TOS";
 import { UserNotExist } from "./UserNotExist";
 
@@ -163,7 +163,7 @@ export const RoutingSystem = () => {
                                             <Route path={`/user/${user.username}`} element={<User username={user.username} />} />
                                         )}
                                         {profile_data.chatRoutes.map((user: { username: string; }) => 
-                                            <Route path={`/message/${user.username}`} element={<Message username={username} />} />
+                                            <Route path={`/message/${user.username}`} element={<MessageUser username={username} />} />
                                         )}
                                         <Route path="/tos" element={<TOS />} />
                                         <Route path="*" element={

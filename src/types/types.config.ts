@@ -58,3 +58,9 @@ export type RatingSubmission = {
     logged_in_user: string,
     index: number
 }
+
+export type MessageLog = {
+    message_from: string,
+    message: string,
+    date_sent: string
+}

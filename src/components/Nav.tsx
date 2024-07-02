@@ -70,20 +70,22 @@ export const Nav = (props: NavProps) => {
     return (
         <>
             <MediaQuery minWidth={1024}>
-                <nav className="profile-nav">
-                    <div id="profile-nav-col">
-                        <Link to={`/profile`}><ProfilePicture /></Link>
-                    </div>
-                    <div id="profile-nav-col">
-                        <Link to={`/profile/options/`} rel="noreferrer"><IoSettingsOutline size={20} style={{ marginBottom: 2 }} /></Link>
-                        <Link to={`/profile/recent_messages`}><NotificationCounter counter={notification_counter} pending={notification_pending} error={notification_error} /><IoChatboxEllipsesOutline size={20} /></Link>
-                        <Link to={`/profile/follow_requests`}><NotificationCounter counter={req_count} pending={req_pending} error={req_error} /><IoMailOutline size={20} /></Link>
-                        <Link to={`/profile/search`}><IoSearchOutline size={20} style={{ marginBottom: 2 }} /></Link>
-                    </div>
-                    <div id="profile-nav-col">
-                        <button onClick={handleLogout}><IoLogOutOutline size={20} style={{ marginRight: 10, marginBottom: 2 }} />Sign Out</button>
-                    </div>
-                </nav>
+                <div className="profile-nav-wrapper">
+                    <nav className="profile-nav">
+                        <div id="profile-nav-col">
+                            <Link to={`/profile`}><ProfilePicture /></Link>
+                        </div>
+                        <div id="profile-nav-col">
+                            <Link to={`/profile/options/`} rel="noreferrer"><IoSettingsOutline size={20} style={{ marginBottom: 2 }} /></Link>
+                            <Link to={`/profile/recent_messages`}><NotificationCounter counter={notification_counter} pending={notification_pending} error={notification_error} /><IoChatboxEllipsesOutline size={20} /></Link>
+                            <Link to={`/profile/follow_requests`}><NotificationCounter counter={req_count} pending={req_pending} error={req_error} /><IoMailOutline size={20} /></Link>
+                            <Link to={`/profile/search`}><IoSearchOutline size={20} style={{ marginBottom: 2 }} /></Link>
+                        </div>
+                        <div id="profile-nav-col">
+                            <button onClick={handleLogout}><IoLogOutOutline size={20} /></button>
+                        </div>
+                    </nav>
+                </div>
             </MediaQuery>
             <MediaQuery maxWidth={1024}>
                 <footer className="mobile-footer-menu">
@@ -156,7 +158,7 @@ export const UserNav = (props: UserNavProps) => {
                 <Link to={`/profile/search`}><IoSearchOutline size={20} style={{ marginBottom: 3 }} /></Link>
             </div>
             <div id="profile-nav-col">
-                <button style={{ background: 'rgb(30, 15, 87)', color: 'rgb(205, 44, 226)', border: 'none', borderRadius: '20px', padding: '5px 20px', fontWeight: '1000' }} onClick={handleBlockUser}>Block User</button>
+                <button style={{ background: 'rgb(30, 15, 87)', color: 'rgb(205, 44, 226)', border: 'none', borderRadius: '20px', padding: '5px 20px', fontWeight: '1000' }} onClick={handleBlockUser}>Block</button>
             </div>
         </nav>
     )
