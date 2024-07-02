@@ -67,10 +67,6 @@ export const MessageUser = (props: MessageProps) => {
         }
     }, [submit])
 
-    useEffect(() => {
-        console.log("messageLog changed!")
-    }, [messageLog])
-
     // Update list of messages for recipient.
     useEffect(() => {
         if (connection.active) {

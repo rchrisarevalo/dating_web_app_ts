@@ -21,7 +21,6 @@ export const useFetchMessages = (receiver: string, submitted: boolean) => {
 
             if (res.ok) {
                 const data: MessageLog[] = await res.json()
-                console.log(data)
                 setError(false)
                 setTextMessages(data)
             } else {
@@ -41,7 +40,6 @@ export const useFetchMessages = (receiver: string, submitted: boolean) => {
 
             if (res.ok) {
                 const data = await res.json()
-                console.log(data)
                 setPending(false)
                 setError(false)
                 setReceiverName(data.first_name)
