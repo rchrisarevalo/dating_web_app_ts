@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
+import { MessageLog } from '../types/types.config';
 
 export const useFetchMessages = (receiver: string, submitted: boolean) => {
-    const [textMessages, setTextMessages] = useState([{
-        message_from: "",
-        message: ""
-    }])
+    const [textMessages, setTextMessages] = useState<MessageLog[]>([])
     const [receiverName, setReceiverName] = useState("")
     const [receiverProfilePic, setReceiverProfilePic] = useState("")
     const [error, setError] = useState(false)
@@ -22,7 +20,8 @@ export const useFetchMessages = (receiver: string, submitted: boolean) => {
             })
 
             if (res.ok) {
-                const data = await res.json()
+                const data: MessageLog[] = await res.json()
+                console.log(data)
                 setError(false)
                 setTextMessages(data)
             } else {
@@ -42,6 +41,7 @@ export const useFetchMessages = (receiver: string, submitted: boolean) => {
 
             if (res.ok) {
                 const data = await res.json()
+                console.log(data)
                 setPending(false)
                 setError(false)
                 setReceiverName(data.first_name)
@@ -69,7 +69,7 @@ export const useFetchMessages = (receiver: string, submitted: boolean) => {
                 })
 
                 if (res.ok) {
-                    const data = await res.json()
+                    const data: MessageLog[] = await res.json()
                     setError(false)
                     setTextMessages(data)
                 } else {
