@@ -61,6 +61,7 @@ const createConnection = async () => {
 // Create socket server connection so that client
 // can emit messages to it.
 socket_server.on('connection', (socket) => {
+    console.log("Connected!")
     // Retrieve message from client (sender).
     socket.on('sender-message', (sender_msg, username) => {
         // Emit message to recipient.
