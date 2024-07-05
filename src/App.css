@@ -819,7 +819,7 @@ hr {
   letter-spacing: 0.5px;
 }
 
-.profile-container{
+.profile-container {
   height: 100%;
   width: 100%;
   position: fixed;
@@ -827,6 +827,10 @@ hr {
   background: black;
   color: rgb(205, 44, 226);
   z-index: -1;
+}
+
+.profile-page-section {
+  margin-bottom: 12.5vh;
 }
 
 .profile-page-pic{
