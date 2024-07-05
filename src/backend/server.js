@@ -239,7 +239,7 @@ protected_route.post('/profile/:user', profileCache, async (req, res) => {
     try {
         const username = req.params.user
 
-        const statement = "SELECT * FROM Profile($1)"
+        const statement = "SELECT * FROM Retrieve_Profile($1)"
         const params = [username]
         await db.connect()
 

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { CurrentProfile } from '../types/types.config';
-import { CalculateBirthday } from '../functions/CalculateBirthday';
 
 export const useFetchProfile = (auth: boolean, username: string) => {
     const [profile, setProfile] = useState<CurrentProfile>({
@@ -9,13 +8,9 @@ export const useFetchProfile = (auth: boolean, username: string) => {
         age: 0,
         height: "",
         interests: "",
-        gender: "",
         sexual_orientation: "",
         relationship_status: "",
-        birth_date: "",
-        birth_month: "",
-        birth_year: "",
-        profile_pic: ""
+        uri: ""
     })
 
     // State variable that is used if error is detected.
@@ -40,22 +35,8 @@ export const useFetchProfile = (auth: boolean, username: string) => {
                 })
 
                 if (res.ok) {
-                    const data = await res.json()
-                    
-                    setProfile({
-                        username: data.username,
-                        name: `${data.first_name} ${data.middle_name} ${data.last_name}`,
-                        age: CalculateBirthday(data.birth_month, parseInt(data.birth_date), parseInt(data.birth_year)),
-                        height: data.height,
-                        interests: data.interests,
-                        gender: data.gender,
-                        sexual_orientation: data.sexual_orientation,
-                        relationship_status: data.relationship_status,
-                        birth_date: data.birth_date,
-                        birth_month: data.birth_month,
-                        birth_year: data.birth_year,
-                        profile_pic: data.uri
-                    })
+                    const data: CurrentProfile = await res.json()
+                    setProfile(data)
                     sessionStorage.setItem("profile_pic", data.uri)
                     setPending(false)
                 } else {
