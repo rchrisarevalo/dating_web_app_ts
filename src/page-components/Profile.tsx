@@ -47,6 +47,9 @@ export const Profile = () => {
                                     </div>
                                 </div>
                             </div>
+                            <br></br>
+                            <br></br>
+                            <br></br>
                         </div>
                         :
                         <Loading error={profile_page_error}/>
