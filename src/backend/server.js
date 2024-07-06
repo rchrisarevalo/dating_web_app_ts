@@ -269,6 +269,10 @@ protected_route.post('/profile/:user', profileCache, async (req, res) => {
             // Store the query result.
             const chat_request_user = chat_db_res.rows
 
+            // Include only the first name of the user that the current
+            // user is visiting.
+            db_res.rows[0]["name"] = db_res.rows[0]["name"].split(" ")[0]
+
             // If the query does not come with the current user's username,
             // then remove these attributes below.
             if (chat_request_user.length == 0) {

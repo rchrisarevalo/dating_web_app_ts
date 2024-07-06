@@ -233,7 +233,7 @@ export const User = (props: UserProps) => {
                                 }
                             </div>
                             <div className="profile-page-bio">
-                                <h1>{`${profile.name.split(" ")[0]}, ${profile.age}`}</h1>
+                                <h1>{`${profile.name}, ${profile.age}`}</h1>
                                 {profile.interests.split("\n").map((paragraph, i) =>
                                     <p key={`profile-interests-paragraph-${i}`}>
                                         {paragraph}
@@ -258,7 +258,7 @@ export const User = (props: UserProps) => {
                                     :
                                     <div>
                                         <i>
-                                            To know more about {profile.name.split(" ")[0]}, 
+                                            To know more about {profile.name}, 
                                             send them a chat request!
                                         </i>
                                     </div>
