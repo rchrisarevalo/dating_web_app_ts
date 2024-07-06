@@ -238,7 +238,7 @@ protected_route.post('/profile/:user', profileCache, async (req, res) => {
     
     try {
         const username = req.params.user
-
+        
         let statement = ""
         const params = [username]
 
