@@ -1,6 +1,7 @@
 import { useContext } from 'react';
 import { Loading } from '../components/Loading'
 import { CurrentUserProfileContext } from '../components/Contexts';
+import MediaQuery from 'react-responsive';
 
 
 export const Profile = () => {
@@ -19,7 +20,7 @@ export const Profile = () => {
                     {!profile_page_error ? 
                         <div className="profile-page-section">
                             <div className="profile-page-pic">
-                                <img src={`data:image/png;base64,${profile_page.profile_pic}`} alt="profile-pic"></img>
+                                <img src={`data:image/png;base64,${profile_page.uri}`} alt="profile-pic"></img>
                             </div>
                             <div className="profile-page-bio">
                                 <h1>{`${profile_page.name}, ${profile_page.age}`}</h1>
@@ -47,9 +48,11 @@ export const Profile = () => {
                                     </div>
                                 </div>
                             </div>
-                            <br></br>
-                            <br></br>
-                            <br></br>
+                            <MediaQuery minWidth={1024}>
+                                <br></br>
+                                <br></br>
+                                <br></br>
+                            </MediaQuery>
                         </div>
                         :
                         <Loading error={profile_page_error}/>
