@@ -8,7 +8,7 @@ export type MatchProfiles = {
     username: string
 }
 
-export type CurrentProfile = {
+export type Profile = {
     username: string,
     name: string,
     age: number,
@@ -17,6 +17,13 @@ export type CurrentProfile = {
     sexual_orientation: string,
     relationship_status: string,
     uri: string
+}
+
+export type CurrentUserProfile = Profile & {
+    birth_date: string,
+    birth_month: string,
+    birth_year: string,
+    gender: string
 }
 
 export type CurrentRequestStatus = {

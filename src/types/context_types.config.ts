@@ -1,9 +1,9 @@
 import React from "react"
-import { CurrentProfile } from "./types.config"
+import { CurrentUserProfile } from "./types.config"
 
-export type CurrentUserProfile = {
-    profile_page: CurrentProfile,
-    setProfile: React.Dispatch<React.SetStateAction<CurrentProfile>>,
+export type CurrentProfile = {
+    profile_page: CurrentUserProfile,
+    setProfile: React.Dispatch<React.SetStateAction<CurrentUserProfile>>,
     profile_page_pending: boolean,
     profile_page_error: boolean,
     notification_counter: number,

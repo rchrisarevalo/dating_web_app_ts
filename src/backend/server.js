@@ -239,8 +239,15 @@ protected_route.post('/profile/:user', profileCache, async (req, res) => {
     try {
         const username = req.params.user
 
-        const statement = "SELECT * FROM Retrieve_Profile($1)"
+        let statement = ""
         const params = [username]
+
+        if (username == req.cookies.username) {
+            statement = `SELECT * FROM Profile($1)`
+        } else {
+            statement = "SELECT * FROM Retrieve_Profile($1)"
+        }
+
         await db.connect()
 
         let db_res = await db.query(statement, params)
