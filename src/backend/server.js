@@ -247,7 +247,29 @@ protected_route.post('/profile/:user', profileCache, async (req, res) => {
 
         // Turn the user's profile image, which was retrieved as a Buffer data type,
         // into a URI that is readable by the client so that it can be displayed.
-        db_res.rows.map(result => result.uri = Buffer.from(result.uri).toString())
+        db_res.rows[0]["uri"] = Buffer.from(db_res.rows[0]["uri"]).toString()
+
+        // If the current user's username does not match the username provided in the
+        // request body--in other words, the current user is visiting another user's
+        // profile, then...
+        if (req.cookies.username != username) {
+            // Execute the query to see if the user they are visiting has approved
+            // a chat request pertaining to them.
+            const chat_user_stmt = "SELECT username FROM retrieve_chat_users($1) WHERE username=$2"
+            const chat_user_params = [username, req.cookies.username]
+            let chat_db_res = await db.query(chat_user_stmt, chat_user_params)
+
+            // Store the query result.
+            const chat_request_user = chat_db_res.rows
+
+            // If the query does not come with the current user's username,
+            // then remove these attributes below.
+            if (chat_request_user.length == 0) {
+                delete db_res.rows[0]["sexual_orientation"]
+                delete db_res.rows[0]["relationship_status"]
+                delete db_res.rows[0]["height"]
+            }
+        }
 
         // Set the cache so that when the user visits the profile once more within every
         // 5 minutes, the profile is immediately ready to be sent to the client.
@@ -256,7 +278,8 @@ protected_route.post('/profile/:user', profileCache, async (req, res) => {
         // Send the rows retrieved from the database to the client
         // to display the user's profile.        
         res.status(200).send(db_res.rows[0])
-    } catch {
+    } catch (error) {
+        console.log(error)
         res.status(500).send({"message": "Failed to retrieve profile data!"})
     } finally {
         setTimeout(async () => {
