@@ -5,10 +5,10 @@ import { useNotificationUpdate } from "../hooks/useNotificationUpdate";
 import { useFetchReqCount } from "../hooks/useChatReq";
 import { useFetchAlgoConfig } from "../hooks/useFetchSearch";
 
-import { CurrentUserProfile } from "../types/context_types.config";
+import { CurrentProfile } from "../types/context_types.config";
 import { socket_conn } from "../functions/SocketConn";
 
-export const CurrentUserProfileContext = createContext<CurrentUserProfile | undefined>(undefined)
+export const CurrentUserProfileContext = createContext<CurrentProfile | undefined>(undefined)
 
 interface CurrentUserProfileContextProps {
     auth: boolean,

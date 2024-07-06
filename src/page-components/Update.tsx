@@ -194,12 +194,6 @@ export const Update = (props: UpdateProps) => {
                 }
             }).then((data) => {
                 console.log(data)
-                setProfile({
-                    ...profile_page, 
-                    birth_month: birth_month, 
-                    birth_date: birth_date, 
-                    birth_year: birth_year
-                })
             }).catch((error) => {
                 console.log(error)
                 setProfile({

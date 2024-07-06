@@ -6,7 +6,7 @@ import { MobileFooter } from '../components/MobileFooter'
 
 import { useLogVisit } from '../hooks/useLogVisit'
 import { useFetchChatReqStatus, useSendChatReq } from '../hooks/useChatReq'
-import { CurrentProfile, CurrentRequestStatus } from '../types/types.config'
+import { Profile, CurrentRequestStatus } from '../types/types.config'
 
 import { IoTrashOutline } from "react-icons/io5";
 import { Spinner } from 'react-bootstrap'
@@ -21,7 +21,7 @@ export const User = (props: UserProps) => {
     // by them.
     const { username } = props
 
-    const [profile, setProfile] = useState<CurrentProfile>({
+    const [profile, setProfile] = useState<Profile>({
         username: "",
         name: "",
         age: 0,
@@ -124,7 +124,7 @@ export const User = (props: UserProps) => {
             })
 
             if (res.ok) {
-                const data: CurrentProfile = await res.json()
+                const data: Profile = await res.json()
                 setPending(false)
                 setProfile(data)
             } else {

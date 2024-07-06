@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { CurrentProfile } from '../types/types.config';
+import { CurrentUserProfile } from '../types/types.config';
 
 export const useFetchProfile = (auth: boolean, username: string) => {
-    const [profile, setProfile] = useState<CurrentProfile>({
+    const [profile, setProfile] = useState<CurrentUserProfile>({
         username: "",
         name: "",
         age: 0,
@@ -10,7 +10,11 @@ export const useFetchProfile = (auth: boolean, username: string) => {
         interests: "",
         sexual_orientation: "",
         relationship_status: "",
-        uri: ""
+        uri: "",
+        birth_date: "",
+        birth_month: "",
+        birth_year: "",
+        gender: ""
     })
 
     // State variable that is used if error is detected.
@@ -35,7 +39,7 @@ export const useFetchProfile = (auth: boolean, username: string) => {
                 })
 
                 if (res.ok) {
-                    const data: CurrentProfile = await res.json()
+                    const data: CurrentUserProfile = await res.json()
                     setProfile(data)
                     sessionStorage.setItem("profile_pic", data.uri)
                     setPending(false)
