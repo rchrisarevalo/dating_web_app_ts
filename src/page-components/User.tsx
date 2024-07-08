@@ -78,12 +78,13 @@ export const User = (props: UserProps) => {
             }
         })
 
-        if (res.ok) {
+        if (res.ok) { 
             setRequest({
                 ...request,
                 approved: true,
                 sent: true
             })
+            socket_conn.emit('chat-request', username)
         }
     }
 
@@ -105,6 +106,7 @@ export const User = (props: UserProps) => {
                 approved: false,
                 sent: false
             })
+            socket_conn.emit('chat-request', username)
         }
     }
 
@@ -125,6 +127,7 @@ export const User = (props: UserProps) => {
 
             if (res.ok) {
                 const data: Profile = await res.json()
+                console.log(data)
                 setPending(false)
                 setProfile(data)
             } else {
@@ -133,7 +136,7 @@ export const User = (props: UserProps) => {
             }
         }
         retrieveUserProfile()
-    }, [retrieve_username_from_path])
+    }, [retrieve_username_from_path, request.approved])
 
     // Custom hook that increments the number of times
     // the logged in user visits the user.
@@ -244,16 +247,24 @@ export const User = (props: UserProps) => {
                             <div className="profile-page-details">
                                 {(request.sent && request.approved) ?
                                     <div className="profile-page-details-row">
-                                        <div className="profile-page-details-col">
-                                            <h4>Height</h4>
-                                            <h5>{`${profile.height}`}</h5>
-                                            <h4>Sexual Orientation</h4>
-                                            <h5>{`${profile.sexual_orientation}`}</h5>
-                                        </div>
-                                        <div className="profile-page-details-col">
-                                            <h4>Relationship Status</h4>
-                                            <h5>{`${profile.relationship_status}`}</h5>
-                                        </div>
+                                        {(typeof(profile.height) == "undefined" || typeof(profile.sexual_orientation) == "undefined" || typeof(profile.sexual_orientation) == "undefined") ?
+                                            <>
+                                                <Spinner animation='border' />  
+                                            </>
+                                            :
+                                            <>
+                                                <div className="profile-page-details-col">
+                                                    <h4>Height</h4>
+                                                    <h5>{`${profile.height}`}</h5>
+                                                    <h4>Sexual Orientation</h4>
+                                                    <h5>{`${profile.sexual_orientation}`}</h5>
+                                                </div>
+                                                <div className="profile-page-details-col">
+                                                    <h4>Relationship Status</h4>
+                                                    <h5>{`${profile.relationship_status}`}</h5>
+                                                </div>
+                                            </>
+                                        }
                                     </div>
                                     :
                                     <div>

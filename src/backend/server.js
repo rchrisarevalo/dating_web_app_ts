@@ -73,6 +73,14 @@ socket_server.on('connection', (socket) => {
     })
 
     socket.on('chat-request', (username) => {
+        // Clear all the cache to ensure that
+        // new profile details are fetched,
+        // regardless of whether the chat request
+        // was approved.
+        cache.flushAll()
+
+        // Notify the user of the decision of whether their chat
+        // request was approved, denied, or cancelled.
         socket.to(socket_id_users[username]).emit('update-chat-request')
     })
 
@@ -272,6 +280,8 @@ protected_route.post('/profile/:user', profileCache, async (req, res) => {
             // Include only the first name of the user that the current
             // user is visiting.
             db_res.rows[0]["name"] = db_res.rows[0]["name"].split(" ")[0]
+
+            console.log(chat_request_user)
 
             // If the query does not come with the current user's username,
             // then remove these attributes below.
