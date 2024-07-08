@@ -42,7 +42,7 @@ export const useFetchMessages = (receiver: string, submitted: boolean) => {
                 const data = await res.json()
                 setPending(false)
                 setError(false)
-                setReceiverName(data.first_name)
+                setReceiverName(data.name)
                 setReceiverProfilePic(data.uri)
             } else {
                 setPending(false)
