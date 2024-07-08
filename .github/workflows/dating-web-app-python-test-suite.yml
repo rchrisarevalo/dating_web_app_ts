@@ -11,9 +11,9 @@ env:
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "dependabot/**" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "dependabot/**" ]
 
 permissions:
   contents: read
