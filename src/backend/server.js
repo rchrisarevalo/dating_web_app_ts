@@ -281,8 +281,6 @@ protected_route.post('/profile/:user', profileCache, async (req, res) => {
             // user is visiting.
             db_res.rows[0]["name"] = db_res.rows[0]["name"].split(" ")[0]
 
-            console.log(chat_request_user)
-
             // If the query does not come with the current user's username,
             // then remove these attributes below.
             if (chat_request_user.length == 0) {
