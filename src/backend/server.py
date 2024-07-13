@@ -1399,10 +1399,12 @@ async def match(r: Request):
         if request_info["algo_config"]:
             # Run matching algorithm using the list of profiles (excluding the current user) to compare with the
             # profile of the logged in user.
-            matches = run_matching_algorithm(username=r.cookies.get("username"),
-                                             db=db,
-                                             cursor=cursor,
-                                             use_so_filter=request_info["use_so_filter"])
+            matches: list[dict[str, any]] = run_matching_algorithm(
+                                                username=r.cookies.get("username"),
+                                                db=db,
+                                                cursor=cursor,
+                                                use_so_filter=request_info["use_so_filter"]
+                                            )
             
             # If the limit of the number of searches retrieved is less than the
             # actual number of matched users, then let the
