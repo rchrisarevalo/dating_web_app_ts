@@ -303,49 +303,49 @@ class TestAppOps(unittest.TestCase):
 
         # Dummy user information.
         self.dummy_user_1 = {
-            "first_name": "Kimberly",
-            "middle_name": "Elizabeth",
-            "last_name": "Hernandez",
-            "username": "kimmy_liz_hdz00",
-            "password": "kimmypassword123",
+            "first_name": "Jane",
+            "middle_name": "Willow",
+            "last_name": "Garza",
+            "username": "jane_gza_01",
+            "password": "jane123",
             "birth_month": "August",
-            "birth_date": "11",
+            "birth_date": "19",
             "birth_year": "2001",
             "state": "Texas",
             "city": "San Antonio",
             "height_feet": "5",
-            "height_inches": "8",
-            "gender": "Non-Binary",
-            "sexual_orientation": "Pansexual",
-            "interested_in": "Anyone",
+            "height_inches": "3",
+            "gender": "Female",
+            "sexual_orientation": "Bisexual",
+            "interested_in": "Males, Females",
             "relationship_status": "Single",
             "so_filter_choice": "true",
             "interests": "Writing poems, reading books, and watching movies",
-            "age": 22,
-            "pic": "kimmy_pic.jpg"
+            "age": 23,
+            "pic": "jane_pic.jpg"
         }
 
         self.dummy_user_2 = {
-            "first_name": "Eduardo",
-            "middle_name": "Marcos",
-            "last_name": "Hernandez",
-            "username": "lalo_hernandez",
-            "password": "thereallalo!",
-            "birth_month": "January",
-            "birth_date": "25",
+            "first_name": "Joaquin",
+            "middle_name": "Martin",
+            "last_name": "Gomez",
+            "username": "j_gomez_98",
+            "password": "martin_gmz!",
+            "birth_month": "February",
+            "birth_date": "9",
             "birth_year": "1998",
             "state": "Texas",
-            "city": "San Antonio",
+            "city": "Dallas",
             "height_feet": "6",
-            "height_inches": "4",
+            "height_inches": "1",
             "gender": "Male",
             "sexual_orientation": "Heterosexual",
             "interested_in": "Females",
             "relationship_status": "Taken",
             "so_filter_choice": "true",
-            "interests": "Driving sports cars, boxing, and hitting the gym",
+            "interests": "Driving sports cars",
             "age": 26,
-            "pic": "lalo_hernandez_profile_pic.jpg"
+            "pic": "joaquin_0101.jpg"
         }
         
         # Create and store the dummy users in the database.
