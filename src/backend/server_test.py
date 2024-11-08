@@ -5,6 +5,7 @@ import os
 import psycopg2
 import jwt
 import unittest
+from helpers.helper import generate_fake_username as f_user
 
 PATH = 'secret.env'
 load_dotenv(PATH)
@@ -57,10 +58,10 @@ class TestSignUpOps(unittest.TestCase):
 
         # Dummy user information.
         self.user_info = {
-            "first_name": "Kathy",
-            "middle_name": "Adriana",
-            "last_name": "Wood",
-            "username": "kathy.a.wood",
+            "first_name": f_user()[0],
+            "middle_name": f_user()[1],
+            "last_name": f_user()[2],
+            "username": f_user()[3],
             "password": "password123",
             "birth_month": "January",
             "birth_date": "20",
@@ -159,10 +160,10 @@ class TestLoginOps(unittest.TestCase):
 
             # Dummy user information.
             user_info = {
-                "first_name": "Kathy",
-                "middle_name": "Adriana",
-                "last_name": "Wood",
-                "username": "kathy.a.wood",
+                "first_name": f_user()[0],
+                "middle_name": f_user()[1],
+                "last_name": f_user()[2],
+                "username": f_user()[3],
                 "password": "password123",
                 "birth_month": "January",
                 "birth_date": "20",
@@ -232,10 +233,10 @@ class TestProtectedRouteOps(unittest.TestCase):
         # Test a bunch of different routes with a valid JWT token.
         # Dummy user information.
         self.user_info = {
-            "first_name": "Kathy",
-            "middle_name": "Adriana",
-            "last_name": "Wood",
-            "username": "kathy.a.wood",
+            "first_name": f_user()[0],
+            "middle_name": f_user()[1],
+            "last_name": f_user()[2],
+            "username": f_user()[3],
             "password": "password123",
             "birth_month": "January",
             "birth_date": "20",
@@ -303,10 +304,10 @@ class TestAppOps(unittest.TestCase):
 
         # Dummy user information.
         self.dummy_user_1 = {
-            "first_name": "Jane",
-            "middle_name": "Willow",
-            "last_name": "Garza",
-            "username": "jane_gza_01",
+            "first_name": f_user()[0],
+            "middle_name": f_user()[1],
+            "last_name": f_user()[2],
+            "username": f_user()[3],
             "password": "jane123",
             "birth_month": "August",
             "birth_date": "19",
@@ -326,10 +327,10 @@ class TestAppOps(unittest.TestCase):
         }
 
         self.dummy_user_2 = {
-            "first_name": "Joaquin",
-            "middle_name": "Martin",
-            "last_name": "Gomez",
-            "username": "j_gomez_98",
+            "first_name": f_user()[0],
+            "middle_name": f_user()[1],
+            "last_name": f_user()[2],
+            "username": f_user()[3],
             "password": "martin_gmz!",
             "birth_month": "February",
             "birth_date": "9",
@@ -482,11 +483,11 @@ class TestChatRequestOps(unittest.TestCase):
 
         # Dummy user information.
         self.dummy_user_1 = {
-            "first_name": "Kimberly",
-            "middle_name": "Elizabeth",
-            "last_name": "Hernandez",
-            "username": "kimmy_liz_hdz00",
-            "password": "kimmypassword123",
+            "first_name": f_user()[0],
+            "middle_name": f_user()[1],
+            "last_name": f_user()[2],
+            "username": f_user()[3],
+            "password": "password123",
             "birth_month": "August",
             "birth_date": "11",
             "birth_year": "2001",
@@ -505,11 +506,11 @@ class TestChatRequestOps(unittest.TestCase):
         }
 
         self.dummy_user_2 = {
-            "first_name": "Eduardo",
-            "middle_name": "Marcos",
-            "last_name": "Hernandez",
-            "username": "lalo_hernandez",
-            "password": "thereallalo!",
+            "first_name": f_user()[0],
+            "middle_name": f_user()[1],
+            "last_name": f_user()[2],
+            "username": f_user()[3],
+            "password": "password123!",
             "birth_month": "January",
             "birth_date": "25",
             "birth_year": "1998",

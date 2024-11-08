@@ -1,8 +1,10 @@
 from passlib.context import CryptContext
 from fastapi import HTTPException, Request
+from faker import Faker
 import psycopg2 as p
 import datetime as dt
 import jwt
+import random
 
 context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 
@@ -288,3 +290,13 @@ async def retrieve_banned_user(db: p.extensions.connection, username: str) -> di
     user = {key: value[0] for key, value in zip(keys, values) if keys and values}
     
     return user
+
+# Helper function to generate fake usernames for continuous integration
+# tests for FastAPI server.
+def generate_fake_username() -> tuple[str, str, str, str]:
+    fake = Faker()
+    f_name, m_name, l_name = fake.first_name(), fake.first_name(), fake.last_name()
+    id_num = random.randint(10, 100)
+    fake_username = f"{f_name[0:2]}{l_name[0:3]}{id_num}".lower()
+
+    return f_name, m_name, l_name, fake_username
