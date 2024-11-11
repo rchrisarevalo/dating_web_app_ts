@@ -1,12 +1,12 @@
 # Dating Web App (TypeScript Version)
 
-This project was made using React TypeScript, Express.js, and Flask. React Bootstrap was also incorporated into this project for the use of modals when logging in or configuring account settings.
+This project was made using React TypeScript, Express.js, and FastAPI. React Bootstrap was also incorporated into this project for the use of modals when logging in or configuring account settings.
 
 ## FOR DEVELOPERS
 Hello, fellow developer! If you are joining the software development team for this web app, you have to make sure that you have the following programs installed on your computer before working on this project:
 
 * **Node.js** (latest version highly recommended to avoid unexpected bugs and/or errors during development) (*https://nodejs.org/en/download*)
-* **Python v3.10** (or later, but preferrably v3.10, since Flask is used to develop one of the backends for the web app) (*https://www.python.org/downloads/*)
+* **Python v3.10** (or later) (*https://www.python.org/downloads/*)
 * **Git** (for committing changes and creating branches)
 * And finally, **Vite**, which will allow you to speed up the development process of this application. Use the following command to install it:
     * **npm install vite@latest** (or without **@latest**, depending on your preference) (*from*: *https://www.npmjs.com/package/vite*)
