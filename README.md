@@ -26,7 +26,7 @@ Lastly, since this web app now uses PostgreSQL, you will need the database key t
     
 * To access your .env file, you have to install two libraries:
     * **dotenv (for Express server)** (https://www.npmjs.com/package/dotenv)
-    * **python-dotenv (for Flask server)** (https://pypi.org/project/python-dotenv/)
+    * **python-dotenv (for FastAPI server)** (https://pypi.org/project/python-dotenv/)
 
 In order to keep track of the tasks when developing new features or making bug fixes, contact me so that I can send you an invite link to our Jira Dashboard, where we use Agile Development to ensure high-quality, and working software.
 
