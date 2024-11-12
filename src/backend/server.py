@@ -355,7 +355,7 @@ async def update_profile_pic(request: Request):
         return RedirectResponse("http://localhost:5173/profile/options/update", status_code=302)
     
     except Exception as e:
-        return RedirectResponse(location="http://localhost:5173/profile/options/update", status_code=302)
+        return RedirectResponse(url="http://localhost:5173/profile/options/update", status_code=302)
     
     finally:
         await terminate_connection(db)
