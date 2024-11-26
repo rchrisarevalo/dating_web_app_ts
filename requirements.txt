@@ -7,7 +7,7 @@ psycopg2==2.9.10
 numpy==1.26.4
 pillow==11.0.0
 python-dotenv<=1.0.1
-python-socketio==5.11.3
+python-socketio==5.11.4
 scikit-learn==1.5.2
 uvicorn==0.30.3
 PyJWT==2.10.0
