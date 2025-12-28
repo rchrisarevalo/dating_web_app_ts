@@ -345,7 +345,7 @@ async def update_profile_pic(request: Request):
         req = await request.form()
         username = request.cookies.get("username") if request.cookies.get("username") is not None else ""
         image_uri = bytes(base64.b64encode(await req.get('new-profile-pic').read())).decode('utf-8')
-        
+
         # Commit new profile pic to database.
         update_information = [image_uri, username]
         update_stmt = "UPDATE Photos SET uri=%s WHERE username=%s"
@@ -355,7 +355,8 @@ async def update_profile_pic(request: Request):
         return RedirectResponse("http://localhost:5173/profile/options/update", status_code=302)
     
     except Exception as e:
-        return RedirectResponse(url="http://localhost:5173/profile/options/update", status_code=302)
+        print(e)
+        return RedirectResponse(url="http://localhost:5173/profile/options/update", status_code=500)
     
     finally:
         await terminate_connection(db)
