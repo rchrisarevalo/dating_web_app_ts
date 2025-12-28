@@ -747,6 +747,7 @@ hr {
   top: 0;
   position: sticky;
   z-index: 10;
+  background: rgba(0, 0, 0, 0.726);
 }
 
 .profile-nav {
