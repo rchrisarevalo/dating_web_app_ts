@@ -904,6 +904,9 @@ export const Update = (props: UpdateProps) => {
                 )}
               </div>
               <MediaQuery minWidth={1024}>
+                <br></br>
+                <br></br>
+                <br></br>
                 <footer
                   className="main-footer"
                   style={{
@@ -935,6 +938,9 @@ export const Update = (props: UpdateProps) => {
                 </footer>
               </MediaQuery>
               <MediaQuery maxWidth={1024}>
+                <br></br>
+                <br></br>
+                <br></br>
                 <footer
                   className="main-footer"
                   style={{
